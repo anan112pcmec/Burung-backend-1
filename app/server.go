@@ -20,7 +20,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/anan112pcmec/Template/app/middleware"
+	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
 )
 
 type Server struct {
@@ -48,8 +48,6 @@ func enableCORS(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
-
-// rateLimiter per IP menggunakan golang.org/x/time/rate
 
 type clientLimiter struct {
 	limiter  *rate.Limiter
@@ -334,9 +332,11 @@ func (server *Server) initialize(appconfig Appsetting) {
 		w.Write([]byte("Halo dari " + appconfig.AppName))
 	})
 
-	server.Router.Handle("/endpoint.go", middleware.PostHandler(server.DB)).Methods("POST", "OPTIONS")
-	server.Router.Handle("/endpoint.go", middleware.GetHandler()).Methods("GET")
-	server.Router.HandleFunc("/ws", middleware.HandleWebSocket)
+	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler()).Methods("GET")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler()).Methods("POST", "OPTIONS")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler()).Methods("PUT")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler()).Methods("PATCH")
+	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler()).Methods("DELETE")
 }
 
 func (server *Server) Run(alamat string) {

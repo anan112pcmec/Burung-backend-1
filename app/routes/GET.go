@@ -1,12 +1,10 @@
-package middleware
+package routes
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 )
-
-// Handle Get Request
 
 func GetHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
