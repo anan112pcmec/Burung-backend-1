@@ -293,9 +293,9 @@ func (server *Server) initialize(appconfig Appsetting) {
 
 	server.Router = mux.NewRouter()
 
-	server.Router.Use(blockBadRequestsMiddleware)
-	server.Router.Use(enableCORS)
-	server.Router.Use(rateLimitMiddleware)
+	// server.Router.Use(blockBadRequestsMiddleware)
+	// server.Router.Use(enableCORS)
+	// server.Router.Use(rateLimitMiddleware)
 
 	go cleanupClients()
 
@@ -332,11 +332,11 @@ func (server *Server) initialize(appconfig Appsetting) {
 		w.Write([]byte("Halo dari " + appconfig.AppName))
 	})
 
-	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler()).Methods("GET")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler()).Methods("POST", "OPTIONS")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler()).Methods("PUT")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler()).Methods("PATCH")
-	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler()).Methods("DELETE")
+	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB)).Methods("GET")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB)).Methods("POST")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB)).Methods("PATCH")
+	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler(server.DB)).Methods("DELETE")
 }
 
 func (server *Server) Run(alamat string) {
