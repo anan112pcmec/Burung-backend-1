@@ -21,6 +21,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
 )
 
 type Server struct {
@@ -331,6 +332,9 @@ func (server *Server) initialize(appconfig Appsetting) {
 	server.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Halo dari " + appconfig.AppName))
 	})
+
+	migrate.UpEntity(server.DB)
+	migrate.UpBarang(server.DB)
 
 	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB)).Methods("GET")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB)).Methods("POST")

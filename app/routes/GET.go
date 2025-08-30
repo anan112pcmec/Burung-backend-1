@@ -7,8 +7,9 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
+	"github.com/anan112pcmec/Burung-backend-1/app/routes/seller"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
-
 )
 
 func GetHandler(db *gorm.DB) http.HandlerFunc {
@@ -23,7 +24,13 @@ func GetHandler(db *gorm.DB) http.HandlerFunc {
 
 		// Jika path diawali "/seller/"
 		if len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/seller/" {
-			userroute.GetUserHandler(db, w, r)
+			seller.GetSellerHandler(db, w, r)
+			return
+		}
+
+		// Jika path diawali "/kurir/"
+		if len(r.URL.Path) >= 7 && r.URL.Path[:7] == "/kurir/" {
+			kurir.GetKurirHandler(db, w, r)
 			return
 		}
 
