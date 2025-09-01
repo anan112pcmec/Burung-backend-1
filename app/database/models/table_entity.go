@@ -95,8 +95,8 @@ const (
 type Kurir struct {
 	ID               int64             `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
 	Nama             string            `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_kurir"`
-	Email            string            `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
-	Jenis            JenisLayananKurir `gorm:"column:jenis;type:varchar(250);not null;default:'Reguler'" json:"jenis_kurir"`
+	Email            string            `gom:"column:email;type:varchar(150);not null;default:''" json:"email_kurir"`
+	Jenis            JenisLayananKurir `gorrm:"column:jenis;type:varchar(250);not null;default:'Reguler'" json:"jenis_kurir"`
 	PasswordHash     string            `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_kurir"`
 	Deskripsi        string            `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_kurir"`
 	StatusKurir      Status            `gorm:"column:status;type:varchar(150);not null;default:'Offline'" json:"status_kurir"`

@@ -294,9 +294,9 @@ func (server *Server) initialize(appconfig Appsetting) {
 
 	server.Router = mux.NewRouter()
 
-	// server.Router.Use(blockBadRequestsMiddleware)
-	// server.Router.Use(enableCORS)
-	// server.Router.Use(rateLimitMiddleware)
+	server.Router.Use(blockBadRequestsMiddleware)
+	server.Router.Use(enableCORS)
+	server.Router.Use(rateLimitMiddleware)
 
 	go cleanupClients()
 
@@ -335,6 +335,8 @@ func (server *Server) initialize(appconfig Appsetting) {
 
 	migrate.UpEntity(server.DB)
 	migrate.UpBarang(server.DB)
+	migrate.UpTransaksi(server.DB)
+	migrate.UpEngagementEntity(server.DB)
 
 	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB)).Methods("GET")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB)).Methods("POST")
