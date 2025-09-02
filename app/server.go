@@ -294,11 +294,11 @@ func (server *Server) initialize(appconfig Appsetting) {
 
 	server.Router = mux.NewRouter()
 
-	server.Router.Use(blockBadRequestsMiddleware)
-	server.Router.Use(enableCORS)
-	server.Router.Use(rateLimitMiddleware)
+	// server.Router.Use(blockBadRequestsMiddleware)
+	// server.Router.Use(enableCORS)
+	// server.Router.Use(rateLimitMiddleware)
 
-	go cleanupClients()
+	// go cleanupClients()
 
 	var dbConfig = Dataconfig{
 		dbHost: getenvi("DBHOST", "localhost"),

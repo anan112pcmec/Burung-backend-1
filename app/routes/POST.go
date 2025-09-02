@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/routes/auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/seller"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
@@ -15,6 +16,13 @@ import (
 func PostHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PostHandler dijalankan...")
+
+		//registration handler
+		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/auth/" {
+			fmt.Println("Auth HANDLER JALAN")
+			auth.HandleAuth(db, w, r)
+			return
+		}
 
 		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {

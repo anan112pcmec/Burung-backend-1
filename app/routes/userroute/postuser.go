@@ -15,7 +15,7 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  200,
-		"message": "Halo dari GET middleware handler",
+		"message": "Halo dari Post middleware handler",
 		"payload": hasil,
 	})
 }
