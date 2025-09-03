@@ -8,8 +8,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	"github.com/anan112pcmec/Burung-backend-1/app/service"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/authservices"
 )
+
+type OTPkey struct {
+	Value string `json:"otp_key"`
+}
 
 func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/auth/user/registration" && r.Method == http.MethodPost {
@@ -26,7 +30,7 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		hasil := service.UserRegistration(db, data.Username, data.Nama, data.Email, data.PasswordHash)
+		hasil := authservices.PreUserRegistration(db, data.Username, data.Nama, data.Email, data.PasswordHash)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(hasil)
@@ -47,7 +51,28 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		hasil := service.UserLogin(db, data.Email, data.PasswordHash)
+		hasil := authservices.UserLogin(db, data.Email, data.PasswordHash)
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(hasil)
+		return
+	}
+
+	if r.URL.Path == "/auth/user/registration/validate" && r.Method == http.MethodPost {
+		bb, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Gagal membaca body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer r.Body.Close()
+
+		var data OTPkey
+		if err := json.Unmarshal(bb, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		hasil := authservices.ValidateUserRegistration(db, data.Value)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(hasil)

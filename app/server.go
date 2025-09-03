@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"golang.org/x/time/rate"
@@ -27,6 +28,7 @@ import (
 type Server struct {
 	DB     *gorm.DB
 	Router *mux.Router
+	Redis  *redis.Client
 }
 
 type Appsetting struct {
@@ -37,10 +39,14 @@ type Dataconfig struct {
 	dbHost, dbUser, dbPass, dbName, dbPort string
 }
 
+type RedisConfig struct {
+	dbPort string
+}
+
 // enableCORS sama seperti sebelumnya
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", getenvi("ACCESS_CTRL", "Unauthorized"))
+		w.Header().Set("Access-Control-Allow-Origin", Getenvi("ACCESS_CTRL", "Unauthorized"))
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == "OPTIONS" {
@@ -98,8 +104,8 @@ func getLimiter(ip string) *rate.Limiter {
 
 	cl, exists := clients[ip]
 	if !exists {
-		reqLimitStr := getenvi("REQ_LIMIT", "5")
-		burstLimitStr := getenvi("BURST_LIMIT", "100")
+		reqLimitStr := Getenvi("REQ_LIMIT", "5")
+		burstLimitStr := Getenvi("BURST_LIMIT", "100")
 
 		reqLimitFloat, err := strconv.ParseFloat(reqLimitStr, 64)
 		if err != nil {
@@ -289,6 +295,13 @@ func blockBadRequestsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (c RedisConfig) NewClient(dbSelect int) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: "localhost:" + c.dbPort,
+		DB:   dbSelect,
+	})
+}
+
 func (server *Server) initialize(appconfig Appsetting) {
 	fmt.Println("Inisialisasi server:", appconfig.AppName)
 
@@ -301,12 +314,22 @@ func (server *Server) initialize(appconfig Appsetting) {
 	// go cleanupClients()
 
 	var dbConfig = Dataconfig{
-		dbHost: getenvi("DBHOST", "localhost"),
-		dbUser: getenvi("DBUSER", "postgres"),
-		dbPass: getenvi("DBPASS", "Faiz"),
-		dbName: getenvi("DBNAME", "perpustakaan"),
-		dbPort: getenvi("DBPORT", "8082"),
+		dbHost: Getenvi("DBHOST", "localhost"),
+		dbUser: Getenvi("DBUSER", "postgres"),
+		dbPass: Getenvi("DBPASS", "Faiz"),
+		dbName: Getenvi("DBNAME", "perpustakaan"),
+		dbPort: Getenvi("DBPORT", "8082"),
 	}
+
+	var rdsConfig = RedisConfig{
+		dbPort: Getenvi("REDISPORT", "6357"),
+	}
+
+	server.Redis = redis.NewClient(&redis.Options{
+		Addr: "localhost" + rdsConfig.dbPort,
+	})
+
+	server.Redis = rdsConfig.NewClient(0)
 
 	var err error
 	dsn := fmt.Sprintf(
@@ -321,7 +344,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 	if err != nil {
 		panic("Server Gagal Menyambungkan ke database")
 	} else {
-		fmt.Println("Berhasil terhubung ke database:", getenvi("DBNAME", "DBMU"))
+		fmt.Println("Berhasil terhubung ke database:", Getenvi("DBNAME", "DBMU"))
 		fmt.Println("DB_NAME dari .env:", os.Getenv("DB_NAME"))
 	}
 
@@ -350,7 +373,7 @@ func (server *Server) Run(alamat string) {
 	log.Fatal(http.ListenAndServe(alamat, server.Router))
 }
 
-func getenvi(key, fallback string) string {
+func Getenvi(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}
@@ -364,9 +387,9 @@ func Run() {
 	}
 	var server = Server{}
 	var appconfig = Appsetting{
-		AppName: getenvi("APPNAME", "backend"),
-		AppConf: getenvi("APPENV", "developmentcoy"),
-		AppPort: getenvi("APPPORT", "8081"),
+		AppName: Getenvi("APPNAME", "backend"),
+		AppConf: Getenvi("APPENV", "developmentcoy"),
+		AppPort: Getenvi("APPPORT", "8081"),
 	}
 
 	server.initialize(appconfig)
