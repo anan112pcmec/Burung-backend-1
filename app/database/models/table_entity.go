@@ -13,7 +13,7 @@ type Pengguna struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_user"`
 	Username       string     `gorm:"column:username;type:varchar(100);not null;default:''" json:"username_user"`
 	Nama           string     `gorm:"column:nama;type:text;not null;default:''" json:"nama_user"`
-	Email          string     `gorm:"column:email;type:varchar(100);not null;default:''" json:"email_user"`
+	Email          string     `gorm:"column:email;type:varchar(100);not null;uniqueIndex" json:"email_user"`
 	PasswordHash   string     `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"pass_user"`
 	PinHash        string     `gorm:"column:pin_hash;type:varchar(250);not null;default:''" json:"pin_user"`
 	StatusPengguna Status     `gorm:"column:status;type:varchar(250);not null;default:'Offline'" json:"status_user"`
