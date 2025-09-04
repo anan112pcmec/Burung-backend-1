@@ -2,6 +2,10 @@ package models
 
 import "time"
 
+type BarangContract interface {
+	Validating() string
+}
+
 type BarangInduk struct {
 	ID            int32      `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
 	SellerID      int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
@@ -16,6 +20,26 @@ type BarangInduk struct {
 	CreatedAt     time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt     *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (b *BarangInduk) Validating() string {
+	if b.SellerID == 0 {
+		return "Gagal: IdSeller kosong"
+	}
+	if b.NamaBarang == "" {
+		return "Gagal: Nama Barang kosong"
+	}
+	if b.JenisBarang == "" {
+		return "Gagal: Jenis Barang kosong"
+	}
+	if b.Deskripsi == "" {
+		return "Gagal: Deskripsi Barang kosong"
+	}
+	if b.TanggalRilis == "" {
+		return "Gagal: Tanggal Rilis kosong"
+	}
+
+	return "Data Lengkap"
 }
 
 func (BarangInduk) TableName() string {
@@ -34,6 +58,7 @@ type KategoriBarang struct {
 	BeratGram      int16       `gorm:"column:berat_gram;type:int2" json:"berat_gram_kategori_barang"`
 	DimensiPanjang int16       `gorm:"column:dimensi_panjang_cm;type:int2" json:"dimensi_panjang_cm_kategori_barang"`
 	DimensiLebar   int16       `gorm:"column:dimensi_lebar_cm;type:int2" json:"dimensi_tinggi_cm_kategori_barang"`
+	Sku            string      `json:"sku_kategori"`
 	CreatedAt      time.Time   `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt      *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
@@ -56,8 +81,8 @@ type VarianBarang struct {
 	ID            int64              `gorm:"primaryKey;autoIncrement" json:"id_varian_barang"`
 	IdBarangInduk int32              `gorm:"column:id_induk;not null" json:"id_barang_induk_varian_barang"`
 	BarangInduk   BarangInduk        `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	IdKategori    int64              `gorm:"column:id_kategori;not null" json:"id_kategori_varian_barang"`
-	Kategori      KategoriBarang     `gorm:"foreignKey:IdKategori;references:ID"`
+	NamaKategori  string             `gorm:"column:nama_kategori;not null" json:"nama_kategori_varian_barang"`
+	Kategori      KategoriBarang     `gorm:"foreignKey:NamaKategori;references:Nama"`
 	IdTransaksi   int64              `gorm:"column:id_transaksi;type:int8" json:"id_transksi_varian_barang"`
 	Sku           string             `gorm:"column:sku;type:varchar(100);not null" json:"Sku_varian_barang"`
 	Status        StatusVarianBarang `gorm:"column:status;type:varchar(250);not null; default:'Ready'" json:"status_varian_barang"`
