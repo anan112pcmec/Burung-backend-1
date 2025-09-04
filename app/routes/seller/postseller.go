@@ -2,11 +2,11 @@ package seller
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 )
@@ -14,21 +14,33 @@ import (
 func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var hasil *response.ResponseForm
 
-	if r.URL.Path == "/seller/masukan-barang" {
-		bb, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Gagal membaca body: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		defer r.Body.Close()
-
+	switch r.URL.Path {
+	case "/seller/masukan_barang":
 		var data seller_service.PayloadMasukanBarang
-		if err := json.Unmarshal(bb, &data); err != nil {
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-
 		hasil = seller_service.MasukanBarang(db, data)
+	case "/seller/edit_barang":
+		var data seller_service.PayloadEditBarang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditBarang(db, data)
+	case "/seller/hapus_barang":
+		var data seller_service.PayloadHapusBarang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+		}
+		hasil = seller_service.HapusBarang(db, data)
+	default:
+		hasil = &response.ResponseForm{
+			Status:   http.StatusBadRequest,
+			Services: "Seller Services",
+			Payload:  "Gagal Coba Lagi Nanti",
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

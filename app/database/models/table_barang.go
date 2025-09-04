@@ -79,10 +79,10 @@ const (
 
 type VarianBarang struct {
 	ID            int64              `gorm:"primaryKey;autoIncrement" json:"id_varian_barang"`
-	IdBarangInduk int32              `gorm:"column:id_induk;not null" json:"id_barang_induk_varian_barang"`
+	IdBarangInduk int32              `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_varian_barang"`
 	BarangInduk   BarangInduk        `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	NamaKategori  string             `gorm:"column:nama_kategori;not null" json:"nama_kategori_varian_barang"`
-	Kategori      KategoriBarang     `gorm:"foreignKey:NamaKategori;references:Nama"`
+	IdKategori    int64              `gorm:"column:id_kategori;not null" json:"id_kategori_varian_barang"`
+	Kategori      KategoriBarang     `gorm:"foreignKey:IdKategori;references:ID"`
 	IdTransaksi   int64              `gorm:"column:id_transaksi;type:int8" json:"id_transksi_varian_barang"`
 	Sku           string             `gorm:"column:sku;type:varchar(100);not null" json:"Sku_varian_barang"`
 	Status        StatusVarianBarang `gorm:"column:status;type:varchar(250);not null; default:'Ready'" json:"status_varian_barang"`
