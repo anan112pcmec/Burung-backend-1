@@ -12,7 +12,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////
@@ -386,7 +385,7 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 }
 
 func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.ResponseForm {
-	services := "HapusKategoriBarang"
+	services := "EditKategoriBarang"
 
 	var idBarangIndukGet string
 	barangIndukFilter := models.BarangInduk{
@@ -399,7 +398,7 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 		Select("id").
 		First(&idBarangIndukGet).Error; err != nil {
 		return &response.ResponseForm{
-			Status:   http.StatusOK,
+			Status:   http.StatusBadRequest,
 			Services: services,
 			Payload:  "Gagal Mendapatkan Barang Yang Dituju",
 		}
@@ -407,12 +406,27 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 
 	go func() {
 		if err := db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Unscoped().Updates(&data.KategoriBarang).Error; err != nil {
-				return err
+			for i := range data.KategoriBarang {
+				// update kategori barang
+				if err := tx.Model(&models.KategoriBarang{}).
+					Where("id = ?", data.KategoriBarang[i].ID).
+					Updates(&data.KategoriBarang[i]).Error; err != nil {
+					return err
+				}
+
+				varBarangFilter := models.VarianBarang{
+					IdBarangInduk: data.IdBarangInduk,
+					IdKategori:    data.KategoriBarang[i].ID,
+				}
+				if err := tx.Model(&models.VarianBarang{}).
+					Where(&varBarangFilter).
+					Update("sku", data.KategoriBarang[i].Sku).Error; err != nil {
+					log.Printf("[EditKategoriBarang] Gagal update SKU: %v", err)
+				}
 			}
 			return nil
 		}); err != nil {
-			log.Printf("[TambahKategoriBarang] Gagal menghapus kategori untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
+			log.Printf("[EditKategoriBarang] Gagal mengupdate kategori untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
 		}
 	}()
 
