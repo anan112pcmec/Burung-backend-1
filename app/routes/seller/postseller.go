@@ -22,19 +22,13 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_service.MasukanBarang(db, data)
-	case "/seller/edit_barang":
-		var data seller_service.PayloadEditBarang
+	case "/seller/tambah_kategori_barang":
+		var data seller_service.PayloadTambahKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditBarang(db, data)
-	case "/seller/hapus_barang":
-		var data seller_service.PayloadHapusBarang
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-		}
-		hasil = seller_service.HapusBarang(db, data)
+		hasil = seller_service.TambahKategoriBarang(db, data)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

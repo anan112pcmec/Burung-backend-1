@@ -1,5 +1,9 @@
 package response_barang_service
 
+// ////////////////////////////////////////////////////////////////////////////////
+// BARANG INDUK
+// ////////////////////////////////////////////////////////////////////////////////
+
 type ResponseMasukanBarang struct {
 	Message string `json:"pesan_memasukan_data_barang"`
 }
@@ -10,4 +14,20 @@ type ResponseEditBarang struct {
 
 type ResponseHapusBarang struct {
 	Message string `json:"pesan_hapus_data_barang"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////
+// KATEGORI BARANG
+// ////////////////////////////////////////////////////////////////////////////////
+
+type ResponseTambahKategori struct {
+	Message string `json:"pesan_masukan_kategori_barang"`
+}
+
+type ResponseHapusKategori struct {
+	Message string `json:"pesan_hapus_kategori_barang"`
+}
+
+type ResponseEditKategori struct {
+	Message string `json:"pesan_edit_kategori_barang"`
 }
