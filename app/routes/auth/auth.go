@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
@@ -15,7 +16,7 @@ type OTPkey struct {
 	Value string `json:"otp_key"`
 }
 
-func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.URL.Path {
@@ -26,7 +27,7 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasil := authservices.PreUserRegistration(db, data.Username, data.Nama, data.Email, data.PasswordHash)
+			hasil := authservices.PreUserRegistration(db, data.Username, data.Nama, data.Email, data.PasswordHash, rds)
 			json.NewEncoder(w).Encode(hasil)
 			return
 		}
@@ -50,7 +51,7 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasil := authservices.ValidateUserRegistration(db, data.Value)
+			hasil := authservices.ValidateUserRegistration(db, data.Value, rds)
 			json.NewEncoder(w).Encode(hasil)
 			return
 		}
@@ -62,7 +63,7 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasil := authservices.PreSellerRegistration(db, data.Username, data.Nama, data.Email, data.Jenis, data.Norek, data.SellerDedication, data.Password)
+			hasil := authservices.PreSellerRegistration(db, data.Username, data.Nama, data.Email, data.Jenis, data.Norek, data.SellerDedication, data.Password, rds)
 			json.NewEncoder(w).Encode(hasil)
 			return
 		}
@@ -86,7 +87,43 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasil := authservices.ValidateSellerRegistration(db, data.Value)
+			hasil := authservices.ValidateSellerRegistration(db, data.Value, rds)
+			json.NewEncoder(w).Encode(hasil)
+			return
+		}
+
+	case "/auth/kurir/registration":
+		if r.Method == http.MethodPost {
+			var data models.Kurir
+			if err := helper.DecodeJSONBody(r, &data); err != nil {
+				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			hasil := authservices.PreKurirRegistration(db, data.Nama, data.Email, data.PasswordHash, rds)
+			json.NewEncoder(w).Encode(hasil)
+			return
+		}
+
+	case "/auth/kurir/login":
+		if r.Method == http.MethodPost {
+			var data models.Pengguna
+			if err := helper.DecodeJSONBody(r, &data); err != nil {
+				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			hasil := authservices.UserLogin(db, data.Email, data.PasswordHash)
+			json.NewEncoder(w).Encode(hasil)
+			return
+		}
+
+	case "/auth/kurir/registration/validate":
+		if r.Method == http.MethodPost {
+			var data OTPkey
+			if err := helper.DecodeJSONBody(r, &data); err != nil {
+				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			hasil := authservices.ValidateKurirRegistration(db, data.Value, rds)
 			json.NewEncoder(w).Encode(hasil)
 			return
 		}

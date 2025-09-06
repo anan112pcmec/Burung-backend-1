@@ -23,6 +23,7 @@ import (
 
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
+
 )
 
 type Server struct {
@@ -321,15 +322,11 @@ func (server *Server) initialize(appconfig Appsetting) {
 		dbPort: Getenvi("DBPORT", "8082"),
 	}
 
-	var rdsConfig = RedisConfig{
-		dbPort: Getenvi("REDISPORT", "6357"),
-	}
-
-	server.Redis = redis.NewClient(&redis.Options{
-		Addr: "localhost" + rdsConfig.dbPort,
+	redis_entity_cache := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       1,
 	})
-
-	server.Redis = rdsConfig.NewClient(0)
 
 	var err error
 	dsn := fmt.Sprintf(
@@ -362,7 +359,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 	migrate.UpEngagementEntity(server.DB)
 
 	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB)).Methods("GET")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB)).Methods("POST")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache)).Methods("POST")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB)).Methods("PATCH")
 	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler(server.DB)).Methods("DELETE")

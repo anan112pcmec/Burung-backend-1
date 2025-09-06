@@ -52,10 +52,12 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 		}
 	} else {
 		go func() {
-			if user.StatusPengguna != "Online" {
-				if err1 := db.Where(models.Pengguna{Email: email}).Update("status", "Online").Error; err1 != nil {
-					fmt.Println("user sudah login di tempat lain")
+			if user.StatusPengguna == "Offline" {
+				if err1 := db.Model(models.Pengguna{}).Where(models.Pengguna{Email: email}).Update("status", "Online").Error; err1 != nil {
+					fmt.Println("Gagal Ubah Status")
 				}
+			} else {
+				fmt.Println("user sudah login di tempat lain")
 			}
 		}()
 	}
@@ -79,19 +81,17 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 	service := "SellerLogin"
 	var seller models.Seller
-	pass := "password"
-	ID := "id"
-	username := "username"
-	emaild := "email"
-	nama := "nama"
 
-	if err := db.Where(models.Seller{Email: email}).Select(&ID, &nama, &username, &emaild, &pass, "status").First(&seller).Error; err != nil {
+	if err := db.Where(&models.Seller{Email: email}).
+		Select("id", "nama", "username", "email", "password_hash", "status").
+		First(&seller).Error; err != nil {
+
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &response.ResponseForm{
 				Status:   http.StatusNotFound,
 				Services: service,
 				Payload: response_auth.LoginSellerResp{
-					Message: "Gagal Akun Belum Terdaftar, Coba Daftar kan dirimu dan bergabung bersama kami",
+					Message: "Gagal, akun belum terdaftar. Silakan daftar dulu.",
 				},
 			}
 		}
@@ -100,7 +100,7 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 			Status:   http.StatusInternalServerError,
 			Services: service,
 			Payload: response_auth.LoginSellerResp{
-				Message: "Gagal Server Sedang Sibuk Coba Lagi Nanti",
+				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
 	}
@@ -110,25 +110,29 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 			Status:   http.StatusUnauthorized,
 			Services: service,
 			Payload: response_auth.LoginSellerResp{
-				Message: "Password Salah",
+				Message: "Password salah",
 			},
 		}
-	} else {
-		go func() {
-			if seller.StatusSeller != "Online" {
-				if err1 := db.Where(models.Seller{Email: email}).Update("status", "Online").Error; err1 != nil {
-					fmt.Println("seller sudah login di tempat lain")
-				}
-			}
-		}()
 	}
+
+	go func() {
+		if seller.StatusSeller == "Offline" {
+			if err := db.Model(&models.Seller{}).
+				Where(&models.Seller{Email: email}).
+				Update("status", "Online").Error; err != nil {
+				fmt.Println("Gagal update status seller:", err)
+			} else {
+				fmt.Println("Seller sudah login di tempat lain")
+			}
+		}
+	}()
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: service,
 		Payload: response_auth.LoginSellerResp{
 			Status:  "Berhasil",
-			Message: fmt.Sprintf("Kamu Berhasil Login %s, Kembangkan Koneksimu Raih Keuntungan Disini", seller.Nama),
+			Message: fmt.Sprintf("Kamu berhasil login %s, kembangkan koneksimu dan raih keuntungan di sini!", seller.Nama),
 			ID:      seller.ID,
 			LoginResponse: response_auth.LoginResponse{
 				Nama:     seller.Nama,
@@ -139,7 +143,7 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 	}
 }
 
-func PreUserRegistration(db *gorm.DB, username, nama, email, password string) *response.ResponseForm {
+func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreUserRegistration"
 	ctx := context.Background()
 	var user models.Pengguna
@@ -187,12 +191,6 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string) *r
 			"password_hash": password,
 		}
 
-		rds := redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: "",
-			DB:       1,
-		})
-
 		for data, name := range fields {
 			if err := rds.HSet(ctx, key, data, name).Err(); err != nil {
 				fmt.Println("Gagal Set Redis")
@@ -214,16 +212,10 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string) *r
 	}
 }
 
-func ValidateUserRegistration(db *gorm.DB, OTPkey string) *response.ResponseForm {
+func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUserRegistration"
 
 	ctx := context.Background()
-
-	rds := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       1,
-	})
 
 	key := fmt.Sprintf("registration_user_pending:%s", OTPkey)
 
@@ -294,7 +286,7 @@ func ValidateUserRegistration(db *gorm.DB, OTPkey string) *response.ResponseForm
 	}
 }
 
-func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis models.JenisSeller, norek string, SellerDedication models.SellerType, password string) *response.ResponseForm {
+func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis models.JenisSeller, norek string, SellerDedication models.SellerType, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreSellerRegistration"
 
 	jenis_final := string(jenis)
@@ -353,12 +345,6 @@ func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis mode
 			"password_hash":     password,
 		}
 
-		rds := redis.NewClient(&redis.Options{
-			Addr:     "localhost:6379",
-			Password: "",
-			DB:       1,
-		})
-
 		pipe := rds.TxPipeline()
 		hset := pipe.HSet(ctx, key, fields)
 		exp := pipe.Expire(ctx, key, 3*time.Minute)
@@ -384,15 +370,9 @@ func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis mode
 	}
 }
 
-func ValidateSellerRegistration(db *gorm.DB, OTPkey string) *response.ResponseForm {
+func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateSellerRegistration"
 	ctx := context.Background()
-
-	rds := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       1,
-	})
 
 	key := fmt.Sprintf("registration_seller_pending:%s", OTPkey)
 
@@ -462,6 +442,155 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string) *response.ResponseFo
 		Payload: response_auth.ValidateSellerResp{
 			Status:  "Berhasil",
 			Message: "Berhasil, Akun mu sudah terdaftar dan Kamu Siap Berjualan Bersama Kami",
+		},
+	}
+}
+
+func PreKurirRegistration(db *gorm.DB, nama, email, password string, rds *redis.Client) *response.ResponseForm {
+	services := "PreKurirRegistration"
+
+	var kurir models.Kurir
+	err := db.Unscoped().
+		Where(models.Kurir{Email: email}).
+		Select("id").
+		First(&kurir).Error
+
+	if err == nil {
+		return &response.ResponseForm{
+			Status:   http.StatusConflict,
+			Services: services,
+			Payload: response_auth.PreRegistrationKurirResp{
+				Message: "kurir dengan gmail Itu sudah terdaftar di sistem kami",
+			},
+		}
+	} else if err != gorm.ErrRecordNotFound {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_auth.PreRegistrationKurirResp{
+				Message: "Terjadi kesalahan pada server",
+			},
+		}
+	}
+
+	Otp := GenerateOTP()
+
+	go func() {
+		to := []string{email}
+		subject := "Kode OTP App Burung"
+		message := fmt.Sprintf("Kode OTP Anda: %s\nMasa berlaku 3 menit.", Otp)
+
+		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
+			fmt.Println("Gagal Kirim Email Untuk Otp:", Otp)
+		}
+
+		log.Println("[TRACE] Email sent successfully")
+	}()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		key := fmt.Sprintf("registration_kurir_pending:%s", Otp)
+		fields := map[string]interface{}{
+			"nama":          nama,
+			"email":         email,
+			"password_hash": password,
+		}
+
+		pipe := rds.TxPipeline()
+		hset := pipe.HSet(ctx, key, fields)
+		exp := pipe.Expire(ctx, key, 3*time.Minute)
+
+		res, err := pipe.Exec(ctx)
+		if err != nil {
+			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
+
+		}
+
+		_ = hset
+		_ = exp
+		_ = res
+	}()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_auth.PreRegistrationKurirResp{
+			Status:  "Berhasil",
+			Message: "Silahkan Masukan Kode OTP yang sudah dikirimkan ke Gmail Anda",
+		},
+	}
+}
+
+func ValidateKurirRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
+
+	services := "ValidateKurirRegistration"
+	ctx := context.Background()
+
+	key := fmt.Sprintf("registration_kurir_pending:%s", OTPkey)
+
+	userData, err := rds.HGetAll(ctx, key).Result()
+	if err != nil {
+		fmt.Println("[ValidateKurirRegistration] ERROR getting data from Redis:", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_auth.ValidateKurirResp{
+				Message: "Gagal Kode Sudah Expired, Coba Registrasi Ulang",
+			},
+		}
+	}
+
+	if len(userData) == 0 {
+		fmt.Println("[ValidateUserRegistration] Key not found or expired")
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_auth.ValidateKurirResp{
+				Message: "Gagal Kode Sudah Expired, Coba Registrasi Ulang",
+			},
+		}
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userData["password_hash"]), bcrypt.DefaultCost)
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_auth.ValidateSellerResp{
+				Message: "Gagal Server Sedang Sibuk, Coba Lagi Nanti",
+			},
+		}
+	}
+
+	seller := models.Kurir{
+		Nama:         userData["nama"],
+		Email:        userData["email"],
+		PasswordHash: string(hashedPassword),
+	}
+
+	if err := db.Unscoped().Create(&seller).Error; err != nil {
+		fmt.Println("[ValidateUserRegistration] ERROR saving to DB:", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_auth.ValidateKurirResp{
+				Message: "Gagal Server Sedang Sibuk, Coba Lagi Nanti Ya",
+			},
+		}
+	}
+
+	if err := rds.Del(ctx, key).Err(); err != nil {
+		fmt.Println("[ValidateUserRegistration] WARNING deleting Redis key:", err)
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_auth.ValidateKurirResp{
+			Status:  "Berhasil",
+			Message: "Berhasil, Akun mu sudah terdaftar dan Kamu Siap Menjadi Bagian Dari Kami",
 		},
 	}
 }

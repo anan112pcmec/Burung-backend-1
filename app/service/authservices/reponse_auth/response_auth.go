@@ -52,3 +52,26 @@ type ValidateSellerResp struct {
 	Status  string `json:"status_validasi_seller"`
 	Message string `json:"pesan_validasi_seller"`
 }
+
+// /////////////////////////////////////////
+
+// KURIR RESPONSE
+
+// /////////////////////////////////////////
+
+type LoginKurirResp struct {
+	Status  string `json:"status_login_kurir"`
+	Message string `json:"pesan_login_kurir"`
+	ID      int64  `json:"id_kurir"`
+	LoginResponse
+}
+
+type PreRegistrationKurirResp struct {
+	Status  string `json:"status_pre_registrasi_kurir"`
+	Message string `json:"pesan_pre_registrasi_kurir"`
+}
+
+type ValidateKurirResp struct {
+	Status  string `json:"status_validasi_kurir"`
+	Message string `json:"pesan_validasi_kurir"`
+}
