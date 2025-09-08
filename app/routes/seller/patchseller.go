@@ -29,6 +29,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_service.EditKategoriBarang(db, data)
+	case "/seller/edit/stok-barang":
+		var data seller_service.PayloadEditStokBarang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditStokBarang(db, data)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

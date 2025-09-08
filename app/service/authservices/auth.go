@@ -16,6 +16,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
+
 )
 
 func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
@@ -61,6 +62,19 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 			}
 		}()
 	}
+
+	go func() {
+		aksiDilakukan := models.AktivitasPengguna{
+			IdPengguna:     user.ID,
+			WaktuDilakukan: time.Now(),
+			Aksi:           "Login",
+		}
+
+		if err := db.Unscoped().Create(&aksiDilakukan).Error; err != nil {
+			log.Printf("gagal menyimpan aktivitas pengguna (unscoped): %v", err)
+		}
+
+	}()
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
@@ -141,6 +155,71 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 			},
 		},
 	}
+}
+
+func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
+	service := "KurirLogin"
+
+	var kurir models.Kurir
+	if err := db.Where(&models.Kurir{Email: email}).
+		Select("id", "nama", "email", "password_hash", "status").
+		First(&kurir).Error; err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: service,
+				Payload: response_auth.LoginKurirResp{
+					Message: "Gagal, akun belum terdaftar. Silakan daftar dulu.",
+				},
+			}
+		}
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: service,
+			Payload: response_auth.LoginKurirResp{
+				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
+			},
+		}
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(kurir.PasswordHash), []byte(password)); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: service,
+			Payload: response_auth.LoginKurirResp{
+				Message: "Password salah",
+			},
+		}
+	}
+
+	go func() {
+		if kurir.StatusKurir == "Offline" {
+			if err := db.Model(&models.Kurir{}).
+				Where(&models.Kurir{Email: email}).
+				Update("status", "Online").Error; err != nil {
+				fmt.Println("Gagal update status kurir:", err)
+			} else {
+				fmt.Println("Seller sudah login di tempat lain")
+			}
+		}
+	}()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: service,
+		Payload: response_auth.LoginKurirResp{
+			Status:  "Berhasil",
+			Message: fmt.Sprintf("Kamu berhasil login %s, kembangkan koneksimu dan raih keuntungan di sini!", kurir.Nama),
+			ID:      kurir.ID,
+			LoginResponse: response_auth.LoginResponse{
+				Nama:  kurir.Nama,
+				Email: kurir.Email,
+			},
+		},
+	}
+
 }
 
 func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rds *redis.Client) *response.ResponseForm {

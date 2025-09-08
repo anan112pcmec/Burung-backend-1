@@ -31,3 +31,11 @@ type ResponseHapusKategori struct {
 type ResponseEditKategori struct {
 	Message string `json:"pesan_edit_kategori_barang"`
 }
+
+// ////////////////////////////////////////////////////////////////////////////////
+// STOK BARANG
+// ////////////////////////////////////////////////////////////////////////////////
+
+type ResponseEditStokBarang struct {
+	Message string `json:"pesan_edit_stok_barang"`
+}

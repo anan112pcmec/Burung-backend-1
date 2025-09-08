@@ -12,6 +12,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
+
 )
 
 // ////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +71,11 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 	go func() {
 		ctx := context.Background()
 		if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+			if data.BarangInduk.OriginalKategori == "" {
+				return fmt.Errorf("OriginalKategori kosong, rollback transaksi")
+			}
+
 			if err := tx.Model(&models.BarangInduk{}).Create(&data.BarangInduk).Error; err != nil {
 				return err
 			}
@@ -435,6 +441,98 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 		Services: services,
 		Payload: response_barang_service.ResponseEditKategori{
 			Message: "Berhasil",
+		},
+	}
+}
+
+// ////////////////////////////////////////////////////////////////////////////////
+// STOK BARANG
+// ////////////////////////////////////////////////////////////////////////////////
+
+func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseForm {
+	services := "EditStokBarang"
+
+	var idbaranginduk models.BarangInduk
+	if err := db.
+		Where(&models.BarangInduk{ID: data.IdBarangInduk, SellerID: data.IdSeller}).
+		Select("id").
+		Take(&idbaranginduk).Error; err != nil {
+		log.Printf("[TRACE] Barang induk tidak ditemukan: IdBarangInduk=%d, IdSeller=%d, Error=%v\n", data.IdBarangInduk, data.IdSeller, err)
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  "Barang induk tidak ditemukan / tidak sesuai seller",
+		}
+	}
+
+	// Cek kategori barang
+	for _, b := range data.Barang {
+		if err := db.
+			Where(&models.KategoriBarang{IdBarangInduk: data.IdBarangInduk, ID: b.IdKategoriBarang}).
+			Take(&models.KategoriBarang{}).Error; err != nil {
+			log.Printf("[TRACE] Kategori tidak ditemukan: IdKategori=%d, NamaKategori=%s, Error=%v\n", b.IdKategoriBarang, b.NamaKategoriBarang, err)
+			return &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: services,
+				Payload:  fmt.Sprintf("Kategori %s tidak ditemukan", b.NamaKategoriBarang),
+			}
+		}
+		log.Printf("[TRACE] Kategori ditemukan: IdKategori=%d, NamaKategori=%s\n", b.IdKategoriBarang, b.NamaKategoriBarang)
+	}
+
+	go func() {
+		for _, b := range data.Barang {
+
+			var jumlah int64
+			if err := db.Model(&models.VarianBarang{}).
+				Where(&models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: b.IdKategoriBarang, Status: "Ready"}).
+				Count(&jumlah).Error; err != nil {
+				log.Printf("[TRACE] Gagal menghitung stok: IdKategori=%d, Error=%v\n", b.IdKategoriBarang, err)
+				continue
+			}
+
+			if jumlah == int64(b.JumlahStok) {
+				return
+			}
+
+			if jumlah > int64(b.JumlahStok) {
+				hapus := jumlah - int64(b.JumlahStok)
+				log.Printf("[TRACE] Perlu hapus varian: IdKategori=%d, JumlahHapus=%d\n", b.IdKategoriBarang, hapus)
+				for j := int64(0); j < hapus; j++ {
+					if err := db.
+						Where("id_barang_induk = ? AND id_kategori = ? AND status = ?", data.IdBarangInduk, b.IdKategoriBarang, "Ready").
+						Limit(1).
+						Delete(&models.VarianBarang{}).Error; err != nil {
+						log.Printf("[TRACE] Gagal menghapus varian: IdKategori=%d, Iterasi=%d, Error=%v\n", b.IdKategoriBarang, j, err)
+					} else {
+						log.Printf("[TRACE] Berhasil menghapus varian: IdKategori=%d, Iterasi=%d\n", b.IdKategoriBarang, j)
+					}
+				}
+			}
+
+			if int64(b.JumlahStok) > jumlah {
+				buat := int64(b.JumlahStok) - jumlah
+				for j := int64(0); j < buat; j++ {
+					newVarian := models.VarianBarang{
+						IdBarangInduk: data.IdBarangInduk,
+						IdKategori:    b.IdKategoriBarang,
+						Sku:           b.SkuKategoriBarang,
+					}
+					if err := db.Create(&newVarian).Error; err != nil {
+						log.Printf("[TRACE] Gagal membuat varian: IdKategori=%d, Iterasi=%d, Error=%v\n", b.IdKategoriBarang, j, err)
+					} else {
+						log.Printf("[TRACE] Berhasil membuat varian: IdKategori=%d, Iterasi=%d\n", b.IdKategoriBarang, j)
+					}
+				}
+			}
+		}
+	}()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_barang_service.ResponseEditStokBarang{
+			Message: "Proses update stok sedang berjalan",
 		},
 	}
 }

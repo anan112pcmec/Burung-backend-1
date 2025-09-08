@@ -43,3 +43,20 @@ type PayloadEditKategori struct {
 	IdSeller       int32                   `json:"id_seller_edit_kategori"`
 	KategoriBarang []models.KategoriBarang `json:"edit_kategori_barang"`
 }
+
+// ////////////////////////////////////////////////////////////////////////////////
+// STOK BARANG
+// ////////////////////////////////////////////////////////////////////////////////
+
+type IdKategoriDanStok struct {
+	IdKategoriBarang   int64  `json:"id_kategori_barang_edit_stok"`
+	NamaKategoriBarang string `json:"nama_kategori_barang_edit_stok"`
+	SkuKategoriBarang  string `json:"sku_kategori_barang"`
+	JumlahStok         int32  `json:"jumlah_stok"`
+}
+
+type PayloadEditStokBarang struct {
+	IdBarangInduk int32               `json:"id_barang_induk_stok_edit"`
+	IdSeller      int32               `json:"id_seller_edit_stok"`
+	Barang        []IdKategoriDanStok `json:"stok_barang_edit"`
+}

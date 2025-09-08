@@ -106,12 +106,12 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.
 
 	case "/auth/kurir/login":
 		if r.Method == http.MethodPost {
-			var data models.Pengguna
+			var data models.Kurir
 			if err := helper.DecodeJSONBody(r, &data); err != nil {
 				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasil := authservices.UserLogin(db, data.Email, data.PasswordHash)
+			hasil := authservices.KurirLogin(db, data.Email, data.PasswordHash)
 			json.NewEncoder(w).Encode(hasil)
 			return
 		}

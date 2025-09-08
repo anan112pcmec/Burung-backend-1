@@ -23,13 +23,11 @@ import (
 
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
-
 )
 
 type Server struct {
 	DB     *gorm.DB
 	Router *mux.Router
-	Redis  *redis.Client
 }
 
 type Appsetting struct {
@@ -293,13 +291,6 @@ func blockBadRequestsMiddleware(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
-	})
-}
-
-func (c RedisConfig) NewClient(dbSelect int) *redis.Client {
-	return redis.NewClient(&redis.Options{
-		Addr: "localhost:" + c.dbPort,
-		DB:   dbSelect,
 	})
 }
 
