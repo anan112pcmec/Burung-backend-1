@@ -11,6 +11,7 @@ import (
 )
 
 func UpEntity(db *gorm.DB) {
+
 	var wg sync.WaitGroup
 	errCh := make(chan error, 3)
 
@@ -81,6 +82,12 @@ func UpTransaksi(db *gorm.DB) {
 			log.Println("Berhasil Membuat Table Pembayaran")
 		} else {
 			log.Fatalf("Gagal Membuat Table Pembayaran")
+		}
+		if err2 := db.AutoMigrate(&models.Pengiriman{}); err2 == nil {
+			log.Println("Berhasil Membuat Table Pengiriman")
+			if err3 := db.AutoMigrate(&models.JejakPengiriman{}); err3 == nil {
+				log.Println("Berhasil Membuat Table Jejak Pengiriman")
+			}
 		}
 	} else {
 		log.Fatalf("Gagal Membuat Keseluruhan Table transaksi")

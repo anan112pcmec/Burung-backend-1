@@ -22,6 +22,7 @@ import (
 	"gorm.io/gorm/logger"
 
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
 )
 
@@ -343,6 +344,18 @@ func (server *Server) initialize(appconfig Appsetting) {
 	server.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Halo dari " + appconfig.AppName))
 	})
+
+	if err := enums.UpEnumsEntity(server.DB); err != nil {
+		return
+	}
+
+	if err := enums.UpBarangEnums(server.DB); err != nil {
+		return
+	}
+
+	if err := enums.UpEnumsTransaksi(server.DB); err != nil {
+		return
+	}
 
 	migrate.UpEntity(server.DB)
 	migrate.UpBarang(server.DB)

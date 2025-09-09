@@ -12,7 +12,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////
@@ -96,7 +95,7 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 					varianBatch = append(varianBatch, models.VarianBarang{
 						IdBarangInduk: int32(idInduk),
 						IdKategori:    idKategori,
-						Status:        models.Ready,
+						Status:        "Ready",
 						Sku:           kategori.Sku,
 					})
 				}
@@ -296,7 +295,7 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 					varianBatch = append(varianBatch, models.VarianBarang{
 						IdBarangInduk: int32(data.IdBarangInduk),
 						IdKategori:    kategoriBaru.ID,
-						Status:        models.Ready,
+						Status:        "Ready",
 						Sku:           data.KategoriBarang[i].Sku,
 					})
 				}

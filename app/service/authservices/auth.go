@@ -16,7 +16,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
-
 )
 
 func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
@@ -365,7 +364,7 @@ func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *re
 	}
 }
 
-func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis models.JenisSeller, norek string, SellerDedication models.SellerType, password string, rds *redis.Client) *response.ResponseForm {
+func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, norek string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreSellerRegistration"
 
 	jenis_final := string(jenis)
@@ -494,9 +493,9 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 		Nama:             userData["nama"],
 		Username:         userData["username"],
 		Email:            userData["email"],
-		Jenis:            models.JenisSeller(userData["jenis"]),
+		Jenis:            userData["jenis"],
 		Norek:            userData["norek"],
-		SellerDedication: models.SellerType(userData["seller_dedication"]),
+		SellerDedication: userData["seller_dedication"],
 		Password:         string(hashedPassword),
 	}
 
