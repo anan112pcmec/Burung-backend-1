@@ -11,7 +11,7 @@ type BarangInduk struct {
 	SellerID         int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
 	Seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
 	NamaBarang       string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
-	JenisBarang      string     `gorm:"column:jenis_barang;type:seller_dedication;not null" json:"jenis_barang_induk"`
+	JenisBarang      string     `gorm:"column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis_barang_induk"`
 	OriginalKategori string     `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori"`
 	Deskripsi        string     `gorm:"column:deskripsi;type:text" json:"deskripsi_barang_induk"`
 	TanggalRilis     string     `gorm:"column:tanggal_rilis;type:date;not null" json:"tanggal_rilis_barang_induk"`
