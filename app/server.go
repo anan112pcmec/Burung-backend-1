@@ -24,6 +24,7 @@ import (
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/enums"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
+
 )
 
 type Server struct {
@@ -320,6 +321,12 @@ func (server *Server) initialize(appconfig Appsetting) {
 		DB:       1,
 	})
 
+	redis_barang_cache := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       2,
+	})
+
 	var err error
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
@@ -362,7 +369,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 	migrate.UpTransaksi(server.DB)
 	migrate.UpEngagementEntity(server.DB)
 
-	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB)).Methods("GET")
+	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB, redis_barang_cache)).Methods("GET")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache)).Methods("POST")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB)).Methods("PATCH")
@@ -386,6 +393,7 @@ func Run() {
 	if err != nil {
 		log.Fatalf("Error di env")
 	}
+
 	var server = Server{}
 	var appconfig = Appsetting{
 		AppName: Getenvi("APPNAME", "backend"),

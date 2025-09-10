@@ -21,23 +21,27 @@ func UpEnumsEntity(db *gorm.DB) error {
 	}
 
 	for enumName, values := range enumMap {
-		// Drop type dulu kalau ada
-		dropSQL := fmt.Sprintf("DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_type WHERE typname = '%s') THEN DROP TYPE %s CASCADE; END IF; END $$;", enumName, enumName)
-		if err := tx.Exec(dropSQL).Error; err != nil {
+		// Cek apakah enum sudah ada
+		var exists bool
+		checkSQL := "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = ?);"
+		if err := tx.Raw(checkSQL, enumName).Scan(&exists).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
 
-		// Create type baru
-		createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
-		if err := tx.Exec(createSQL).Error; err != nil {
-			tx.Rollback()
-			return err
+		if !exists {
+			// Create type baru
+			createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
+			if err := tx.Exec(createSQL).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 	}
 
 	return tx.Commit().Error
 }
+
 func UpBarangEnums(db *gorm.DB) error {
 	tx := db.Begin()
 	if tx.Error != nil {
@@ -49,25 +53,21 @@ func UpBarangEnums(db *gorm.DB) error {
 	}
 
 	for enumName, values := range enumMap {
-		// Drop type dulu kalau ada
-		dropSQL := fmt.Sprintf(`
-			DO $$
-			BEGIN
-				IF EXISTS (SELECT 1 FROM pg_type WHERE typname = '%s') THEN
-					DROP TYPE %s CASCADE;
-				END IF;
-			END
-			$$;`, enumName, enumName)
-		if err := tx.Exec(dropSQL).Error; err != nil {
+		// Cek apakah enum sudah ada
+		var exists bool
+		checkSQL := "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = ?);"
+		if err := tx.Raw(checkSQL, enumName).Scan(&exists).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
 
-		// Create type baru
-		createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
-		if err := tx.Exec(createSQL).Error; err != nil {
-			tx.Rollback()
-			return err
+		if !exists {
+			// Create type baru
+			createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
+			if err := tx.Exec(createSQL).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 	}
 
@@ -87,25 +87,21 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 	}
 
 	for enumName, values := range enumMap {
-		// Drop type dulu kalau ada
-		dropSQL := fmt.Sprintf(`
-			DO $$
-			BEGIN
-				IF EXISTS (SELECT 1 FROM pg_type WHERE typname = '%s') THEN
-					DROP TYPE %s CASCADE;
-				END IF;
-			END
-			$$;`, enumName, enumName)
-		if err := tx.Exec(dropSQL).Error; err != nil {
+		// Cek apakah enum sudah ada
+		var exists bool
+		checkSQL := "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = ?);"
+		if err := tx.Raw(checkSQL, enumName).Scan(&exists).Error; err != nil {
 			tx.Rollback()
 			return err
 		}
 
-		// Create type baru
-		createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
-		if err := tx.Exec(createSQL).Error; err != nil {
-			tx.Rollback()
-			return err
+		if !exists {
+			// Create type baru
+			createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
+			if err := tx.Exec(createSQL).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
 		}
 	}
 
