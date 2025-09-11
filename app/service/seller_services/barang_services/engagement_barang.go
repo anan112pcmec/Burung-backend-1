@@ -12,17 +12,9 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
-
-
-
-
 )
 
-// ////////////////////////////////////////////////////////////////////////////////
-// BARANG INDUK
-// ////////////////////////////////////////////////////////////////////////////////
-
-func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseForm {
+func MasukanBarang(ctx context.Context, db *gorm.DB, data PayloadMasukanBarang) *response.ResponseForm {
 	services := "MasukanBarang"
 	data.BarangInduk.SellerID = data.IdSeller
 
@@ -72,7 +64,6 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 	}
 
 	go func() {
-		ctx := context.Background()
 		if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 			if data.BarangInduk.OriginalKategori == "" {

@@ -3,6 +3,7 @@ package userroute
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -13,16 +14,21 @@ import (
 
 func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
 	var hasil *response.ResponseForm
+	ctx := r.Context()
 
 	switch r.URL.Path {
 	case "/user/barang-all":
-		hasil = pengguna_service.AmbilRandomBarang(rds)
+		hasil = pengguna_service.AmbilRandomBarang(ctx, rds)
 	case "/user/barang-spesified":
 		jenis := r.URL.Query().Get("jenis")
 		if jenis != "" {
-			hasil = pengguna_service.AmbilBarangJenis(rds, jenis)
-		} else {
-			hasil = pengguna_service.AmbilRandomBarang(rds)
+			hasil = pengguna_service.AmbilBarangJenis(ctx, rds, jenis)
+		}
+
+		seller := r.URL.Query().Get("seller")
+		if seller != "" {
+			seller_id, _ := strconv.Atoi(seller)
+			hasil = pengguna_service.AmbilBarangSeller(ctx, rds, int32(seller_id))
 		}
 
 	default:
