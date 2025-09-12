@@ -9,7 +9,7 @@ type BarangContract interface {
 type BarangInduk struct {
 	ID               int32      `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
 	SellerID         int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
-	Seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
+	seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
 	NamaBarang       string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
 	JenisBarang      string     `gorm:"column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis_barang_induk,omitempty"`
 	OriginalKategori string     `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori,omitempty"`
@@ -51,7 +51,7 @@ func (BarangInduk) TableName() string {
 type KategoriBarang struct {
 	ID             int64       `gorm:"primaryKey;autoIncrement" json:"id_kategori_barang"`
 	IdBarangInduk  int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_kategori"`
-	BarangInduk    BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	barangInduk    BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
 	Nama           string      `gorm:"column:nama;type:varchar(120);not null" json:"nama_kategori_barang"`
 	Deskripsi      string      `gorm:"column:deskripsi;type:text" json:"deskripsi_kategori_barang"`
 	Warna          string      `gorm:"column:warna;type:varchar(50)" json:"warna_kategori_barang"`
@@ -82,7 +82,7 @@ const (
 type VarianBarang struct {
 	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id_varian_barang"`
 	IdBarangInduk int32          `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_varian_barang"`
-	BarangInduk   BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	barangInduk   BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID"`
 	IdKategori    int64          `gorm:"column:id_kategori;not null" json:"id_kategori_varian_barang"`
 	Kategori      KategoriBarang `gorm:"foreignKey:IdKategori;references:ID"`
 	IdTransaksi   int64          `gorm:"column:id_transaksi;type:int8" json:"id_transksi_varian_barang,omitempty"`

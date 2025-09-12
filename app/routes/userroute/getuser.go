@@ -40,6 +40,25 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *re
 		if nama_barang != "" && jenis != "" {
 			hasil = pengguna_service.AmbilBarangNamaDanJenis(ctx, rds, db, nama_barang, jenis, SE)
 		}
+
+		if nama_barang != "" && seller != "" {
+			seller_id, _ := strconv.Atoi(seller)
+			hasil = pengguna_service.AmbilBarangNamaDanSeller(ctx, rds, db, int32(seller_id), nama_barang, SE)
+		}
+
+		if jenis != "" && seller != "" {
+
+		}
+	case "/user/data-barang-induk":
+		id_barang_induk, err := strconv.Atoi(r.URL.Query().Get("barang_induk"))
+		hasil = pengguna_service.AmbilDataBarangInduk(ctx, int32(id_barang_induk), db, rds)
+		if err != nil {
+			hasil = &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: "User Services",
+				Payload:  "Barang Itu Tidak Ada",
+			}
+		}
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
