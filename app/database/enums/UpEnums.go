@@ -121,7 +121,6 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		return err
 	}
 
-	// Insert semua value
 	for _, val := range enumOngkir {
 		insertSQL := fmt.Sprintf("INSERT INTO ongkir (value) VALUES (%d);", val)
 		if err := tx.Exec(insertSQL).Error; err != nil {

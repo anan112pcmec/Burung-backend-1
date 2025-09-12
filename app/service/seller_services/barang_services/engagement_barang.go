@@ -1,7 +1,6 @@
 package seller_service
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -14,7 +13,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
 )
 
-func MasukanBarang(ctx context.Context, db *gorm.DB, data PayloadMasukanBarang) *response.ResponseForm {
+func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseForm {
 	services := "MasukanBarang"
 	data.BarangInduk.SellerID = data.IdSeller
 
@@ -64,7 +63,7 @@ func MasukanBarang(ctx context.Context, db *gorm.DB, data PayloadMasukanBarang) 
 	}
 
 	go func() {
-		if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := db.Transaction(func(tx *gorm.DB) error {
 
 			if data.BarangInduk.OriginalKategori == "" {
 				return fmt.Errorf("OriginalKategori kosong, rollback transaksi")
