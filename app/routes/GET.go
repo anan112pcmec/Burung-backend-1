@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -13,13 +14,13 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
 )
 
-func GetHandler(db *gorm.DB, rds *redis.Client) http.HandlerFunc {
+func GetHandler(db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("GetHandler dijalankan...")
 
 		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
-			userroute.GetUserHandler(db, w, r, rds)
+			userroute.GetUserHandler(db, w, r, rds, SE)
 			return
 		}
 

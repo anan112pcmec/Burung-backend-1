@@ -15,6 +15,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/time/rate"
 	"gorm.io/driver/postgres"
@@ -24,7 +25,6 @@ import (
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/enums"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
-
 )
 
 type Server struct {
@@ -327,6 +327,10 @@ func (server *Server) initialize(appconfig Appsetting) {
 		DB:       2,
 	})
 
+	keysnya := "SuperSecureKey1234567890"
+
+	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(keysnya))
+
 	var err error
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
@@ -369,7 +373,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 	migrate.UpTransaksi(server.DB)
 	migrate.UpEngagementEntity(server.DB)
 
-	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB, redis_barang_cache)).Methods("GET")
+	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB, redis_barang_cache, SearchEngine)).Methods("GET")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache)).Methods("POST")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB)).Methods("PATCH")

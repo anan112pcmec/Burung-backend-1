@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
@@ -12,7 +13,7 @@ import (
 	pengguna_service "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services"
 )
 
-func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
+func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client, SE meilisearch.ServiceManager) {
 	var hasil *response.ResponseForm
 	ctx := r.Context()
 
@@ -22,7 +23,7 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *re
 	case "/user/barang-spesified":
 		jenis := r.URL.Query().Get("jenis")
 		if jenis != "" {
-			hasil = pengguna_service.AmbilBarangJenis(ctx, rds, jenis)
+			hasil = pengguna_service.AmbilBarangJenis(ctx, db, rds, jenis)
 		}
 
 		seller := r.URL.Query().Get("seller")
@@ -31,6 +32,14 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *re
 			hasil = pengguna_service.AmbilBarangSeller(ctx, rds, int32(seller_id))
 		}
 
+		nama_barang := r.URL.Query().Get("nama_barang")
+		if nama_barang != "" {
+			hasil = pengguna_service.AmbilBarangNama(ctx, rds, db, nama_barang, SE)
+		}
+
+		if nama_barang != "" && jenis != "" {
+			hasil = pengguna_service.AmbilBarangNamaDanJenis(ctx, rds, db, nama_barang, jenis, SE)
+		}
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
