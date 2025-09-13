@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	jwt_function "github.com/anan112pcmec/Burung-backend-1/app/jwt"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
 )
@@ -119,6 +120,16 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 func HapusBarang(db *gorm.DB, data PayloadHapusBarang) *response.ResponseForm {
 	services := "HapusBarang"
 	var barangdihapus int32
+
+	_, _, err_jwt := jwt_function.ClaimsJWT(data.JWT)
+
+	if err_jwt != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  "Barang tidak ditemukan atau tidak sesuai kredensial seller",
+		}
+	}
 
 	if err := db.Model(&models.BarangInduk{}).
 		Where("id_seller = ? AND nama_barang = ?", data.IdSeller, data.BarangInduk.NamaBarang).

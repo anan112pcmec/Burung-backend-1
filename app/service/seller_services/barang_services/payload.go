@@ -20,6 +20,7 @@ type PayloadEditBarang struct {
 type PayloadHapusBarang struct {
 	IdSeller    int32              `json:"id_seller"`
 	BarangInduk models.BarangInduk `json:"barang_induk_hapus"`
+	JWT         string             `json:"jwt_key"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////

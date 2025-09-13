@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	jwt_function "github.com/anan112pcmec/Burung-backend-1/app/jwt"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
@@ -75,17 +76,29 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 
 	}()
 
+	jwt_key, jwt_err := jwt_function.GenerateJWT(user.ID, user.Email)
+
+	if jwt_err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: service,
+			Payload: response_auth.LoginSellerResp{
+				Message: "Gagal Sistem Sedang Sibuk Coba Lagi Nanti",
+			},
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: service,
 		Payload: response_auth.LoginUserResp{
 			Status:  "Berhasil",
 			Message: "Kamu Berhasil Login Selamat datang",
-			ID:      user.ID,
 			LoginResponse: response_auth.LoginResponse{
+				ID:       user.ID,
 				Nama:     user.Nama,
 				Username: user.Username,
-				Email:    user.Email,
+				JWT:      jwt_key,
 			},
 		},
 	}
@@ -140,17 +153,28 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 		}
 	}()
 
+	jwt_key, err_jwt := jwt_function.GenerateJWT(int64(seller.ID), seller.Email)
+	if err_jwt != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: service,
+			Payload: response_auth.LoginSellerResp{
+				Message: "Gagal Sistem Sedang Sibuk Coba Lagi Nanti",
+			},
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: service,
 		Payload: response_auth.LoginSellerResp{
 			Status:  "Berhasil",
 			Message: fmt.Sprintf("Kamu berhasil login %s, kembangkan koneksimu dan raih keuntungan di sini!", seller.Nama),
-			ID:      seller.ID,
 			LoginResponse: response_auth.LoginResponse{
+				ID:       int64(seller.ID),
 				Nama:     seller.Nama,
 				Username: seller.Username,
-				Email:    seller.Email,
+				JWT:      jwt_key,
 			},
 		},
 	}
@@ -205,16 +229,28 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 		}
 	}()
 
+	jwt_key, jwt_err := jwt_function.GenerateJWT(kurir.ID, kurir.Email)
+
+	if jwt_err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: service,
+			Payload: response_auth.LoginSellerResp{
+				Message: "Gagal Sistem Sedang Sibuk Coba Lagi Nanti",
+			},
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: service,
 		Payload: response_auth.LoginKurirResp{
 			Status:  "Berhasil",
 			Message: fmt.Sprintf("Kamu berhasil login %s, kembangkan koneksimu dan raih keuntungan di sini!", kurir.Nama),
-			ID:      kurir.ID,
 			LoginResponse: response_auth.LoginResponse{
-				Nama:  kurir.Nama,
-				Email: kurir.Email,
+				ID:   kurir.ID,
+				Nama: kurir.Nama,
+				JWT:  jwt_key,
 			},
 		},
 	}

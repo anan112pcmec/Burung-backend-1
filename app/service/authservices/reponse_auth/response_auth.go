@@ -1,10 +1,10 @@
 package response_auth
 
 type LoginResponse struct {
+	ID       int64  `json:"id"`
 	Nama     string `json:"nama"`
 	Username string `json:"username"`
-	Email    string `json:"email"`
-	Status   string `json:"status"`
+	JWT      string `json:"jwt_key"`
 }
 
 // /////////////////////////////////////////
@@ -16,7 +16,6 @@ type LoginResponse struct {
 type LoginUserResp struct {
 	Status  string `json:"status_login_user"`
 	Message string `json:"pesan_login_user"`
-	ID      int64  `json:"id_user"`
 	LoginResponse
 }
 
@@ -39,7 +38,6 @@ type ValidateUserResp struct {
 type LoginSellerResp struct {
 	Status  string `json:"status_login_seller"`
 	Message string `json:"pesan_login_seller"`
-	ID      int32  `json:"id_seller"`
 	LoginResponse
 }
 
@@ -62,7 +60,6 @@ type ValidateSellerResp struct {
 type LoginKurirResp struct {
 	Status  string `json:"status_login_kurir"`
 	Message string `json:"pesan_login_kurir"`
-	ID      int64  `json:"id_kurir"`
 	LoginResponse
 }
 

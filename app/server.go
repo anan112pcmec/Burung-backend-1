@@ -327,6 +327,12 @@ func (server *Server) initialize(appconfig Appsetting) {
 		DB:       2,
 	})
 
+	redis_engagement_cache := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       3,
+	})
+
 	keysnya := "SuperSecureKey1234567890"
 
 	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(keysnya))
@@ -374,7 +380,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 	migrate.UpEngagementEntity(server.DB)
 
 	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB, redis_barang_cache, SearchEngine)).Methods("GET")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache)).Methods("POST")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache, redis_engagement_cache)).Methods("POST")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB)).Methods("PATCH")
 	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler(server.DB)).Methods("DELETE")

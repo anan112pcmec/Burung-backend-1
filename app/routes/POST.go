@@ -14,7 +14,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
 )
 
-func PostHandler(db *gorm.DB, rds *redis.Client) http.HandlerFunc {
+func PostHandler(db *gorm.DB, rds *redis.Client, rds_engagement *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PostHandler dijalankan...")
 
@@ -27,7 +27,7 @@ func PostHandler(db *gorm.DB, rds *redis.Client) http.HandlerFunc {
 
 		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
-			userroute.PostUserHandler(db, w, r)
+			userroute.PostUserHandler(db, w, r, rds_engagement)
 			return
 		}
 

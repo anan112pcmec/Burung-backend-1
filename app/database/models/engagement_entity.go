@@ -2,16 +2,17 @@ package models
 
 import (
 	"time"
+
 )
 
 type Komentar struct {
 	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_komentar"`
-	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_komentar"`
-	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_komentar"`
-	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID"`
-	Komentar      string      `gorm:"column:komentar;type:text;not null;default:''" json:"isi_komentar"`
-	Rating        int16       `gorm:"column:rating;type:int2;default:0" json:"rating_komentar"`
+	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
+	baranginduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity"`
+	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
+	Komentar      string      `gorm:"column:komentar;type:text;not null" json:"isi_komentar"`
+	ParentID      *int64      `gorm:"column:parent_id" json:"parent_id,omitempty"`
 	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
@@ -27,6 +28,7 @@ type Keranjang struct {
 	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_keranjang"`
 	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
 	Count         int16       `gorm:"column:count;type:int2;not null" json:"count_keranjang"`
+	Status        string      `gorm:"column:status;type:status_keranjang;not null" json:"status_keranjang"`
 	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
@@ -39,7 +41,7 @@ func (Keranjang) TableName() string {
 type BarangDisukai struct {
 	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_barang_disukai"`
 	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID"`
-	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_disukai"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_disukai"`
 	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
 	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
