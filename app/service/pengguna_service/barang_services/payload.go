@@ -16,15 +16,24 @@ type PayloadKomentarBarang struct {
 }
 
 type PayloadHapusKomentarBarang struct {
-	IDKomentar int32 `json:"id_komentar_hapus_komentar"`
+	IDKomentar int64 `json:"id_komentar_hapus_komentar"`
 	IDEntity   int64 `json:"id_user_hapus_komentar"`
-	Id_Barang  int32 `json:"id_barang_induk_hapus_komentar"`
+	IdBarang   int32 `json:"id_barang_induk_hapus_komentar"`
+}
+
+type PayloadEditKomentarBarang struct {
+	DataEditKomentar models.Komentar `json:"edit_payload_komentar"`
 }
 
 type PayloadTambahDataKeranjangBarang struct {
 	DataTambahKeranjang models.Keranjang `json:"data_payload_tambah_keranjang"`
 }
 
-type PayloadEditKomentarBarang struct {
-	DataEditKomentar models.Komentar `json:"edit_payload_komentar"`
+type PayloadEditDataKeranjangBarang struct {
+	models.Keranjang
+	Jumlah int64 `json:"data_payload_edit_keranjang"`
+}
+
+type PayloadHapusDataKeranjangBarang struct {
+	DataHapusKeranjang models.Keranjang `json:"data_payload_hapus_keranjang"`
 }

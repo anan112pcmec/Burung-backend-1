@@ -18,7 +18,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services/response_barang_user"
-
 )
 
 var wg sync.WaitGroup
@@ -287,9 +286,9 @@ func AmbilBarangNama(ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_B
 	searchRes, _ := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{})
 
 	var barang []response_barang_user.ResponseUserBarang
-	var id_barang []models.BarangInduk
 
 	if len(searchRes.Hits) > 0 {
+		var id_barang []models.BarangInduk
 		hitsjson, _ := json.Marshal(searchRes.Hits)
 
 		_ = json.Unmarshal(hitsjson, &id_barang)
@@ -340,7 +339,7 @@ func AmbilBarangNama(ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_B
 	} else {
 		var idBarang []models.BarangInduk
 		if err := db.Model(&models.BarangInduk{}).
-			Where("nama_barang LIKE ?", "%"+Nama_Barang+"%").
+			Where("nama_barang LIKE ?", "'%"+Nama_Barang+"%'").
 			Select("id").
 			Order("RANDOM()").
 			Limit(30).
@@ -354,46 +353,47 @@ func AmbilBarangNama(ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_B
 			}
 		}
 
-		for _, data_id := range id_barang {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		if len(idBarang) > 0 {
+			for _, data_id := range idBarang {
+				wg.Add(1)
+				go func(d models.BarangInduk) {
+					defer wg.Done()
+					data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", d.ID)).Result()
+					if len(data) == 0 {
+						return
+					}
 
-				data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", data_id.ID)).Result()
-				if len(data) == 0 {
-					return
-				}
+					id_barang, _ := strconv.Atoi(data["id_barang_induk"])
+					id_seller, _ := strconv.Atoi(data["id_seller_barang_induk"])
+					viewed, _ := strconv.Atoi(data["viewed_barang_induk"])
+					likes, _ := strconv.Atoi(data["likes_barang_induk"])
+					total_komentar, _ := strconv.Atoi(data["total_komentar_barang_induk"])
 
-				id_barang, _ := strconv.Atoi(data["id_barang_induk"])
-				id_seller, _ := strconv.Atoi(data["id_seller_barang_induk"])
-				viewed, _ := strconv.Atoi(data["viewed_barang_induk"])
-				likes, _ := strconv.Atoi(data["likes_barang_induk"])
-				total_komentar, _ := strconv.Atoi(data["total_komentar_barang_induk"])
+					b := response_barang_user.ResponseUserBarang{
+						BarangInduk: models.BarangInduk{
+							ID:               int32(id_barang),
+							SellerID:         int32(id_seller),
+							NamaBarang:       data["nama_barang_induk"],
+							JenisBarang:      data["jenis_barang_induk"],
+							OriginalKategori: data["original_kategori"],
+							Deskripsi:        data["deskripsi_barang_induk"],
+							TanggalRilis:     data["tanggal_rilis_barang_induk"],
+							Viewed:           int32(viewed),
+							Likes:            int32(likes),
+							TotalKomentar:    int32(total_komentar),
+						},
+						Harga: data["harga"],
+					}
 
-				b := response_barang_user.ResponseUserBarang{
-					BarangInduk: models.BarangInduk{
-						ID:               int32(id_barang),
-						SellerID:         int32(id_seller),
-						NamaBarang:       data["nama_barang_induk"],
-						JenisBarang:      data["jenis_barang_induk"],
-						OriginalKategori: data["original_kategori"],
-						Deskripsi:        data["deskripsi_barang_induk"],
-						TanggalRilis:     data["tanggal_rilis_barang_induk"],
-						Viewed:           int32(viewed),
-						Likes:            int32(likes),
-						TotalKomentar:    int32(total_komentar),
-					},
-					Harga: data["harga"],
-				}
+					mu.Lock()
+					barang = append(barang, b)
+					mu.Unlock()
+				}(data_id)
+			}
 
-				mu.Lock()
-				barang = append(barang, b)
-				mu.Unlock()
-			}()
+			wg.Wait()
+
 		}
-
-		wg.Wait()
-
 	}
 
 	return &response.ResponseForm{

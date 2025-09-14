@@ -2,12 +2,11 @@ package models
 
 import (
 	"time"
-
 )
 
 type Komentar struct {
 	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_komentar"`
-	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
 	baranginduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
 	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity"`
 	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
@@ -23,15 +22,17 @@ func (Komentar) TableName() string {
 }
 
 type Keranjang struct {
-	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_keranjang"`
-	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID"`
-	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_keranjang"`
-	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	Count         int16       `gorm:"column:count;type:int2;not null" json:"count_keranjang"`
-	Status        string      `gorm:"column:status;type:status_keranjang;not null" json:"status_keranjang"`
-	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
+	IdPengguna     int64          `gorm:"column:id_pengguna;not null" json:"id_pengguna_keranjang"`
+	Pengguna       Pengguna       `gorm:"foreignKey:IdPengguna;references:ID"`
+	IdBarangInduk  int32          `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_keranjang"`
+	barangInduk    BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	IdKategori     int64          `gorm:"id_kategori_barang;not null" json:"id_kategori_barang_keranjang"`
+	kategoribarang KategoriBarang `gorm:"foreignKey:IdKategori;references:ID"`
+	Count          int16          `gorm:"column:count;type:int2;not null" json:"count_keranjang"`
+	Status         string         `gorm:"column:status;type:status_keranjang;not null" json:"status_keranjang"`
+	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt      *time.Time     `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Keranjang) TableName() string {

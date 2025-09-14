@@ -24,13 +24,13 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 			return
 		}
 		hasil = pengguna_service.TambahKomentarBarang(ctx, data, db)
-	case "/user/komentar-barang/edit":
-		var data pengguna_service.PayloadEditKomentarBarang
+	case "/user/keranjang-barang/tambah":
+		var data pengguna_service.PayloadTambahDataKeranjangBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_service.EditKomentarBarang(ctx, data, db)
+		hasil = pengguna_service.TambahKeranjangBarang(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
