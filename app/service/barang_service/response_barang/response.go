@@ -1,4 +1,4 @@
-package response_barang_user
+package response_barang
 
 import "github.com/anan112pcmec/Burung-backend-1/app/database/models"
 

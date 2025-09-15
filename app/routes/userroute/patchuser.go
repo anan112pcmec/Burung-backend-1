@@ -9,9 +9,10 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	pengguna_service "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services"
+	"github.com/redis/go-redis/v9"
 )
 
-func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
 	var hasil *response.ResponseForm
 	ctx := r.Context()
 
@@ -22,7 +23,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_service.LikesBarang(ctx, data, db)
+		hasil = pengguna_service.LikesBarang(data, db, rds)
 	case "/user/komentar-barang/edit":
 		var data pengguna_service.PayloadEditKomentarBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

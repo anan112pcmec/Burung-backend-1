@@ -26,7 +26,7 @@ func GetHandler(db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) h
 
 		// Jika path diawali "/seller/"
 		if len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/seller/" {
-			seller.GetSellerHandler(db, w, r)
+			seller.GetSellerHandler(db, w, r, rds, SE)
 			return
 		}
 

@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/seller"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
-
 )
 
-func PatchHandler(db *gorm.DB) http.HandlerFunc {
+func PatchHandler(db *gorm.DB, rds *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PatchHandler dijalankan...")
 
 		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
-			userroute.PatchUserHandler(db, w, r)
+			userroute.PatchUserHandler(db, w, r, rds)
 			return
 		}
 

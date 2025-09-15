@@ -11,7 +11,10 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services/response_barang_user"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/barang_service/response_barang"
+
+)
+
 var fieldBarangViewed = "viewed_barang_induk"
 
 func ViewBarang(data PayloadWatchBarang, rds *redis.Client, db *gorm.DB) {
@@ -29,47 +32,103 @@ func ViewBarang(data PayloadWatchBarang, rds *redis.Client, db *gorm.DB) {
 	}
 }
 
-func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *response.ResponseForm {
+func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "Likes Barang"
 
 	var existing models.BarangDisukai
 	err := db.Where("id_pengguna = ? AND id_barang_induk = ?", data.IDUser, data.IDBarang).First(&existing).Error
 
+	// ✅ case: belum pernah like
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		if err := db.Create(&models.BarangDisukai{
-			IdPengguna:    data.IDUser,
-			IdBarangInduk: data.IDBarang,
-		}).Error; err != nil {
-			return &response.ResponseForm{
-				Status:   http.StatusInternalServerError,
-				Services: services,
-				Payload:  "Gagal menambah like",
+		go func() {
+			ctx := context.Background()
+
+			// insert barang disukai
+			if err := db.Create(&models.BarangDisukai{
+				IdPengguna:    data.IDUser,
+				IdBarangInduk: data.IDBarang,
+			}).Error; err != nil {
+				fmt.Println("Gagal likes:", err)
 			}
-		}
+
+			var likes int64
+			if err_ambil := db.Model(models.BarangInduk{}).
+				Select("likes").
+				Where(models.BarangInduk{ID: data.IDBarang}).
+				Take(&likes).Error; err_ambil != nil {
+				return
+			}
+
+			// increment likes di DB
+			if err_incr_db := db.Model(&models.BarangInduk{}).
+				Where("id = ?", data.IDBarang).
+				Update("likes", likes+1).Error; err_incr_db != nil {
+				fmt.Println("Gagal increment likes di DB:", err_incr_db)
+				return
+			}
+
+			// increment likes di Redis
+			if err_incr_rds := rds.HIncrBy(
+				ctx,
+				fmt.Sprintf("barang:%v", data.IDBarang),
+				"likes_barang_induk",
+				likes+1,
+			).Err(); err_incr_rds != nil {
+				fmt.Println("Gagal increment likes di Redis:", err_incr_rds)
+			}
+		}()
 
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
-			Payload: response_barang_user.ResponseLikesBarangUser{
+			Payload: response_barang.ResponseLikesBarangUser{
 				Message: "Disukai",
 			},
 		}
 	}
 
+	// ✅ case: sudah pernah like
 	if err == nil {
-		// sudah ada, maka hapus
-		if err := db.Delete(&existing).Error; err != nil {
-			return &response.ResponseForm{
-				Status:   http.StatusInternalServerError,
-				Services: services,
-				Payload:  "Gagal menghapus like",
+		go func() {
+			if err := db.Model(models.BarangDisukai{}).
+				Delete(&existing, models.BarangDisukai{
+					IdPengguna:    existing.IdPengguna,
+					IdBarangInduk: existing.IdBarangInduk,
+				}).Error; err != nil {
+				fmt.Println("Gagal Hapus Likes")
+				return
 			}
-		}
+
+			var likes int64
+			if err_ambil := db.Model(models.BarangInduk{}).
+				Select("likes").
+				Where(models.BarangInduk{ID: data.IDBarang}).
+				Take(&likes).Error; err_ambil != nil {
+				return
+			}
+
+			// decrement likes di DB (⚠️ sebelumnya salah +1, sekarang -1)
+			if err_decr_db := db.Model(&models.BarangInduk{}).
+				Where("id = ?", data.IDBarang).
+				Update("likes", likes-1).Error; err_decr_db != nil {
+				fmt.Println("Gagal decrement likes di DB:", err_decr_db)
+			}
+
+			// decrement likes di Redis
+			if err_decr_rds := rds.HIncrBy(
+				context.Background(),
+				fmt.Sprintf("barang:%v", data.IDBarang),
+				"likes_barang_induk",
+				-1,
+			).Err(); err_decr_rds != nil {
+				fmt.Println("Gagal decrement likes di Redis:", err_decr_rds)
+			}
+		}()
 
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
-			Payload: response_barang_user.ResponseLikesBarangUser{
+			Payload: response_barang.ResponseLikesBarangUser{
 				Message: "Tidak Disukai",
 			},
 		}
@@ -89,7 +148,7 @@ func TambahKomentarBarang(ctx context.Context, data PayloadKomentarBarang, db *g
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseKomentarBarangUser{
+			Payload: response_barang.ResponseKomentarBarangUser{
 				Message: "Gagal Unggah Komentar",
 			},
 		}
@@ -98,7 +157,7 @@ func TambahKomentarBarang(ctx context.Context, data PayloadKomentarBarang, db *g
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_user.ResponseKomentarBarangUser{
+		Payload: response_barang.ResponseKomentarBarangUser{
 			Message: "Berhasil Unggah Komentar",
 		},
 	}
@@ -116,7 +175,7 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarang, db 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseEditKomentarBarangUser{
+			Payload: response_barang.ResponseEditKomentarBarangUser{
 				Message: "Gagal mengedit komentar, coba lagi nanti",
 			},
 		}
@@ -126,7 +185,7 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarang, db 
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_user.ResponseEditKomentarBarangUser{
+			Payload: response_barang.ResponseEditKomentarBarangUser{
 				Message: "Komentar tidak ditemukan",
 			},
 		}
@@ -135,7 +194,7 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarang, db 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_user.ResponseEditKomentarBarangUser{
+		Payload: response_barang.ResponseEditKomentarBarangUser{
 			Message: "Berhasil mengedit komentar",
 		},
 	}
@@ -156,7 +215,7 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarang, d
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseHapusKomentarBarangUser{
+			Payload: response_barang.ResponseHapusKomentarBarangUser{
 				Message: "Gagal hapus komentar",
 			},
 		}
@@ -166,7 +225,7 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarang, d
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_user.ResponseHapusKomentarBarangUser{
+			Payload: response_barang.ResponseHapusKomentarBarangUser{
 				Message: "Komentar tidak ditemukan",
 			},
 		}
@@ -175,7 +234,7 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarang, d
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_user.ResponseHapusKomentarBarangUser{
+		Payload: response_barang.ResponseHapusKomentarBarangUser{
 			Message: "Berhasil hapus komentar",
 		},
 	}
@@ -193,7 +252,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseTambahKeranjangUser{
+			Payload: response_barang.ResponseTambahKeranjangUser{
 				Message: "Terjadi kesalahan saat cek jumlah keranjang",
 			},
 		}
@@ -203,7 +262,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
-			Payload: response_barang_user.ResponseTambahKeranjangUser{
+			Payload: response_barang.ResponseTambahKeranjangUser{
 				Message: "Maksimal barang dalam keranjang adalah 30",
 			},
 		}
@@ -221,7 +280,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusConflict,
 			Services: services,
-			Payload: response_barang_user.ResponseTambahKeranjangUser{
+			Payload: response_barang.ResponseTambahKeranjangUser{
 				Message: "Kamu sudah memiliki barang ini di keranjang",
 			},
 		}
@@ -230,7 +289,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseTambahKeranjangUser{
+			Payload: response_barang.ResponseTambahKeranjangUser{
 				Message: "Terjadi kesalahan saat cek keranjang",
 			},
 		}
@@ -243,7 +302,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseTambahKeranjangUser{
+			Payload: response_barang.ResponseTambahKeranjangUser{
 				Message: "Gagal menambahkan barang ke keranjang",
 			},
 		}
@@ -252,7 +311,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 	return &response.ResponseForm{
 		Status:   http.StatusCreated,
 		Services: services,
-		Payload: response_barang_user.ResponseTambahKeranjangUser{
+		Payload: response_barang.ResponseTambahKeranjangUser{
 			Message: "Berhasil menambahkan barang ke keranjang",
 		},
 	}
@@ -269,7 +328,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 			return &response.ResponseForm{
 				Status:   http.StatusNotFound,
 				Services: services,
-				Payload: response_barang_user.ResponseEditKeranjangUser{
+				Payload: response_barang.ResponseEditKeranjangUser{
 					Message: "Barang tersebut tidak ada di keranjang",
 				},
 			}
@@ -277,7 +336,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseEditKeranjangUser{
+			Payload: response_barang.ResponseEditKeranjangUser{
 				Message: "Terjadi kesalahan saat cek keranjang",
 			},
 		}
@@ -295,7 +354,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseEditKeranjangUser{
+			Payload: response_barang.ResponseEditKeranjangUser{
 				Message: "Terjadi kesalahan saat cek stok",
 			},
 		}
@@ -305,7 +364,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
-			Payload: response_barang_user.ResponseEditKeranjangUser{
+			Payload: response_barang.ResponseEditKeranjangUser{
 				Message: "Jumlah melebihi stok tersedia",
 			},
 		}
@@ -318,7 +377,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseEditKeranjangUser{
+			Payload: response_barang.ResponseEditKeranjangUser{
 				Message: "Gagal memperbarui jumlah barang",
 			},
 		}
@@ -327,7 +386,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_user.ResponseEditKeranjangUser{
+		Payload: response_barang.ResponseEditKeranjangUser{
 			Message: "Jumlah barang berhasil diperbarui",
 		},
 	}
@@ -344,7 +403,7 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_user.ResponseHapusKeranjangUser{
+			Payload: response_barang.ResponseHapusKeranjangUser{
 				Message: "Gagal Menghapus Barang Keranjang, Coba Lagi Nanti",
 			},
 		}
@@ -353,7 +412,7 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_user.ResponseHapusKeranjangUser{
+		Payload: response_barang.ResponseHapusKeranjangUser{
 			Message: "Barang berhasil dihapus dari keranjang",
 		},
 	}
