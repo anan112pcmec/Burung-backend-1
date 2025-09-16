@@ -2,6 +2,8 @@ package helper
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -10,7 +12,20 @@ import (
 
 func DecodeJSONBody(r *http.Request, dst interface{}) error {
 	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(dst)
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields() // kalau ada field asing diabaikan
+
+	// coba decode, tapi jangan maksa kalau ada field kosong
+	if err := dec.Decode(dst); err != nil {
+		// kalau body kosong total
+		if errors.Is(err, io.EOF) {
+			return nil // biarin struct dst default
+		}
+		return err // JSON rusak atau tipe salah
+	}
+
+	return nil
 }
 
 // GenerateRandomDigits menghasilkan angka random dengan panjang 3-5 digit

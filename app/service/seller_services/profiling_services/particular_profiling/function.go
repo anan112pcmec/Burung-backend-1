@@ -1,66 +1,68 @@
-package particular_profiling
+package seller_particular_profiling
 
 import (
 	"context"
-	"sync"
+	"fmt"
+	"time"
 
-	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
 
 )
 
-var wg sync.WaitGroup
-var mu sync.Mutex
-
-func UbahUsernameSeller(username string, db *gorm.DB, rds *redis.Client) *ResponseUbahUsername {
+func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *ResponseUbahUsername {
 	var countUsername int64
-	var saran []string
+	saran := make([]string, 0, 3)
 
-	if err := db.Model(&models.Seller{}).Where("username = ?", username).Count(&countUsername).Error; err != nil {
+	if err := db.Model(&models.Seller{}).
+		Where("username = ?", username).
+		Count(&countUsername).Error; err != nil {
 		return &ResponseUbahUsername{
 			Message: "Server Bermasalah",
 		}
 	}
 
-	retries := 0
+	if countUsername == 0 {
+		if err_seller := db.Model(&models.Seller{}).
+			Where("id = ?", id_seller).
+			Update("username", username).Error; err_seller == nil {
+			return &ResponseUbahUsername{
+				Message: "Berhasil",
+			}
+		}
+	}
+
 	if countUsername > 0 {
-		for len(saran) < 3 && retries < 20 {
-			retries++
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
 
-				usernameBaru := username + helper.GenerateRandomDigits()
-				var tmp int64
+		for len(saran) < 4 {
 
-				if err := db.Model(&models.Seller{}).Where("username = ?", usernameBaru).Count(&tmp).Error; err != nil {
-					return
-				}
+			usernameBaru := username + helper.GenerateRandomDigits()
+			var tmp int64
 
-				if tmp == 0 {
-					mu.Lock()
-					alreadyExists := false
-					for _, v := range saran {
-						if v == usernameBaru {
-							alreadyExists = true
-							break
-						}
+			if err := db.Model(&models.Seller{}).
+				Where("username = ?", usernameBaru).
+				Count(&tmp).Error; err != nil {
+				continue
+			}
+
+			if tmp == 0 {
+				for _, v := range saran {
+					if v == usernameBaru {
+						continue
 					}
-					if !alreadyExists {
-						saran = append(saran, usernameBaru)
-					}
-					mu.Unlock()
 				}
-			}()
+				saran = append(saran, usernameBaru)
+			}
+
 		}
 
-		wg.Wait()
-
 		go func() {
-			_ = db.Create(models.AktivitasSeller{Aksi: "Mengubah Username"})
+			_ = db.Create(&models.AktivitasSeller{
+				Aksi: "Mengubah Username",
+			})
 		}()
 
 		return &ResponseUbahUsername{
@@ -69,22 +71,63 @@ func UbahUsernameSeller(username string, db *gorm.DB, rds *redis.Client) *Respon
 		}
 	}
 
-	if retries <= 20 {
-		return &ResponseUbahUsername{
-			Message: "Gagal, coba lagi nanti",
+	return &ResponseUbahUsername{
+		Message: "Gagal, Server sedang sibuk coba lagi nanti",
+	}
+}
+
+func UbahNamaSeller(id_seller int32, nama string, db *gorm.DB) *ResponseUbahNama {
+
+	if err_db := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("nama", nama).Error; err_db == nil {
+		return &ResponseUbahNama{
+			Message: "Berhasil",
 		}
 	}
 
-	return &ResponseUbahUsername{
-		Message: "Berhasil",
+	return &ResponseUbahNama{
+		Message: "Gagal, Server Sedang Sibuk Coba Lagi Nanti",
 	}
 }
 
-func UbahNamaSeller(nama string, db *gorm.DB) {
-	
-}
+func UbahEmailSeller(ctx context.Context, id_seller int32, email string, db *gorm.DB) *ResponseUbahEmail {
+	sudah_ada := ""
+	if err_sama := db.Model(models.Seller{}).Select("email").Where(models.Seller{ID: id_seller, Email: email}).First(&sudah_ada).Error; err_sama != nil {
+		fmt.Println("Gak Ada")
+	}
 
-func UbahEmailSeller(ctx context.Context, email string, db *gorm.DB) {
+	if sudah_ada != "" {
+		return &ResponseUbahEmail{
+			Message: "Gagal Mengubah Email, Coba Lagi Nanti",
+		}
+	}
+
+	var email_lama string
+	if err_email := db.Model(models.Seller{}).Select("email").Where(models.Seller{ID: id_seller}).First(&email_lama).Error; err_email != nil {
+		return &ResponseUbahEmail{
+			Message: "Gagal Mengubah Email, Coba Lagi Nanti",
+		}
+	}
+
+	if err_ubah_email := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("email", email).Error; err_ubah_email != nil {
+		return &ResponseUbahEmail{
+			Message: "Gagal Mengubah Email, Coba Lagi Nanti",
+		}
+	}
+
+	go func() {
+		to := []string{email_lama}
+		cc := []string{}
+		subject := "Pemberitahuan Pembaruan Gmail"
+		message := fmt.Sprintf("Akun Burung Mu Telah Diubah Gmail nya Pada %s menjadi %s dan mulai sekarang semua pemberitahuan dan notif akan di berikan kepada email baru yang terkait", time.Time{}, email)
+		err := emailservices.SendMail(to, cc, subject, message)
+		if err != nil {
+			fmt.Println("Gagal Kirim Pesan")
+		}
+	}()
+
+	return &ResponseUbahEmail{
+		Message: "Berhasil",
+	}
 
 }
 

@@ -9,10 +9,13 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
+	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 )
 
 func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var hasil *response.ResponseForm
+
+	ctx := r.Context()
 
 	switch r.URL.Path {
 	case "/seller/edit_barang":
@@ -36,6 +39,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_service.EditStokBarang(db, data)
+	case "/seller/profiling/personal-update":
+		var data seller_profiling_services.PayloadUpdateProfilePersonalSeller
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_profiling_services.UpdatePersonalSeller(ctx, db, data)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
