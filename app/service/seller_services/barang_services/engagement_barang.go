@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	jwt_function "github.com/anan112pcmec/Burung-backend-1/app/jwt"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
 )
@@ -121,16 +120,6 @@ func HapusBarang(db *gorm.DB, data PayloadHapusBarang) *response.ResponseForm {
 	services := "HapusBarang"
 	var barangdihapus int32
 
-	_, _, err_jwt := jwt_function.ClaimsJWT(data.JWT)
-
-	if err_jwt != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload:  "Barang tidak ditemukan atau tidak sesuai kredensial seller",
-		}
-	}
-
 	if err := db.Model(&models.BarangInduk{}).
 		Where("id_seller = ? AND nama_barang = ?", data.IdSeller, data.BarangInduk.NamaBarang).
 		Select("id").
@@ -146,6 +135,25 @@ func HapusBarang(db *gorm.DB, data PayloadHapusBarang) *response.ResponseForm {
 			Status:   http.StatusBadGateway,
 			Services: services,
 			Payload:  "Terjadi kesalahan pada database",
+		}
+	}
+
+	var jumlah_dalam_transaksi int64
+	if err_stock := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: barangdihapus, Status: "Dipesan"}).Or(models.VarianBarang{Status: "Diproses"}).Count(&jumlah_dalam_transaksi).Error; err_stock != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusBadGateway,
+			Services: services,
+			Payload:  "Terjadi kesalahan pada database",
+		}
+	}
+
+	if jumlah_dalam_transaksi != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusBadGateway,
+			Services: services,
+			Payload: response_barang_service.ResponseHapusBarang{
+				Message: fmt.Sprintf("Masih Ada Sejumlah: %v Barang Dalam Transaksi", jumlah_dalam_transaksi),
+			},
 		}
 	}
 
@@ -347,7 +355,25 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 		}
 	}
 
-	go func(data PayloadHapusKategori) {
+	for _, kat := range data.KategoriBarang {
+		var barang_dalam_transaksi int64
+		if err_stock := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: kat.ID, Status: "Dipesan"}).Or(models.VarianBarang{Status: "Diproses"}).Count(&barang_dalam_transaksi).Error; err_stock != nil {
+			continue
+		}
+
+		if barang_dalam_transaksi != 0 {
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload: response_barang_service.ResponseHapusKategori{
+					Message: fmt.Sprintf("Tidak Bisa Menghapus Kategori %s, Masih Ada %v Stok Dalam Transaksi", kat.Nama, barang_dalam_transaksi),
+				},
+			}
+		}
+
+	}
+
+	go func() {
 		if err := db.Transaction(func(tx *gorm.DB) error {
 			for i := range data.KategoriBarang {
 				var existingKategori models.KategoriBarang
@@ -365,10 +391,9 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 					}
 				}
 
-				if err := tx.Unscoped().Where(&models.VarianBarang{
-					IdKategori:    existingKategori.ID,
-					IdBarangInduk: data.IdBarangInduk,
-				}).Delete(&models.VarianBarang{}).Error; err != nil {
+				if err := tx.Unscoped().
+					Where("id_kategori = ? AND id_barang_induk = ?", existingKategori.ID, data.IdBarangInduk).
+					Delete(&models.VarianBarang{}).Error; err != nil {
 					log.Printf("[HapusKategoriBarang] Gagal hapus varian untuk kategori ID %d: %v", existingKategori.ID, err)
 					return err
 				}
@@ -383,7 +408,7 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 		}); err != nil {
 			log.Printf("[HapusKategoriBarang] Gagal hapus kategori & varian untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
 		}
-	}(data)
+	}()
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
@@ -469,7 +494,6 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 		}
 	}
 
-	// Cek kategori barang
 	for _, b := range data.Barang {
 		if err := db.
 			Where(&models.KategoriBarang{IdBarangInduk: data.IdBarangInduk, ID: b.IdKategoriBarang}).
@@ -537,6 +561,94 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 		Services: services,
 		Payload: response_barang_service.ResponseEditStokBarang{
 			Message: "Proses update stok sedang berjalan",
+		},
+	}
+}
+
+func DownStokBarangInduk(db *gorm.DB, data PayloadDownBarangInduk) *response.ResponseForm {
+	services := "DownStokBarangInduk"
+
+	var count_barang int64
+	if err_db := db.Model(models.BarangInduk{}).Where(models.BarangInduk{ID: data.IdBarangInduk, SellerID: data.IdSeller}).Count(&count_barang).Limit(1).Error; err_db != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_barang_service.ResponseDownBarang{
+				Message: "Gagal Coba Lagi Nanti",
+			},
+		}
+	}
+
+	if count_barang != 1 {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_barang_service.ResponseDownBarang{
+				Message: "Gagal Barang Tidak Ditemukan, Coba Lagi Nanti",
+			},
+		}
+	} else {
+		go func() {
+			if err := db.Transaction(func(tx *gorm.DB) error {
+				if err_updates := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, Status: "Ready"}).Or(models.VarianBarang{Status: "Terjual"}).Update("status", "Down").Error; err_updates != nil {
+					return err_updates
+				}
+				return nil
+			}); err != nil {
+				log.Printf("Gagal Downkan Semua stok Barang")
+			}
+		}()
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_barang_service.ResponseDownBarang{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func DownKategoriBarang(db *gorm.DB, data PayloadDownKategoriBarang) *response.ResponseForm {
+	services := "DownKategoriBarang"
+
+	var count_barang int64
+	if err_db := db.Model(models.BarangInduk{}).Where(models.BarangInduk{ID: data.IdBarangInduk, SellerID: data.IdSeller}).Count(&count_barang).Error; err_db != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_barang_service.ResponseDownKategori{
+				Message: "Gagal, Server Sedang sibuk coba lagi nanti",
+			},
+		}
+	}
+
+	if count_barang != 1 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_barang_service.ResponseDownKategori{
+				Message: "Gagal, Barang Tidak Ditemukan",
+			},
+		}
+	} else {
+		go func() {
+			if err_db := db.Transaction(func(tx *gorm.DB) error {
+				if err_updates := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: data.IdKategoriBarang, Status: "Ready"}).Or(models.VarianBarang{Status: "Terjual"}).Update("status", "Down").Error; err_updates != nil {
+					return err_updates
+				}
+				return nil
+			}); err_db != nil {
+				log.Printf("Gagal Downkan stok kategori")
+			}
+		}()
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_barang_service.ResponseDownKategori{
+			Message: "Berhasil",
 		},
 	}
 }

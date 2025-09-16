@@ -61,3 +61,14 @@ type PayloadEditStokBarang struct {
 	IdSeller      int32               `json:"id_seller_edit_stok"`
 	Barang        []IdKategoriDanStok `json:"stok_barang_edit"`
 }
+
+type PayloadDownBarangInduk struct {
+	IdBarangInduk int32 `json:"id_barang_induk_down"`
+	IdSeller      int32 `json:"id_seller_barang_induk_down"`
+}
+
+type PayloadDownKategoriBarang struct {
+	IdBarangInduk    int32 `json:"id_barang_induk_down"`
+	IdKategoriBarang int64 `json:"id_kategori_barang_down"`
+	IdSeller         int32 `json:"id_seller_barang_induk_down"`
+}

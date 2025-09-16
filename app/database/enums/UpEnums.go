@@ -15,6 +15,7 @@ func UpEnumsEntity(db *gorm.DB) error {
 	enumMap := map[string][]string{
 		"status":              {"Online", "Offline"},
 		"aksi_pengguna":       {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist", "Pencarian"},
+		"aksi_seler":          {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist"},
 		"jenis_seller":        {"Brands", "Distributors", "Personal"},
 		"seller_dedication":   {"Pakaian & Fashion", "Kosmetik & Kecantikan", "Elektronik & Gadget", "Buku & Media", "Makanan & Minuman", "Ibu & Bayi", "Mainan", "Olahraga & Outdoor", "Otomotif & Spaarepart", "Rumah Tangga", "Alat Tulis", "Perhiasan & Aksesoris", "Produk Digital", "Bangunan & Perkakas", "Musik & Instrumen", "Film & Broadcasting", "Semua Barang"},
 		"jenis_layanan_kurir": {"Reguler", "Express", "Ekonomi", "Sameday", "NextDay", "Cargo"},
@@ -50,7 +51,7 @@ func UpBarangEnums(db *gorm.DB) error {
 	}
 
 	enumMap := map[string][]string{
-		"status_varian": {"Ready", "Dipesan", "Diproses", "Terjual"},
+		"status_varian": {"Ready", "Dipesan", "Diproses", "Terjual", "Down"},
 	}
 
 	for enumName, values := range enumMap {

@@ -25,7 +25,6 @@ import (
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/enums"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
-
 )
 
 type Server struct {

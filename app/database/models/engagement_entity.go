@@ -115,6 +115,21 @@ func (AktivitasPengguna) TableName() string {
 	return "aktivitas_pengguna"
 }
 
+type AktivitasSeller struct {
+	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_seller"`
+	IdSeler        int32      `gorm:"column:id_seller;not null" json:"id_seller_aktivitas_seller"`
+	seller         Seller     `gorm:"foreignKey:IdSeller;references:ID"`
+	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_seller"`
+	Aksi           string     `gorm:"column:aksi;type:aksi_seller" json:"aksi_aktivitas_seller"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt      *time.Time `gorm:"index"`
+}
+
+func (AktivitasSeller) TableName() string {
+	return "aktivitas_seller"
+}
+
 type Diskon struct {
 	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_diskon"`
 	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`

@@ -39,3 +39,11 @@ type ResponseEditKategori struct {
 type ResponseEditStokBarang struct {
 	Message string `json:"pesan_edit_stok_barang"`
 }
+
+type ResponseDownBarang struct {
+	Message string `json:"pesan_down_stok_barang"`
+}
+
+type ResponseDownKategori struct {
+	Message string `json:"pesan_down_stok_kategori_barang"`
+}

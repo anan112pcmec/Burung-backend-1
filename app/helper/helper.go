@@ -2,12 +2,36 @@ package helper
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 func DecodeJSONBody(r *http.Request, dst interface{}) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(dst)
+}
+
+// GenerateRandomDigits menghasilkan angka random dengan panjang 3-5 digit
+func GenerateRandomDigits() string {
+	rand.Seed(time.Now().UnixNano())
+
+	length := rand.Intn(3) + 3
+
+	min := intPow(10, length-1)   // contoh: 100 untuk 3 digit
+	max := intPow(10, length) - 1 // contoh: 999 untuk 3 digit
+
+	return strconv.Itoa(rand.Intn(max-min+1) + min)
+}
+
+func intPow(base, exp int) int {
+	result := 1
+	for exp > 0 {
+		result *= base
+		exp--
+	}
+	return result
 }
 
 func ConvertJenisBarang(jenis string) string {
