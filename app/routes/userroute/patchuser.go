@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	pengguna_service "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services"
-	"github.com/redis/go-redis/v9"
+	pengguna_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services"
+	pengguna_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/profiling_services"
 )
 
-func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
+func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_barang *redis.Client, rds_engagement *redis.Client) {
 	var hasil *response.ResponseForm
 	ctx := r.Context()
 
@@ -23,7 +25,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_service.LikesBarang(data, db, rds)
+		hasil = pengguna_service.LikesBarang(data, db, rds_barang)
 	case "/user/komentar-barang/edit":
 		var data pengguna_service.PayloadEditKomentarBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -38,6 +40,27 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *
 			return
 		}
 		hasil = pengguna_service.EditKeranjangBarang(ctx, data, db)
+	case "/user/profiling/personal-update":
+		var data pengguna_profiling_services.PayloadPersonalProfilingPengguna
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_profiling_services.UbahPersonalProfilingPengguna(ctx, data, db)
+	case "/user/credential/update-password":
+		var data pengguna_credential_services.PayloadPreUbahPasswordPengguna
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_credential_services.PreUbahPasswordPengguna(data, db, rds_engagement)
+	case "/user/credential/validate-password-otp":
+		var data pengguna_credential_services.PayloadValidateOTPPasswordPengguna
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaOtp(data, db, rds_engagement)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

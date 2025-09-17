@@ -382,7 +382,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB, redis_barang_cache, SearchEngine)).Methods("GET")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache, redis_engagement_cache)).Methods("POST")
 	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB, redis_barang_cache)).Methods("PATCH")
+	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB, redis_barang_cache, redis_engagement_cache)).Methods("PATCH")
 	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler(server.DB)).Methods("DELETE")
 }
 

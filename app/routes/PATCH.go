@@ -13,13 +13,13 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
 )
 
-func PatchHandler(db *gorm.DB, rds *redis.Client) http.HandlerFunc {
+func PatchHandler(db *gorm.DB, rds_barang *redis.Client, rds_engagement *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PatchHandler dijalankan...")
 
 		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
-			userroute.PatchUserHandler(db, w, r, rds)
+			userroute.PatchUserHandler(db, w, r, rds_barang, rds_engagement)
 			return
 		}
 
