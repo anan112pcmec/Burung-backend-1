@@ -25,7 +25,7 @@ func PatchHandler(db *gorm.DB, rds_barang *redis.Client, rds_engagement *redis.C
 
 		// Jika path diawali "/seller/"
 		if len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/seller/" {
-			seller.PatchSellerHandler(db, w, r)
+			seller.PatchSellerHandler(db, w, r, rds_engagement)
 			return
 		}
 

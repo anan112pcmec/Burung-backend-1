@@ -61,6 +61,20 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaOtp(data, db, rds_engagement)
+	case "/user/credential/validate-password-pin":
+		var data pengguna_credential_services.PayloadValidatePinPasswordPengguna
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaPin(data, db, rds_engagement)
+	case "/user/credential/update-pin":
+		var data pengguna_credential_services.PayloadUpdatePinPengguna
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_credential_services.UpdateSecretPinPengguna(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

@@ -4,15 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
+	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 )
 
-func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
 	var hasil *response.ResponseForm
 
 	ctx := r.Context()
@@ -46,6 +48,20 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_profiling_services.UpdatePersonalSeller(ctx, db, data)
+	case "/seller/credential/update-password":
+		var data seller_credential_services.PayloadPreUbahPasswordSeller
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_credential_services.PreUbahPasswordSeller(data, db, rds_engagement)
+	case "/seller/credential/validate-password-otp":
+		var data seller_credential_services.PayloadValidateUbahPasswordSellerOTP
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_credential_services.ValidateUbahPasswordSeller(data, db, rds_engagement)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

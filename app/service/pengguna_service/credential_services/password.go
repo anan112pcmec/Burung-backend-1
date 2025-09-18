@@ -95,7 +95,7 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 				_ = exp
 				_ = res
 			} else {
-				key := fmt.Sprintf("user_ubah_password_by_pin:%v", user.ID)
+				key := fmt.Sprintf("user_ubah_password_by_pin:%v", data.IDPengguna)
 
 				to := []string{user.Email}
 				subject := "Kode Mengubah Password Burung"
