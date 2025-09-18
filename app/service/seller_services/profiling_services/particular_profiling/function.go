@@ -10,7 +10,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
-
 )
 
 func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *ResponseUbahUsername {
@@ -132,10 +131,6 @@ func UbahEmailSeller(ctx context.Context, id_seller int32, email string, db *gor
 }
 
 func UbahJenisSeller(jenis string, db *gorm.DB) {
-
-}
-
-func UbahNorekSeller(ctx context.Context, norek string, db *gorm.DB) {
 
 }
 

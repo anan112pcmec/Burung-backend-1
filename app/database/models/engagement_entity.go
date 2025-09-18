@@ -163,7 +163,7 @@ func (AlamatPengguna) TableName() string {
 
 type AlamatSeller struct {
 	ID              int64   `gorm:"primaryKey;autoIncrement" json:"id_alamat_seller"`
-	IDSeller        int32   `gorm:"column:id_seller;not null" json:"id_pengguna_alamat_seller"`
+	IDSeller        int32   `gorm:"column:id_seller;not null" json:"id_seller_alamat_seller"`
 	Seller          Seller  `gorm:"foreignKey:IDSeller;references:ID"`
 	PanggilanAlamat string  `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_seller"`
 	NomorTelephone  string  `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_seller"`
