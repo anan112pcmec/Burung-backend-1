@@ -144,3 +144,35 @@ type Diskon struct {
 func (Diskon) TableName() string {
 	return "diskon"
 }
+
+type AlamatPengguna struct {
+	ID              int64    `gorm:"primaryKey;autoIncrement" json:"id_alamat_user"`
+	IDPengguna      int64    `gorm:"column:id_pengguna;not null" json:"id_pengguna_alamat_user"`
+	Pengguna        Pengguna `gorm:"foreignKey:IDPengguna;references:ID"`
+	PanggilanAlamat string   `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_user"`
+	NomorTelephone  string   `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_user"`
+	NamaAlamat      string   `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_user"`
+	Deskripsi       string   `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_user"`
+	Longitude       float64  `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_user"`
+	Latitude        float64  `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_user"`
+}
+
+func (AlamatPengguna) TableName() string {
+	return "alamat_pengguna"
+}
+
+type AlamatSeller struct {
+	ID              int64   `gorm:"primaryKey;autoIncrement" json:"id_alamat_seller"`
+	IDSeller        int32   `gorm:"column:id_seller;not null" json:"id_pengguna_alamat_seller"`
+	Seller          Seller  `gorm:"foreignKey:IDSeller;references:ID"`
+	PanggilanAlamat string  `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_seller"`
+	NomorTelephone  string  `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_seller"`
+	NamaAlamat      string  `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_seller"`
+	Deskripsi       string  `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_seller"`
+	Longitude       float64 `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_seller"`
+	Latitude        float64 `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_seller"`
+}
+
+func (AlamatSeller) TableName() string {
+	return "alamat_seller"
+}

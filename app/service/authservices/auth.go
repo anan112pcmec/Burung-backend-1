@@ -140,17 +140,6 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 		}
 	}()
 
-	jwt_key, err_jwt := jwt_function.GenerateJWT(int64(seller.ID), seller.Email)
-	if err_jwt != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: service,
-			Payload: response_auth.LoginSellerResp{
-				Message: "Gagal Sistem Sedang Sibuk Coba Lagi Nanti",
-			},
-		}
-	}
-
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: service,
@@ -161,7 +150,6 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 				ID:       int64(seller.ID),
 				Nama:     seller.Nama,
 				Username: seller.Username,
-				JWT:      jwt_key,
 			},
 		},
 	}

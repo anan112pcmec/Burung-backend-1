@@ -70,7 +70,6 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		var email string
 
 		if err := db.Model(&models.Seller{}).
-			Select("password_hash").
 			Where(&models.Seller{ID: data.IDSeller, Username: data.Username}).
 			Pluck("email", &email).Error; err != nil {
 			return
