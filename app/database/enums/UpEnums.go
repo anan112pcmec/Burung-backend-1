@@ -20,6 +20,7 @@ func UpEnumsEntity(db *gorm.DB) error {
 		"seller_dedication":   {"Pakaian & Fashion", "Kosmetik & Kecantikan", "Elektronik & Gadget", "Buku & Media", "Makanan & Minuman", "Ibu & Bayi", "Mainan", "Olahraga & Outdoor", "Otomotif & Spaarepart", "Rumah Tangga", "Alat Tulis", "Perhiasan & Aksesoris", "Produk Digital", "Bangunan & Perkakas", "Musik & Instrumen", "Film & Broadcasting", "Semua Barang"},
 		"jenis_layanan_kurir": {"Reguler", "Express", "Ekonomi", "Sameday", "NextDay", "Cargo"},
 		"status_keranjang":    {"Ready", "UnReady"},
+		"nama_bank":           {"BCA", "BRI", "BNI", "MANDIRI", "BTN", "CIMB", "PERMATA"},
 	}
 
 	for enumName, values := range enumMap {

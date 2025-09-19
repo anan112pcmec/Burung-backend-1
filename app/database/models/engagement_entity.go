@@ -176,3 +176,19 @@ type AlamatSeller struct {
 func (AlamatSeller) TableName() string {
 	return "alamat_seller"
 }
+
+type RekeningSeller struct {
+	ID              int64     `gorm:"primaryKey;autoIncrement" json:"id_rekening_seller"`
+	IDSeller        int32     `gorm:"column:id_seller;not null;index" json:"id_seller"`
+	NamaBank        string    `gorm:"column:nama_bank;type:varchar(50);not null" json:"nama_bank_rekening_seller"`
+	NomorRekening   string    `gorm:"column:nomor_rekening;type:varchar(50);not null" json:"nomor_rekening_seller"`
+	PemilikRekening string    `gorm:"column:pemilik_rekening;type:varchar(100);not null" json:"pemilik_rekening_seller"`
+	IsDefault       bool      `gorm:"column:id_default;default:false" json:"is_default_rekening_seller"`
+	Status          string    `gorm:"column:status;type:varchar(20);default:'pending'" json:"status_rekening_seller"`
+	CreatedAt       time.Time `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+}
+
+func (RekeningSeller) TableName() string {
+	return "rekening_seller"
+}

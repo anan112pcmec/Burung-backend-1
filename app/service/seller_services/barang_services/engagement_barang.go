@@ -242,7 +242,6 @@ func EditBarang(db *gorm.DB, data PayloadEditBarang) *response.ResponseForm {
 		}
 	}()
 
-	// User langsung dapat respon tanpa nunggu goroutine selesai
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,

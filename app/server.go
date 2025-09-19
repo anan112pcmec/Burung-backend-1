@@ -354,6 +354,15 @@ func (server *Server) initialize(appconfig Appsetting) {
 		fmt.Println("DB_NAME dari .env:", os.Getenv("DB_NAME"))
 	}
 
+	sqlDB, err := server.DB.DB()
+	if err != nil {
+		panic(err)
+	}
+
+	sqlDB.SetMaxOpenConns(98)           // Maks 50 koneksi aktif
+	sqlDB.SetMaxIdleConns(50)           // Maks 25 koneksi idle standby
+	sqlDB.SetConnMaxLifetime(time.Hour) // Koneksi dibuang kalau lebih dari 1 jam
+
 	var currentDB string
 	server.DB.Raw("SELECT current_database();").Scan(&currentDB)
 	fmt.Println("Database yang sedang digunakan:", currentDB)

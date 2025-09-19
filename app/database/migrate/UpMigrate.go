@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-
 )
 
 func UpEntity(db *gorm.DB) {
@@ -127,9 +126,8 @@ func UpTransaksi(db *gorm.DB) {
 
 func UpEngagementEntity(db *gorm.DB) {
 	var wg sync.WaitGroup
-	errCh := make(chan error, 9)
+	errCh := make(chan error, 10)
 
-	// daftar semua model
 	modelsToMigrate := []interface{}{
 		&models.Komentar{},
 		&models.Keranjang{},
@@ -140,6 +138,7 @@ func UpEngagementEntity(db *gorm.DB) {
 		&models.Diskon{},
 		&models.AlamatPengguna{},
 		&models.AlamatSeller{},
+		&models.RekeningSeller{},
 	}
 
 	wg.Add(len(modelsToMigrate))
@@ -147,13 +146,11 @@ func UpEngagementEntity(db *gorm.DB) {
 	for _, m := range modelsToMigrate {
 		go func(model interface{}) {
 			defer wg.Done()
-			// cek apakah table sudah ada
 			if db.Migrator().HasTable(model) {
 				log.Printf("Table %T sudah ada, skipping migration ⚠️", model)
 				return
 			}
 
-			// migrate kalau belum ada
 			if err := db.AutoMigrate(model); err != nil {
 				errCh <- err
 				return

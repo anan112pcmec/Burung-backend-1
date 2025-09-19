@@ -10,7 +10,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
-
+	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
 )
 
 func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -38,6 +38,14 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_alamat_services.MasukanAlamatSeller(data, db)
+	case "/seller/credential/tambah-rekening":
+		var data seller_credential_services.PayloadTambahkanNorekSeller
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_credential_services.TambahRekeningSeller(data, db)
+
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
