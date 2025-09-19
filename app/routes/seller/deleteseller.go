@@ -41,6 +41,7 @@ func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 		}
 		hasil = seller_credential_services.HapusRekeningSeller(data, db)
+
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
