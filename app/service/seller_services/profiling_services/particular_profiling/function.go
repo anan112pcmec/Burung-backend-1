@@ -134,22 +134,60 @@ func UbahJenisSeller(jenis string, db *gorm.DB) {
 
 }
 
-func UbahSellerDedicationSeller(seller_dedication string, db *gorm.DB) {
+func UbahSellerDedicationSeller(id_seller int32, seller_dedication string, db *gorm.DB) {
 
 }
 
-func UbahJamOperasionalSeller(jam_operasional string, db *gorm.DB) {
+func UbahJamOperasionalSeller(id_seller int32, username string, jam_operasional string, db *gorm.DB) *ResponseUbahJamOperasional {
+	if id_seller == 0 && username == "" {
+		return &ResponseUbahJamOperasional{
+			Message: "Gagal Id seller tidak Valid",
+		}
+	}
 
+	if err_ubah := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller, Username: username}).Update("jam_operasional", jam_operasional).Error; err_ubah != nil {
+		return &ResponseUbahJamOperasional{
+			Message: "Gagal Server Sedang sibuk, Coba Lagi lain waktu",
+		}
+	}
+
+	return &ResponseUbahJamOperasional{
+		Message: "Berhasil",
+	}
 }
 
-func UbahPunchlineSeller(punchline string, db *gorm.DB) {
+func UbahPunchlineSeller(id_seller int32, username string, punchline string, db *gorm.DB) *ResponseUbahPunchline {
+	if id_seller == 0 && username == "" {
+		return &ResponseUbahPunchline{
+			Message: "Gagal, Seller Tidak Valid",
+		}
+	}
 
+	if err_ubah := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller, Username: username}).Update("punchline", punchline).Error; err_ubah != nil {
+		return &ResponseUbahPunchline{
+			Message: "Gagal Mungkin Server Sedang sibuk",
+		}
+	}
+
+	return &ResponseUbahPunchline{
+		Message: "Berhasil",
+	}
 }
 
-func UbahPasswordSeller(ctx context.Context, password string, db *gorm.DB) {
+func UbahDeskripsiSeller(id_seller int32, username string, deskripsi string, db *gorm.DB) *ResponseUbahDeskripsi {
+	if id_seller == 0 && username == "" {
+		return &ResponseUbahDeskripsi{
+			Message: "Gagal, Seller kredensial tidak valid",
+		}
+	}
 
-}
+	if err_ubah := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller, Username: username}).Update("deskripsi", deskripsi).Error; err_ubah != nil {
+		return &ResponseUbahDeskripsi{
+			Message: "Gagal Server Sedang Sibuk, Coba Lagi Lain Waktu",
+		}
+	}
 
-func UbahDeskripsiSeller(deskripsi string, db *gorm.DB) {
-
+	return &ResponseUbahDeskripsi{
+		Message: "Berhasil",
+	}
 }

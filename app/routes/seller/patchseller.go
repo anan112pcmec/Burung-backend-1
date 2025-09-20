@@ -48,6 +48,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_profiling_services.UpdatePersonalSeller(ctx, db, data)
+	case "/seller/profiling/info-general-update":
+		var data seller_profiling_services.PayloadUpdateInfoGeneralSeller
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_profiling_services.UpdateInfoGeneralPublic(db, data)
 	case "/seller/credential/update-password":
 		var data seller_credential_services.PayloadPreUbahPasswordSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

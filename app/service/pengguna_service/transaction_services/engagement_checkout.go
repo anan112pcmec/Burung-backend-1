@@ -5,22 +5,11 @@ import (
 	"net/http"
 
 	"gorm.io/gorm"
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
+)
 
 func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
@@ -63,9 +52,11 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			}
 
 			resp := response_transaction_pengguna.CheckoutData{
-				NamaBarang:   barang.NamaBarang,
-				NamaKategori: kategori.Nama,
-				Dipesan:      int32(keranjang.Count),
+				IdBarangInduk:    keranjang.IdBarangInduk,
+				IdKategoriBarang: keranjang.IdKategori,
+				NamaBarang:       barang.NamaBarang,
+				NamaKategori:     kategori.Nama,
+				Dipesan:          int32(keranjang.Count),
 			}
 
 			if jumlahStok >= int64(keranjang.Count) {

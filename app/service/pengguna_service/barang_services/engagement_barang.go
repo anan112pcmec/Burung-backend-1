@@ -20,9 +20,7 @@ func ViewBarang(data PayloadWatchBarang, rds *redis.Client, db *gorm.DB) {
 	ctx := context.Background()
 	key := fmt.Sprintf("barang:%d", data.ID)
 
-	// coba increment di Redis
 	if err := rds.HIncrBy(ctx, key, fieldBarangViewed, 1).Err(); err != nil {
-		// kalau Redis error, fallback ke DB
 		go func() {
 			_ = db.Model(&models.BarangInduk{}).
 				Where("id = ?", data.ID).

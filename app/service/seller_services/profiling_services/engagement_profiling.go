@@ -53,3 +53,39 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 		},
 	}
 }
+
+func UpdateInfoGeneralPublic(db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *response.ResponseForm {
+	services := "UpdatePersonalSeller"
+	var hasil_update_punchline seller_particular_profiling.ResponseUbahPunchline
+	var hasil_update_deskripsi seller_particular_profiling.ResponseUbahDeskripsi
+	var hasil_update_jam_operasional seller_particular_profiling.ResponseUbahJamOperasional
+
+	if data.ID_Seller == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+		}
+	}
+
+	if data.Deskripsi != "" {
+		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(data.ID_Seller, data.Username, data.Deskripsi, db)
+	}
+
+	if data.Punchline != "" {
+		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(data.ID_Seller, data.Username, data.Punchline, db)
+	}
+
+	if data.JamOperasional != "" {
+		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(data.ID_Seller, data.Username, data.JamOperasional, db)
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: seller_response_profiling.ResponseUpdateInfoGeneralSeller{
+			UpdatePunchline:      hasil_update_punchline,
+			UpdateDeskripsi:      hasil_update_deskripsi,
+			UpdateJamOperasional: hasil_update_jam_operasional,
+		},
+	}
+}
