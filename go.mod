@@ -28,6 +28,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/meilisearch/meilisearch-go v0.33.3 // indirect
+	github.com/midtrans/midtrans-go v1.3.8 // indirect
 	github.com/oapi-codegen/runtime v1.1.1 // indirect
 	github.com/redis/go-redis v6.15.9+incompatible // indirect
 	github.com/redis/go-redis/v9 v9.13.0 // indirect

@@ -1,13 +1,23 @@
 package helper
 
 import (
+	crand "crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
+	mrand "math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/midtrans/midtrans-go"
+	"gorm.io/gorm"
+
+	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
 func DecodeJSONBody(r *http.Request, dst interface{}) error {
@@ -105,4 +115,82 @@ func ConvertJenisBarangReverse(jenis string) string {
 	}
 	// fallback kalau tidak ada mapping
 	return jenis
+}
+
+func randomString(length int, charset string) string {
+	if length <= 0 || len(charset) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.Grow(length)
+
+	lenCharset := len(charset)
+	maxAcceptable := 255 - (255 % lenCharset)
+
+	i := 0
+	for i < length {
+		var b [1]byte
+		if _, err := crand.Read(b[:]); err != nil {
+			// fallback: gunakan math/rand jika crypto/rand error
+			r := mrand.New(mrand.NewSource(time.Now().UnixNano()))
+			for ; i < length; i++ {
+				sb.WriteByte(charset[r.Intn(lenCharset)])
+			}
+			return sb.String()
+		}
+
+		if int(b[0]) >= maxAcceptable {
+			// buang hasil supaya tidak bias
+			continue
+		}
+
+		idx := int(b[0]) % lenCharset
+		sb.WriteByte(charset[idx])
+		i++
+	}
+
+	return sb.String()
+}
+
+func GenerateAutoPaymentId(db *gorm.DB) (string, error) {
+	letters := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	numbers := "0123456789"
+	alphanum := letters + numbers
+
+	part1 := randomString(4, letters)  // 4 huruf
+	part2 := randomString(5, numbers)  // 5 angka
+	part3 := randomString(6, alphanum) // 6 huruf/angka
+
+	final := part1 + "-" + part2 + "-" + part3
+
+	var ada int64 = 0
+	err_kode := db.Model(models.Transaksi{}).Where(models.Transaksi{KodeTransaksi: final}).Count(&ada).Limit(2).Error
+	if err_kode != nil {
+		return final, err_kode
+	}
+
+	if ada != 0 {
+		return "", err_kode
+	}
+
+	return final, nil
+}
+
+func GenerateItemDetail(data response_transaction_pengguna.ResponseDataCheckout) []midtrans.ItemDetails {
+	var hasil []midtrans.ItemDetails
+	for _, Item := range data.DataResponse {
+		itemDetail := midtrans.ItemDetails{
+			ID:           fmt.Sprintf("%s--%s", Item.IdBarangInduk, Item.IdKategoriBarang),
+			Price:        int64(Item.HargaKategori),
+			Qty:          Item.Dipesan,
+			Name:         fmt.Sprintf("%s - %s", Item.NamaBarang, Item.NamaKategori),
+			MerchantName: Item.NamaSeller,
+			Category:     Item.JenisBarang,
+		}
+
+		hasil = append(hasil, itemDetail)
+	}
+
+	return hasil
 }

@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/midtrans/midtrans-go"
+	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// CHECKOUT
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
@@ -38,22 +45,30 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			}
 
 			var barang models.BarangInduk
-			if err := tx.Select("nama_barang").
+			if err := tx.Select("nama_barang", "id_seller", "jenis_barang").
 				Where("id = ?", keranjang.IdBarangInduk).
 				First(&barang).Error; err != nil {
 				return err
 			}
 
 			var kategori models.KategoriBarang
-			if err := tx.Select("nama").
+			if err := tx.Select("nama", "harga").
 				Where("id = ?", keranjang.IdKategori).
 				First(&kategori).Error; err != nil {
 				return err
 			}
 
+			var nama_seller string
+			if err_nama_seller := tx.Model(models.Seller{}).Select("nama").Where(models.Seller{ID: barang.SellerID}).First(&nama_seller).Error; err_nama_seller != nil {
+				return err_nama_seller
+			}
+
 			resp := response_transaction_pengguna.CheckoutData{
+				NamaSeller:       nama_seller,
+				JenisBarang:      barang.JenisBarang,
 				IdBarangInduk:    keranjang.IdBarangInduk,
 				IdKategoriBarang: keranjang.IdKategori,
+				HargaKategori:    kategori.Harga,
 				NamaBarang:       barang.NamaBarang,
 				NamaKategori:     kategori.Nama,
 				Dipesan:          int32(keranjang.Count),
@@ -192,4 +207,108 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 			DataResponse: responseData,
 		},
 	}
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// TRANSAKSI
+// ////////////////////////////////////////////////////////////////////////////////////
+
+func ValidateTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB) (*response.ResponseForm, *snap.Request) {
+	services := "ValidateTransaksi"
+	if user.ID == 0 && user.Username == "" {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}, nil
+	}
+
+	var valid int64 = 0
+	if checkuser := db.Model(models.Pengguna{}).Where(models.Pengguna{ID: user.ID, Username: user.Username, Email: user.Email}).Count(&valid).Limit(1).Error; checkuser != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+		}, nil
+	}
+
+	if valid == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}, nil
+	}
+
+	if alamat.NamaAlamat == "" && alamat.PanggilanAlamat == "" && alamat.NomorTelephone == "" {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}, nil
+	}
+
+	var PaymentCode string
+	var err_payment error
+
+	maxRetry := 10
+	for i := 0; i < maxRetry; i++ {
+		PaymentCode, err_payment = helper.GenerateAutoPaymentId(db)
+		if err_payment == nil {
+			break
+		}
+	}
+
+	if err_payment != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+		}, nil
+	}
+
+	var TotalHarga int64 = 0
+
+	for _, barang := range data.DataResponse {
+		if barang.Dipesan != 0 && barang.HargaKategori != 0 {
+			TotalHarga += int64(barang.Dipesan) * int64(barang.HargaKategori)
+		} else {
+			continue
+		}
+	}
+
+	if TotalHarga == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusBadRequest,
+			Services: services,
+		}, nil
+	}
+
+	AlamatPengguna := midtrans.CustomerAddress{
+		Address:     alamat.NamaAlamat,
+		City:        alamat.Kota,
+		Postcode:    alamat.KodePos,
+		CountryCode: alamat.KodeNegara,
+	}
+
+	items := helper.GenerateItemDetail(data)
+
+	SnapReqeust := &snap.Request{
+		TransactionDetails: midtrans.TransactionDetails{
+			OrderID:  PaymentCode,
+			GrossAmt: TotalHarga,
+		},
+		CreditCard: &snap.CreditCardDetails{
+			Secure: true,
+		},
+		CustomerDetail: &midtrans.CustomerDetails{
+			FName:    "Username : " + user.Username,
+			LName:    "Nama : " + user.Nama,
+			Email:    "Email : " + user.Email,
+			Phone:    "NoTelp : " + alamat.NomorTelephone,
+			BillAddr: &AlamatPengguna,
+			ShipAddr: &AlamatPengguna,
+		},
+		Items: &items,
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+	}, SnapReqeust
 }
