@@ -299,8 +299,8 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 		CustomerDetail: &midtrans.CustomerDetails{
 			FName:    "Username : " + user.Username,
 			LName:    "Nama : " + user.Nama,
-			Email:    "Email : " + user.Email,
-			Phone:    "NoTelp : " + alamat.NomorTelephone,
+			Email:    user.Email,
+			Phone:    alamat.NomorTelephone,
 			BillAddr: &AlamatPengguna,
 			ShipAddr: &AlamatPengguna,
 		},
@@ -317,7 +317,7 @@ func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.Respons
 	services := "ProsesTransaksiDenganSDK"
 
 	var s snap.Client
-	s.New("YOUR_SERVER_KEY", midtrans.Sandbox)
+	s.New("Mid-server-7wpABbBW_WURdLxcxc5bX5eb", midtrans.Sandbox)
 
 	snapResp, err := s.CreateTransaction(snapReq)
 	if err != nil {

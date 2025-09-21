@@ -47,12 +47,18 @@ type RedisConfig struct {
 // enableCORS sama seperti sebelumnya
 func enableCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", Getenvi("ACCESS_CTRL", "Unauthorized"))
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		// 🚀 Hardcode langsung ke frontend lo
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight request
 		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
 			return
 		}
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -301,6 +307,10 @@ func (server *Server) initialize(appconfig Appsetting) {
 
 	server.Router = mux.NewRouter()
 
+	server.Router.Use(enableCORS) // 🚀 ini bikin semua route auto kena CORS
+	// server.Router.Use(rateLimitMiddleware)        // kalau mau aktifin rate limiter
+	// server.Router.Use(blockBadRequestsMiddleware) // kalau mau blok request jahat
+
 	var dbConfig = Dataconfig{
 		dbHost: Getenvi("DBHOST", "localhost"),
 		dbUser: Getenvi("DBUSER", "postgres"),
@@ -382,11 +392,30 @@ func (server *Server) initialize(appconfig Appsetting) {
 	migrate.UpTransaksi(server.DB)
 	migrate.UpEngagementEntity(server.DB)
 
-	server.Router.PathPrefix("/").HandlerFunc(routes.GetHandler(server.DB, redis_barang_cache, SearchEngine)).Methods("GET")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PostHandler(server.DB, redis_entity_cache, redis_engagement_cache)).Methods("POST")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PutHandler(server.DB)).Methods("PUT")
-	server.Router.PathPrefix("/").HandlerFunc(routes.PatchHandler(server.DB, redis_barang_cache, redis_engagement_cache)).Methods("PATCH")
-	server.Router.PathPrefix("/").HandlerFunc(routes.DeleteHandler(server.DB)).Methods("DELETE")
+	server.Router.Methods(http.MethodOptions).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
+		routes.GetHandler(server.DB, redis_barang_cache, SearchEngine),
+	)).Methods("GET")
+
+	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
+		routes.PostHandler(server.DB, redis_entity_cache, redis_engagement_cache),
+	)).Methods("POST")
+
+	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
+		routes.PutHandler(server.DB),
+	)).Methods("PUT")
+
+	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
+		routes.PatchHandler(server.DB, redis_barang_cache, redis_engagement_cache),
+	)).Methods("PATCH")
+
+	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
+		routes.DeleteHandler(server.DB),
+	)).Methods("DELETE")
+
 }
 
 func (server *Server) Run(alamat string) {

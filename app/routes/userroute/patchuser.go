@@ -86,7 +86,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
-			Services: "Seller Services",
+			Services: "User Services",
 			Payload:  "Gagal Coba Lagi Nanti",
 		}
 	}
