@@ -213,7 +213,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 // TRANSAKSI
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func ValidateTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB) (*response.ResponseForm, *snap.Request) {
+func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB) (*response.ResponseForm, *snap.Request) {
 	services := "ValidateTransaksi"
 	if user.ID == 0 && user.Username == "" {
 		return &response.ResponseForm{
@@ -311,4 +311,24 @@ func ValidateTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data 
 		Status:   http.StatusOK,
 		Services: services,
 	}, SnapReqeust
+}
+
+func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.ResponseForm) {
+	services := "ProsesTransaksiDenganSDK"
+
+	var s snap.Client
+	s.New("YOUR_SERVER_KEY", midtrans.Sandbox)
+
+	snapResp, err := s.CreateTransaction(snapReq)
+	if err != nil {
+		return nil, &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+		}
+	}
+
+	return snapResp, &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+	}
 }
