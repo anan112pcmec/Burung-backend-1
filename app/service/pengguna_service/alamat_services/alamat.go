@@ -48,6 +48,9 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 			NamaAlamat:      data.DataAlamat.NamaAlamat,
 			Deskripsi:       data.DataAlamat.Deskripsi,
 			NomorTelephone:  data.DataAlamat.NomorTelephone,
+			Kota:            data.DataAlamat.Kota,
+			KodePos:         data.DataAlamat.KodePos,
+			KodeNegara:      data.DataAlamat.KodeNegara,
 			Longitude:       data.DataAlamat.Longitude,
 			Latitude:        data.DataAlamat.Latitude,
 		}).Error; err != nil {

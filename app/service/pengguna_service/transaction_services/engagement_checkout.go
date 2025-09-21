@@ -332,3 +332,43 @@ func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.Respons
 		Services: services,
 	}
 }
+
+func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.ResponseForm {
+	services := "SnapTransaksiUser"
+
+	if data.UserInformation.ID == 0 && data.UserInformation.Username == "" && data.UserInformation.Nama == "" && data.UserInformation.Email == "" {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	}
+
+	if data.AlamatInformation.NamaAlamat == "" && data.AlamatInformation.KodeNegara == "" && data.AlamatInformation.IDPengguna != data.AlamatInformation.ID && data.AlamatInformation.NomorTelephone == "" {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	}
+
+	SnapErr, SnapReq := FormattingTransaksi(data.UserInformation, data.AlamatInformation, data.DataCheckout, db)
+	if SnapErr.Status != http.StatusOK {
+		return &response.ResponseForm{
+			Status:   SnapErr.Status,
+			Services: services,
+		}
+	}
+
+	SnapResponse, SnapResponseErr := ValidateTransaksi(SnapReq)
+	if SnapResponseErr.Status != http.StatusOK {
+		return &response.ResponseForm{
+			Status:   SnapErr.Status,
+			Services: services,
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   SnapErr.Status,
+		Services: services,
+		Payload:  SnapResponse,
+	}
+}
