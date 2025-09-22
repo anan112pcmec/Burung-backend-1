@@ -7,6 +7,8 @@ import "github.com/midtrans/midtrans-go/snap"
 // ////////////////////////////////////////////////////////////////////////////////////
 
 type CheckoutData struct {
+	IDUser           int64  `json:"id_user_barang_keranjang"`
+	IDSeller         int32  `json:"id_seller_barang_keranjang"`
 	NamaSeller       string `json:"nama_seller_barang_keranjang"`
 	JenisBarang      string `json:"jenis_barang_keranjang"`
 	IdBarangInduk    int32  `json:"id_barang_induk_keranjang"`
@@ -31,4 +33,17 @@ type ResponseDataCheckout struct {
 type ResponseDataValidateTransaksi struct {
 	Message             string       `json:"pesan_validate_transaksi"`
 	DataReqeustMidtrans snap.Request `json:"data_request_midtrans_validate_transaksi"`
+}
+
+type SnapTransaksi struct {
+	SnapTransaksi string         `json:"snap_response_token"`
+	DataCheckout  []CheckoutData `json:"checkout_data_hold"`
+}
+
+type ResponseBatalTransaksi struct {
+	Message string `json:"pesan_batal_transaksi"`
+}
+
+type ResponseLockTransaksi struct {
+	Message string `json:"pesan_lock_transaksi"`
 }

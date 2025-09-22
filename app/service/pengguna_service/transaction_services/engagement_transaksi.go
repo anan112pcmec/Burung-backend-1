@@ -64,6 +64,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			}
 
 			resp := response_transaction_pengguna.CheckoutData{
+				IDUser:           data.IDPengguna,
 				NamaSeller:       nama_seller,
 				JenisBarang:      barang.JenisBarang,
 				IdBarangInduk:    keranjang.IdBarangInduk,
@@ -98,7 +99,12 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
-					Update("status", "Dipesan").Error; err != nil {
+					Updates(map[string]interface{}{
+						"status":        "Dipesan",
+						"hold_by":       data.IDPengguna, // misalnya ambil dari data user
+						"holder_entity": "Pengguna",      // atau dari variabel
+					}).Error; err != nil {
+
 					resp.Message = "Coba Lagi Nanti"
 					resp.Status = false
 					responseData = append(responseData, resp)
@@ -157,7 +163,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 			var varianIDs []int64
 
 			if err := tx.Model(&models.VarianBarang{}).
-				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: "Dipesan"}).
+				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: "Dipesan", HoldBy: keranjang.IDUser}).
 				Limit(int(keranjang.Dipesan)).
 				Pluck("id", &varianIDs).Error; err != nil {
 				resp.Message = "Gagal Membatalkan, Coba Lagi Nanti"
@@ -170,7 +176,11 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 			if len(varianIDs) > 0 {
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
-					Update("status", "Ready").Error; err != nil {
+					Updates(map[string]interface{}{
+						"status":        "Ready",
+						"hold_by":       0,  // misalnya ambil dari data user
+						"holder_entity": "", // atau dari variabel
+					}).Error; err != nil {
 					resp.Message = "Gagal Membatalkan, Coba Lagi Nanti"
 					resp.Status = false
 					responseData = append(responseData, resp)
@@ -305,6 +315,12 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 			ShipAddr: &AlamatPengguna,
 		},
 		Items: &items,
+		EnabledPayments: []snap.SnapPaymentType{
+			snap.PaymentTypeBCAVA, // ✅ enum bawaan dari midtrans-go
+			snap.PaymentTypeBNIVA,
+			snap.PaymentTypeBRIVA,
+			snap.PaymentTypePermataVA,
+		},
 	}
 
 	return &response.ResponseForm{
@@ -369,6 +385,103 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 	return &response.ResponseForm{
 		Status:   SnapErr.Status,
 		Services: services,
-		Payload:  SnapResponse,
+		Payload: response_transaction_pengguna.SnapTransaksi{
+			SnapTransaksi: SnapResponse.Token,
+			DataCheckout:  data.DataCheckout.DataResponse,
+		},
+	}
+}
+
+func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
+	services := "BatalTransaksi"
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		for _, keranjang := range data.DataCheckout {
+
+			var varianIDs []int64
+
+			if err := tx.Model(&models.VarianBarang{}).
+				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: "Dipesan", HoldBy: keranjang.IDUser}).
+				Limit(int(keranjang.Dipesan)).
+				Pluck("id", &varianIDs).Error; err != nil {
+				return err
+			}
+
+			// Kalau ada ID, update balik jadi Ready
+			if len(varianIDs) > 0 {
+				if err := tx.Model(&models.VarianBarang{}).
+					Where("id IN ?", varianIDs).
+					Updates(map[string]interface{}{
+						"status":        "Ready",
+						"hold_by":       0,
+						"holder_entity": "",
+					}).Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponseBatalTransaksi{
+				Message: "Gagal, Server Sedang Sibuk Coba Lagi Nanti",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponseBatalTransaksi{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func LockTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
+	services := "LockTransaksi"
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		for _, items := range data.DataCheckout {
+			var varianIDs []int64
+
+			if err := tx.Model(&models.VarianBarang{}).
+				Where(models.VarianBarang{IdBarangInduk: items.IdBarangInduk, IdKategori: items.IdKategoriBarang, Status: "Dipesan", HoldBy: items.IDUser}).
+				Limit(int(items.Dipesan)).
+				Pluck("id", &varianIDs).Error; err != nil {
+				return err
+			}
+
+			if len(varianIDs) > 0 {
+				if err := tx.Model(&models.VarianBarang{}).
+					Where("id IN ?", varianIDs).
+					Update("status", "Diproses").Error; err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponseLockTransaksi{
+				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponseLockTransaksi{
+			Message: "Berhasil",
+		},
 	}
 }

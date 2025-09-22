@@ -13,6 +13,7 @@ import (
 	pengguna_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services"
 	pengguna_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/profiling_services"
 	pengguna_transaction_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
 func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_barang *redis.Client, rds_engagement *redis.Client) {
@@ -76,13 +77,21 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_credential_services.UpdateSecretPinPengguna(data, db)
-	case "/user/transaction/payment-gateaway-snap":
+	case "/user/transaksi/payment-gateaway-snap":
 		var data pengguna_transaction_services.PayloadSnapTransaksiRequest
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_transaction_services.SnapTransaksi(data, db)
+	case "/user/transaksi/payment-gateawat-snap-berhasil":
+		var data response_transaction_pengguna.SnapTransaksi
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		hasil = pengguna_transaction_services.LockTransaksi(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

@@ -47,6 +47,13 @@ func DeleteUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = pengguna_transaction_services.BatalCheckoutUser(data, db)
+	case "/user/transaksi/payment-gateaway-snap-gagal":
+		var data response_transaction_pengguna.SnapTransaksi
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_transaction_services.BatalTransaksi(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
