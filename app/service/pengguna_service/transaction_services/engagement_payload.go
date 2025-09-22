@@ -4,6 +4,7 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/payment/payment_response_models"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
@@ -22,4 +23,9 @@ type PayloadSnapTransaksiRequest struct {
 type PayloadReactionTransaksiSnap struct {
 	response_transaction_pengguna.SnapTransaksi
 	snap.Response
+}
+
+type PayloadLockTransaksi struct {
+	DataHold      response_transaction_pengguna.ResponseDataCheckout `json:"checkout_data_hold"`
+	PaymentResult payment_response_models.BcaVirtualAccountResponse  `json:"payment_result"`
 }

@@ -28,6 +28,24 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 		}
 	}
 
+	// Validasi semua seller sama
+	var firstSellerID int64 = 0
+	for i, keranjang := range data.DataCheckout {
+		if i == 0 {
+			firstSellerID = int64(keranjang.IdSeller)
+		} else {
+			if keranjang.IdSeller != int32(firstSellerID) {
+				return &response.ResponseForm{
+					Status:   http.StatusBadRequest,
+					Services: services,
+					Payload: response_transaction_pengguna.ResponseDataCheckout{
+						Message: "Gagal, semua barang harus dari seller yang sama",
+					},
+				}
+			}
+		}
+	}
+
 	var responseData []response_transaction_pengguna.CheckoutData
 	var processCheckout []models.Keranjang
 
@@ -59,7 +77,10 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			}
 
 			var nama_seller string
-			if err_nama_seller := tx.Model(models.Seller{}).Select("nama").Where(models.Seller{ID: barang.SellerID}).First(&nama_seller).Error; err_nama_seller != nil {
+			if err_nama_seller := tx.Model(models.Seller{}).
+				Select("nama").
+				Where(models.Seller{ID: barang.SellerID}).
+				First(&nama_seller).Error; err_nama_seller != nil {
 				return err_nama_seller
 			}
 
@@ -81,8 +102,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 					Where("id_barang_induk = ? AND id_kategori = ? AND status = ?", keranjang.IdBarangInduk, keranjang.IdKategori, "Ready").
 					Limit(int(keranjang.Count)).
 					Pluck("id", &varianIDs).Error; err != nil {
-					resp.IdBarangInduk = keranjang.IdBarangInduk
-					resp.IdKategoriBarang = keranjang.IdKategori
+
 					resp.Message = "Coba Lagi Nanti"
 					resp.Status = false
 					responseData = append(responseData, resp)
@@ -101,8 +121,8 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 					Where("id IN ?", varianIDs).
 					Updates(map[string]interface{}{
 						"status":        "Dipesan",
-						"hold_by":       data.IDPengguna, // misalnya ambil dari data user
-						"holder_entity": "Pengguna",      // atau dari variabel
+						"hold_by":       data.IDPengguna,
+						"holder_entity": "Pengguna",
 					}).Error; err != nil {
 
 					resp.Message = "Coba Lagi Nanti"
@@ -386,8 +406,12 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 		Status:   SnapErr.Status,
 		Services: services,
 		Payload: response_transaction_pengguna.SnapTransaksi{
-			SnapTransaksi: SnapResponse.Token,
-			DataCheckout:  data.DataCheckout.DataResponse,
+			SnapTransaksi: &snap.Response{
+				Token:       SnapResponse.Token,
+				RedirectURL: "/",
+				StatusCode:  "Berhasil",
+			},
+			DataCheckout: data.DataCheckout.DataResponse,
 		},
 	}
 }
@@ -442,38 +466,22 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 	}
 }
 
-func LockTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
+func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseForm {
 	services := "LockTransaksi"
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for _, items := range data.DataCheckout {
-			var varianIDs []int64
-
-			if err := tx.Model(&models.VarianBarang{}).
-				Where(models.VarianBarang{IdBarangInduk: items.IdBarangInduk, IdKategori: items.IdKategoriBarang, Status: "Dipesan", HoldBy: items.IDUser}).
-				Limit(int(items.Dipesan)).
-				Pluck("id", &varianIDs).Error; err != nil {
-				return err
-			}
-
-			if len(varianIDs) > 0 {
-				if err := tx.Model(&models.VarianBarang{}).
-					Where("id IN ?", varianIDs).
-					Update("status", "Diproses").Error; err != nil {
-					return err
-				}
+	for _, keranjang := range data.DataHold.DataResponse {
+		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
+			return &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: services,
 			}
 		}
-		return nil
-	})
+	}
 
-	if err != nil {
+	if data.PaymentResult.OrderId == "" {
 		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_transaction_pengguna.ResponseLockTransaksi{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
-			},
 		}
 	}
 

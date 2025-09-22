@@ -36,7 +36,7 @@ type ResponseDataValidateTransaksi struct {
 }
 
 type SnapTransaksi struct {
-	SnapTransaksi string         `json:"snap_response_token"`
+	SnapTransaksi *snap.Response `json:"snap_response_token"`
 	DataCheckout  []CheckoutData `json:"checkout_data_hold"`
 }
 
