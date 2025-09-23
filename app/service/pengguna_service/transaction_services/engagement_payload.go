@@ -26,6 +26,7 @@ type PayloadReactionTransaksiSnap struct {
 }
 
 type PayloadLockTransaksi struct {
-	DataHold      response_transaction_pengguna.ResponseDataCheckout `json:"checkout_data_hold"`
-	PaymentResult payment_response_models.BcaVirtualAccountResponse  `json:"payment_result"`
+	DataHold      []response_transaction_pengguna.CheckoutData      `json:"checkout_data_hold"`
+	PaymentResult payment_response_models.BcaVirtualAccountResponse `json:"payment_result"`
+	IdAlamatUser  int64                                             `json:"alamat_data_hold"`
 }

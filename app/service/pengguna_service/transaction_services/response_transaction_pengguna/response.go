@@ -1,6 +1,11 @@
 package response_transaction_pengguna
 
-import "github.com/midtrans/midtrans-go/snap"
+import (
+	"github.com/midtrans/midtrans-go/snap"
+
+	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+
+)
 
 // ////////////////////////////////////////////////////////////////////////////////////
 // CHECKOUT
@@ -36,8 +41,9 @@ type ResponseDataValidateTransaksi struct {
 }
 
 type SnapTransaksi struct {
-	SnapTransaksi *snap.Response `json:"snap_response_token"`
-	DataCheckout  []CheckoutData `json:"checkout_data_hold"`
+	SnapTransaksi *snap.Response        `json:"snap_response_token"`
+	DataCheckout  []CheckoutData        `json:"checkout_data_hold"`
+	DataAlamat    models.AlamatPengguna `json:"alamat_data_hold"`
 }
 
 type ResponseBatalTransaksi struct {

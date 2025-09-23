@@ -88,14 +88,6 @@ func UpBarang(db *gorm.DB) {
 
 func UpTransaksi(db *gorm.DB) {
 	// Transaksi
-	if db.Migrator().HasTable(&models.Transaksi{}) {
-		log.Println("Table Transaksi sudah ada, skipping migration ⚠️")
-	} else if err := db.AutoMigrate(&models.Transaksi{}); err != nil {
-		log.Fatalf("Gagal Migrasi Table Transaksi: %v", err)
-	} else {
-		log.Println("Berhasil membuat Table Transaksi ✅")
-	}
-
 	// Pembayaran
 	if db.Migrator().HasTable(&models.Pembayaran{}) {
 		log.Println("Table Pembayaran sudah ada, skipping migration ⚠️")
@@ -103,6 +95,14 @@ func UpTransaksi(db *gorm.DB) {
 		log.Fatalf("Gagal Membuat Table Pembayaran: %v", err)
 	} else {
 		log.Println("Berhasil Membuat Table Pembayaran ✅")
+	}
+
+	if db.Migrator().HasTable(&models.Transaksi{}) {
+		log.Println("Table Transaksi sudah ada, skipping migration ⚠️")
+	} else if err := db.AutoMigrate(&models.Transaksi{}); err != nil {
+		log.Fatalf("Gagal Migrasi Table Transaksi: %v", err)
+	} else {
+		log.Println("Berhasil membuat Table Transaksi ✅")
 	}
 
 	// Pengiriman

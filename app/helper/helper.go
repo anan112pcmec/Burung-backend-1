@@ -165,7 +165,7 @@ func GenerateAutoPaymentId(db *gorm.DB) (string, error) {
 	final := part1 + "-" + part2 + "-" + part3
 
 	var ada int64 = 0
-	err_kode := db.Model(models.Transaksi{}).Where(models.Transaksi{KodeTransaksi: final}).Count(&ada).Limit(2).Error
+	err_kode := db.Model(models.Transaksi{}).Where(models.Transaksi{KodeOrder: final}).Count(&ada).Limit(2).Error
 	if err_kode != nil {
 		return final, err_kode
 	}

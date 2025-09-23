@@ -24,3 +24,12 @@ type BcaVirtualAccountResponse struct {
 	BcaVaNumber string `json:"bca_va_number"`
 	VirtualAccountResponse
 }
+
+type BniOrBriVirtualAccountResponse struct {
+	VirtualAccountResponse
+}
+
+type PermataVirtualAccount struct {
+	PermataVaNumber string `json:"permata_va_number"`
+	VirtualAccountResponse
+}

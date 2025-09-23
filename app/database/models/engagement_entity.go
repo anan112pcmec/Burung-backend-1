@@ -150,7 +150,7 @@ func (Diskon) TableName() string {
 type AlamatPengguna struct {
 	ID              int64    `gorm:"primaryKey;autoIncrement" json:"id_alamat_user"`
 	IDPengguna      int64    `gorm:"column:id_pengguna;not null" json:"id_pengguna_alamat_user"`
-	Pengguna        Pengguna `gorm:"foreignKey:IDPengguna;references:ID"`
+	Pengguna        Pengguna `gorm:"foreignKey:IDPengguna;references:ID" json:"-"`
 	PanggilanAlamat string   `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_user"`
 	NomorTelephone  string   `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_user"`
 	NamaAlamat      string   `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_user"`

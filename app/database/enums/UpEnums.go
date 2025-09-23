@@ -84,7 +84,6 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 	}
 
 	enumMap := map[string][]string{
-		"metode_pembayaran": {"Transfer Bank", "Kartu Kredit", "E Wallet", "COD"},
 		"status_transaksi":  {"Dibayar", "Diproses", "Waiting", "Dikirim", "Selesai", "Dibatalkan"},
 		"status_pengiriman": {"Packaging", "Picked Up", "Diperjalanan", "Sampai"},
 	}

@@ -3,20 +3,20 @@ package pengguna_transaction_services
 import (
 	"fmt"
 	"net/http"
+	"strconv"
+// ////////////////////////////////////////////////////////////////////////////////////
+// CHECKOUT
+// ////////////////////////////////////////////////////////////////////////////////////
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
+func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
-)
-
-// ////////////////////////////////////////////////////////////////////////////////////
-// CHECKOUT
-// ////////////////////////////////////////////////////////////////////////////////////
 
 func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
@@ -86,6 +86,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 
 			resp := response_transaction_pengguna.CheckoutData{
 				IDUser:           data.IDPengguna,
+				IDSeller:         keranjang.IdSeller,
 				NamaSeller:       nama_seller,
 				JenisBarang:      barang.JenisBarang,
 				IdBarangInduk:    keranjang.IdBarangInduk,
@@ -412,6 +413,7 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 				StatusCode:  "Berhasil",
 			},
 			DataCheckout: data.DataCheckout.DataResponse,
+			DataAlamat:   data.AlamatInformation,
 		},
 	}
 }
@@ -469,7 +471,7 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseForm {
 	services := "LockTransaksi"
 
-	for _, keranjang := range data.DataHold.DataResponse {
+	for _, keranjang := range data.DataHold {
 		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
 			return &response.ResponseForm{
 				Status:   http.StatusNotFound,
@@ -485,11 +487,102 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 		}
 	}
 
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// gross amount aman
+		grossFloat, err := strconv.ParseFloat(data.PaymentResult.GrossAmount, 64)
+		if err != nil {
+			return fmt.Errorf("invalid gross amount format: %v", err)
+		}
+		Grossamount := int(grossFloat)
+
+		// provider aman
+		provider := ""
+		if len(data.PaymentResult.VaNumbers) > 0 {
+			provider = data.PaymentResult.VaNumbers[0].Bank
+		}
+
+		// insert pembayaran
+		pembayaran := models.Pembayaran{
+			KodeTransaksi:      data.PaymentResult.TransactionId,
+			KodeOrderTransaksi: data.PaymentResult.OrderId,
+			Provider:           provider,
+			Amount:             int32(Grossamount),
+			PaymentType:        data.PaymentResult.PaymentType,
+			PaidAt:             data.PaymentResult.TransactionTime,
+		}
+		if err := tx.Create(&pembayaran).Error; err != nil {
+			return err
+		}
+
+		// loop keranjang
+		for _, keranjang := range data.DataHold {
+			// ambil kembali pembayaran yang baru dibuat
+			var pembayaranObj models.Pembayaran
+			if err := tx.Where(&models.Pembayaran{
+				KodeTransaksi:      data.PaymentResult.TransactionId,
+				KodeOrderTransaksi: data.PaymentResult.OrderId,
+				Provider:           provider,
+				Amount:             int32(Grossamount),
+				PaymentType:        data.PaymentResult.PaymentType,
+				PaidAt:             data.PaymentResult.TransactionTime,
+			}).First(&pembayaranObj).Error; err != nil {
+				return err
+			}
+
+			if pembayaranObj.ID == 0 {
+				return fmt.Errorf("gagal, kredensial pembayaran tidak valid")
+			}
+
+			// buat transaksi
+			transaksi := models.Transaksi{
+				IdPengguna:    keranjang.IDUser,
+				IdSeller:      keranjang.IDSeller,
+				IdBarangInduk: keranjang.IdBarangInduk,
+				IdAlamat:      data.IdAlamatUser,
+				IdPembayaran:  pembayaranObj.ID,
+				KodeOrder:     data.PaymentResult.OrderId,
+				Status:        "Dibayar",
+				Metode:        data.PaymentResult.PaymentType,
+				Kuantitas:     int16(keranjang.Dipesan),
+				Total:         keranjang.HargaKategori * keranjang.Dipesan,
+			}
+
+			if err := tx.Create(&transaksi).Error; err != nil {
+				return err
+			}
+
+			// update varian barang
+			if err := tx.Model(&models.VarianBarang{}).
+				Where(&models.VarianBarang{
+					IdBarangInduk: keranjang.IdBarangInduk,
+					IdKategori:    keranjang.IdKategoriBarang,
+					IdTransaksi:   0,
+					Status:        "Dipesan",
+					HoldBy:        keranjang.IDUser,
+					HolderEntity:  "Pengguna",
+				}).
+				Updates(&models.VarianBarang{
+					Status:      "Diproses",
+					IdTransaksi: transaksi.ID,
+				}).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		// rollback case
+		fmt.Printf("[FATAL] Transaction rollback | Err=%v\n", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponseLockTransaksi{
+				Message: "Gaga",
+			},
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_transaction_pengguna.ResponseLockTransaksi{
-			Message: "Berhasil",
-		},
-	}
-}
+		Payload: response_transaction_pen
