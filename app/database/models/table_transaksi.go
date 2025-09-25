@@ -2,7 +2,6 @@ package models
 
 import (
 	"time"
-
 )
 
 type StatusTransaksi string
@@ -49,7 +48,7 @@ type Transaksi struct {
 	IdPembayaran  int64          `gorm:"column:id_pembayaran;not null" json:"id_pembayaran_transaksi"`
 	IPembayaran   Pembayaran     `gorm:"foreignKey:IdPembayaran;references:ID" json:"-"`
 	KodeOrder     string         `gorm:"column:kode_order;not null" json:"kode_order_transaksi"`
-	KPembayaran   Pembayaran     `gorm:"foreignKey:KodeOrder;references:KodeOrderTransaksi"`
+	KPembayaran   Pembayaran     `gorm:"foreignKey:KodeOrder;references:KodeOrderTransaksi" json:"-"`
 	Status        string         `gorm:"column:status;type:status_transaksi;not null;default:'Dibayar'" json:"status_transaksi"`
 	Metode        string         `gorm:"column:metode;type:varchar(50);not null;" json:"metode_transaksi"`
 	Catatan       string         `gorm:"column:catatan;type:text" json:"catatan_transaksi"`

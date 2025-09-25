@@ -11,6 +11,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
+	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 )
 
@@ -69,6 +70,20 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_credential_services.ValidateUbahPasswordSeller(data, db, rds_engagement)
+	case "/seller/order-processing/approve":
+		var data seller_order_processing_services.PayloadApproveOrder
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_order_processing_services.ApproveOrderBarang(data, db)
+	case "/seller/order-processing/unapprove":
+		var data seller_order_processing_services.PayloadUnApproveOrder
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_order_processing_services.UnApproveOrderBarang(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

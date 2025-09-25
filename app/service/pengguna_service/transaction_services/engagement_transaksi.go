@@ -4,19 +4,21 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-// ////////////////////////////////////////////////////////////////////////////////////
-// CHECKOUT
-// ////////////////////////////////////////////////////////////////////////////////////
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
+
+)
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// CHECKOUT
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
@@ -501,7 +503,6 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 			provider = data.PaymentResult.VaNumbers[0].Bank
 		}
 
-		// insert pembayaran
 		pembayaran := models.Pembayaran{
 			KodeTransaksi:      data.PaymentResult.TransactionId,
 			KodeOrderTransaksi: data.PaymentResult.OrderId,
@@ -514,9 +515,7 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 			return err
 		}
 
-		// loop keranjang
 		for _, keranjang := range data.DataHold {
-			// ambil kembali pembayaran yang baru dibuat
 			var pembayaranObj models.Pembayaran
 			if err := tx.Where(&models.Pembayaran{
 				KodeTransaksi:      data.PaymentResult.TransactionId,
@@ -533,7 +532,6 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 				return fmt.Errorf("gagal, kredensial pembayaran tidak valid")
 			}
 
-			// buat transaksi
 			transaksi := models.Transaksi{
 				IdPengguna:    keranjang.IDUser,
 				IdSeller:      keranjang.IDSeller,
@@ -551,7 +549,6 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 				return err
 			}
 
-			// update varian barang
 			if err := tx.Model(&models.VarianBarang{}).
 				Where(&models.VarianBarang{
 					IdBarangInduk: keranjang.IdBarangInduk,
@@ -571,7 +568,6 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 
 		return nil
 	}); err != nil {
-		// rollback case
 		fmt.Printf("[FATAL] Transaction rollback | Err=%v\n", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -585,4 +581,8 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_transaction_pen
+		Payload: response_transaction_pengguna.ResponseLockTransaksi{
+			Message: "Berhasil",
+		},
+	}
+}

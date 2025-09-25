@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Status string
 
@@ -75,6 +78,19 @@ type Seller struct {
 	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (s *Seller) Validating() error {
+	if s.ID == 0 {
+		return fmt.Errorf("id tidak valid")
+	}
+	if s.Username == "" {
+		return fmt.Errorf("username tidak valid")
+	}
+	if s.Email == "" {
+		return fmt.Errorf("email tidak valid")
+	}
+	return nil
 }
 
 func (Seller) TableName() string {
