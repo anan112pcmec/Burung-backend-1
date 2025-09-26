@@ -13,7 +13,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	jwt_function "github.com/anan112pcmec/Burung-backend-1/app/jwt"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
@@ -204,18 +203,6 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 		}
 	}()
 
-	jwt_key, jwt_err := jwt_function.GenerateJWT(kurir.ID, kurir.Email)
-
-	if jwt_err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: service,
-			Payload: response_auth.LoginSellerResp{
-				Message: "Gagal Sistem Sedang Sibuk Coba Lagi Nanti",
-			},
-		}
-	}
-
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: service,
@@ -225,7 +212,6 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 			LoginResponse: response_auth.LoginResponse{
 				ID:   kurir.ID,
 				Nama: kurir.Nama,
-				JWT:  jwt_key,
 			},
 		},
 	}
@@ -535,7 +521,7 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 	}
 }
 
-func PreKurirRegistration(db *gorm.DB, nama, email, password string, rds *redis.Client) *response.ResponseForm {
+func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, rds *redis.Client) *response.ResponseForm {
 	services := "PreKurirRegistration"
 
 	var kurir models.Kurir
@@ -583,6 +569,7 @@ func PreKurirRegistration(db *gorm.DB, nama, email, password string, rds *redis.
 		fields := map[string]interface{}{
 			"nama":          nama,
 			"email":         email,
+			"username":      username,
 			"password_hash": password,
 		}
 
@@ -656,6 +643,7 @@ func ValidateKurirRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *r
 	seller := models.Kurir{
 		Nama:         userData["nama"],
 		Email:        userData["email"],
+		Username:     userData["username"],
 		PasswordHash: string(hashedPassword),
 	}
 

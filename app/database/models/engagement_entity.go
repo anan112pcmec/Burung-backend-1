@@ -120,7 +120,7 @@ func (AktivitasPengguna) TableName() string {
 type AktivitasSeller struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_seller"`
 	IdSeler        int32      `gorm:"column:id_seller;not null" json:"id_seller_aktivitas_seller"`
-	seller         Seller     `gorm:"foreignKey:IdSeller;references:ID"`
+	Seller         Seller     `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
 	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_seller"`
 	Aksi           string     `gorm:"column:aksi;type:aksi_seller" json:"aksi_aktivitas_seller"`
 	CreatedAt      time.Time  `gorm:"autoCreateTime"`
@@ -196,4 +196,31 @@ type RekeningSeller struct {
 
 func (RekeningSeller) TableName() string {
 	return "rekening_seller"
+}
+
+type BalanceKurirLog struct {
+	ID        int64     `gorm:"primaryKey;autoIncrement" json:"id_balance_kurir"`
+	KurirID   int64     `gorm:"column:kurir_id;not null" json:"kurir_id"`
+	Kurir     Kurir     `gorm:"foreignKey:KurirID;references:ID" json:"-"`
+	Amount    int64     `gorm:"column:amount;type:bigint;default:0" json:"amount_balance_kurir"`
+	Type      string    `gorm:"column:type;type:varchar(10);default:'credit'" json:"type_balance_kurir"`
+	Catatan   string    `gorm:"column:catatan;type:text" json:"catatan_balance_kurir"`
+	CreatedAt time.Time `gorm:"autoCreateTime" json:"dibuat_pada"`
+}
+
+func (BalanceKurirLog) TableName() string {
+	return "balance_kurir_log"
+}
+
+type BatalTransaksi struct {
+	ID             int64     `gorm:"primaryKey;autoIncrement" json:"id_batal_transaksi"`
+	IdTransaksi    int64     `gorm:"column:id_transaksi;not null" json:"id_transaksi_batal_transaksi"`
+	ITransaksi     Transaksi `gorm:"foreignKey:IdTransaksi;references:ID" json:"-"`
+	DibatalkanOleh string    `gorm:"column:dibatalkan_oleh;type:varchar(20);not null" json:"transaksi_dibatalkan_oleh"`
+	Alasan         string    `gorm:"column:alasan;type:text;not null" json:"alasan_batal_transaksi"`
+	CreatedAt      time.Time `gorm:"autoCreateTime" json:"dibuat_pada"`
+}
+
+func (BatalTransaksi) TableName() string {
+	return "batal_transaksi"
 }

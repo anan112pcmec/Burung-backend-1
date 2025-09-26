@@ -1,8 +1,10 @@
 package seller_order_processing_services
 
 import (
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -117,27 +119,47 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 	}
 
 	var unApprovedData []response_order_processing_seller.UnApprovedStatus
+
 	for _, transaksi := range data.DataTransaction {
 		wg.Add(1)
 		go func(transaksi models.Transaksi) {
 			defer wg.Done()
-			var unapprovingstatus response_order_processing_seller.UnApprovedStatus
-			if err_approve := db.Model(models.Transaksi{}).Where(models.Transaksi{
-				IdSeller:      data.Seller.ID,
-				IdPengguna:    transaksi.IdPengguna,
-				IdBarangInduk: transaksi.IdBarangInduk,
-				Status:        "Dibayar",
-				Kuantitas:     transaksi.Kuantitas,
-				KodeOrder:     transaksi.KodeOrder,
-			}).Update("status", "Dibatalkan").Error; err_approve != nil {
-				unapprovingstatus.Status = false
-			} else {
-				unapprovingstatus.Status = true
+			if err := db.Transaction(func(tx *gorm.DB) error {
+				var unapprovingstatus response_order_processing_seller.UnApprovedStatus
+
+				// harus pakai tx, bukan db
+				if errUpdate := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+					IdSeller:      data.Seller.ID,
+					IdPengguna:    transaksi.IdPengguna,
+					IdBarangInduk: transaksi.IdBarangInduk,
+					Status:        "Dibayar",
+					Kuantitas:     transaksi.Kuantitas,
+					KodeOrder:     transaksi.KodeOrder,
+				}).Limit(int(transaksi.Kuantitas)).Update("status", "Dibatalkan").Error; errUpdate != nil {
+					unapprovingstatus.Status = false
+				} else {
+					unapprovingstatus.Status = true
+				}
+
+				unapprovingstatus.DataUnApproved = transaksi
+				mu.Lock()
+				unApprovedData = append(unApprovedData, unapprovingstatus)
+				mu.Unlock()
+
+				// insert log pembatalan
+				if errBatal := tx.Create(&models.BatalTransaksi{
+					IdTransaksi:    transaksi.ID,
+					DibatalkanOleh: "Seller",
+					Alasan:         data.Alasan,
+					CreatedAt:      time.Now(),
+				}).Error; errBatal != nil {
+					return errBatal
+				}
+
+				return nil
+			}); err != nil {
+				fmt.Println("❌ Gagal Membatalkan transaksi:", transaksi.ID, err)
 			}
-			unapprovingstatus.DataUnApproved = transaksi
-			mu.Lock()
-			unApprovedData = append(unApprovedData, unapprovingstatus)
-			mu.Unlock()
 		}(transaksi)
 	}
 
