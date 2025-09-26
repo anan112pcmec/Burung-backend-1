@@ -97,6 +97,26 @@ func UpTransaksi(db *gorm.DB) {
 		log.Println("Berhasil Membuat Table Pembayaran ✅")
 	}
 
+	layanankurir := [2]models.LayananPengirimanKurir{
+		{
+			NamaLayanan:  "motor",
+			HargaLayanan: 7000,
+		},
+		{
+			NamaLayanan:  "cargo",
+			HargaLayanan: 15000,
+		},
+	}
+
+	if db.Migrator().HasTable(&models.LayananPengirimanKurir{}) {
+		log.Println("Table Pembayaran sudah ada, skipping migration ⚠️")
+	} else if err := db.AutoMigrate(&models.LayananPengirimanKurir{}); err != nil {
+		log.Fatalf("Gagal Membuat Table Pembayaran: %v", err)
+	} else {
+		log.Println("Berhasil Membuat Table Pembayaran ✅")
+		_ = db.Create(layanankurir).Error
+	}
+
 	if db.Migrator().HasTable(&models.Transaksi{}) {
 		log.Println("Table Transaksi sudah ada, skipping migration ⚠️")
 	} else if err := db.AutoMigrate(&models.Transaksi{}); err != nil {

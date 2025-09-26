@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+
+	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 )
 
 func UpEnumsEntity(db *gorm.DB) error {
@@ -107,7 +109,14 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		}
 	}
 
-	enumOngkir := []int16{13000, 17000, 10000, 31000, 25000, 7000}
+	enumOngkir := []models.Ongkir{
+		{13000, "fast"},
+		{17000, "express"},
+		{10000, "reguler"},
+		{31000, "sameday"},
+		{25000, "instant"},
+		{7000, "ekonomi"},
+	}
 
 	// Drop table dulu kalau ada
 	dropSQL := `DROP TABLE IF EXISTS ongkir;`
@@ -116,19 +125,16 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		return err
 	}
 
-	// Create table baru
-	createSQL := `CREATE TABLE ongkir (value SMALLINT PRIMARY KEY);`
-	if err := tx.Exec(createSQL).Error; err != nil {
+	// Create table baru lewat migrasi GORM
+	if err := tx.AutoMigrate(&models.Ongkir{}); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	for _, val := range enumOngkir {
-		insertSQL := fmt.Sprintf("INSERT INTO ongkir (value) VALUES (%d);", val)
-		if err := tx.Exec(insertSQL).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
+	// Insert data ongkir sekaligus
+	if err := tx.Create(&enumOngkir).Error; err != nil {
+		tx.Rollback()
+		return err
 	}
 
 	return tx.Commit().Error

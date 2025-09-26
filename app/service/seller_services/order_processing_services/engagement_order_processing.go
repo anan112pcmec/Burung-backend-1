@@ -129,7 +129,7 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 				Status:        "Dibayar",
 				Kuantitas:     transaksi.Kuantitas,
 				KodeOrder:     transaksi.KodeOrder,
-			}).Update("status", "Diproses").Error; err_approve != nil {
+			}).Update("status", "Dibatalkan").Error; err_approve != nil {
 				unapprovingstatus.Status = false
 			} else {
 				unapprovingstatus.Status = true

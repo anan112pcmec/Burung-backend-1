@@ -4,7 +4,6 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -26,9 +25,15 @@ type CheckoutData struct {
 	Message          string `json:"pesan_data_keranjang"`
 }
 
+type LayananPengiriman struct {
+	LayananKurir      string `json:"layanan_kurir_keranjang"`
+	JenisLayananKurir string `json:"jenis_layanan_kurir_keranjang"`
+}
+
 type ResponseDataCheckout struct {
-	Message      string         `json:"pesan_chekout_barang"`
-	DataResponse []CheckoutData `json:"data_response_checkout_barang"`
+	Message           string            `json:"pesan_chekout_barang"`
+	DataResponse      []CheckoutData    `json:"data_response_checkout_barang"`
+	LayananPengiriman LayananPengiriman `json:"data_layanan_pengiriman_barang"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////

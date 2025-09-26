@@ -9,9 +9,11 @@ import (
 )
 
 type PayloadCheckoutBarangCentang struct {
-	IDPengguna   int64              `json:"id_pengguna_checkout_barang"`
-	Username     string             `json:"username_pengguna_checkout_barang"`
-	DataCheckout []models.Keranjang `json:"data_checkout"`
+	IDPengguna        int64              `json:"id_pengguna_checkout_barang"`
+	Username          string             `json:"username_pengguna_checkout_barang"`
+	DataCheckout      []models.Keranjang `json:"data_checkout"`
+	LayananKurir      string             `json:"layanan_kurir_checkout_barang"`
+	JenisLayananKurir string             `json:"jenis_layanan_kurir_checkout_barang"`
 }
 
 type PayloadSnapTransaksiRequest struct {

@@ -13,7 +13,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -164,6 +163,10 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 		Payload: response_transaction_pengguna.ResponseDataCheckout{
 			Message:      "Berhasil",
 			DataResponse: responseData,
+			LayananPengiriman: response_transaction_pengguna.LayananPengiriman{
+				LayananKurir:      data.LayananKurir,
+				JenisLayananKurir: data.JenisLayananKurir,
+			},
 		},
 	}
 }
