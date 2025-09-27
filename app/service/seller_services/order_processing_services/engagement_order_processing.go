@@ -127,7 +127,6 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 			if err := db.Transaction(func(tx *gorm.DB) error {
 				var unapprovingstatus response_order_processing_seller.UnApprovedStatus
 
-				// harus pakai tx, bukan db
 				if errUpdate := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
 					IdSeller:      data.Seller.ID,
 					IdPengguna:    transaksi.IdPengguna,
@@ -146,7 +145,6 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 				unApprovedData = append(unApprovedData, unapprovingstatus)
 				mu.Unlock()
 
-				// insert log pembatalan
 				if errBatal := tx.Create(&models.BatalTransaksi{
 					IdTransaksi:    transaksi.ID,
 					DibatalkanOleh: "Seller",

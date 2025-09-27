@@ -1,11 +1,68 @@
 package kurir_profiling_service
 
-import "gorm.io/gorm"
+import (
+	"net/http"
+	"sync"
 
-func GeneralProfilingKurir(db *gorm.DB) {
+	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/response"
+	particular_profiling_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services/particular_profiling"
+	response_profiling_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services/response_profiling"
+)
+
+func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *response.ResponseForm {
+	var wg sync.WaitGroup
+	services := "GeneralProfilingKurir"
+
+	if data.DataKredensial.IDkurir == 0 && data.DataKredensial.UsernameKurir == "" {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	}
+
+	var hasilresponsenama particular_profiling_kurir.ResponseUbahNama
+	var hasilresponseusername particular_profiling_kurir.ResponseUbahUsername
+	var hasilresponseemail particular_profiling_kurir.ResponseUbahGmail
+
+	if data.Nama != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			hasilresponsenama = particular_profiling_kurir.UbahNama(data.DataKredensial.IDkurir, data.DataKredensial.UsernameKurir, data.Nama, db)
+		}()
+	}
+
+	if data.Username != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			hasilresponseusername = particular_profiling_kurir.UbahUsernameKurir(db, data.DataKredensial.IDkurir, data.Username)
+		}()
+	}
+
+	if data.Email != "" {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			hasilresponseemail = particular_profiling_kurir.UbahEmail(data.DataKredensial.IDkurir, data.Username, data.Email, db)
+		}()
+	}
+
+	wg.Wait()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_profiling_kurir.ResponseProfilingGeneralKurir{
+			UpdateNama:     hasilresponsenama,
+			UpdateUsername: hasilresponseusername,
+			UpdateEmail:    hasilresponseemail,
+		},
+	}
 }
 
-func CoreProfilingKurir(db *gorm.DB) {
+func GeneralProfilingKurir(db *gorm.DB) {
 
 }
