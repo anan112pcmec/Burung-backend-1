@@ -17,13 +17,11 @@ func PatchHandler(db *gorm.DB, rds_barang *redis.Client, rds_engagement *redis.C
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PatchHandler dijalankan...")
 
-		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
 			userroute.PatchUserHandler(db, w, r, rds_barang, rds_engagement)
 			return
 		}
 
-		// Jika path diawali "/seller/"
 		if len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/seller/" {
 			seller.PatchSellerHandler(db, w, r, rds_engagement)
 			return

@@ -46,7 +46,6 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 		}
 	}
 
-	// Transaction mulai dari cek rekening sampai insert
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var id_rekening int64
 		if err_check_rekening := tx.Model(&models.RekeningSeller{}).
@@ -57,11 +56,9 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 				NomorRekening: data.Data.NomorRekening,
 			}).
 			First(&id_rekening).Error; err_check_rekening == nil {
-			// sudah ada rekening
 			return fmt.Errorf("rekening sudah ada")
 		}
 
-		// Insert data rekening baru
 		if err_masukan := tx.Create(&data.Data).Error; err_masukan != nil {
 			return err_masukan
 		}

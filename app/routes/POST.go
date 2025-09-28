@@ -18,20 +18,17 @@ func PostHandler(db *gorm.DB, rds *redis.Client, rds_engagement *redis.Client) h
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PostHandler dijalankan...")
 
-		//registration handler
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/auth/" {
 			fmt.Println("Auth HANDLER JALAN")
 			auth.HandleAuth(db, w, r, rds)
 			return
 		}
 
-		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
 			userroute.PostUserHandler(db, w, r, rds_engagement)
 			return
 		}
 
-		// Jika path diawali "/seller/"
 		if len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/seller/" {
 			seller.PostSellerHandler(db, w, r)
 			return

@@ -224,3 +224,18 @@ type BatalTransaksi struct {
 func (BatalTransaksi) TableName() string {
 	return "batal_transaksi"
 }
+
+type Jenis_Seller struct {
+	ID               int64     `gorm:"primaryKey;autoIncrement" json:"id_jenis_seller"`
+	IdSeller         int32     `gorm:"column:id_seller;not null" json:"id_seller_jenis_seller"`
+	Seller           Seller    `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
+	ValidationStatus string    `gorm:"column:validation_status; not null; default:'Pending'" json:"validation_status_jenis_seller"`
+	Alasan           string    `gorm:"alasan_seller;type:text" json:"alasan_seller_jenis_seller"`
+	AlasanAdmin      string    `gorm:"alasan_admin;type:text" json:"alasan_admin_jenis_seller"`
+	TargetJenis      string    `gorm:"column:target_jenis;type:jenis_seller" json:"target_jenis_seller"`
+	CreatedAt        time.Time `gorm:"autoCreateTime" `
+}
+
+func (Jenis_Seller) TableName() string {
+	return "jenis_seller_validation"
+}

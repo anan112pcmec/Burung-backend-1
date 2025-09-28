@@ -11,6 +11,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 )
@@ -84,6 +85,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_order_processing_services.UnApproveOrderBarang(data, db)
+	case "/seller/jenis/ajukan-perubahan":
+		var data jenis_seller_services.PayloadAjukanUbahJenisSeller
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = jenis_seller_services.AjukanUbahJenisSeller(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
