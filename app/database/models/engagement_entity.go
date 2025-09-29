@@ -261,7 +261,7 @@ type InformasiKendaraanKurir struct {
 	RodaKendaraan   string     `gorm:"column:roda_kendaraan;type:roda_kendaraan_kurir;not null" json:"roda_kendaraan_kurir"`
 	STNK            bool       `gorm:"column:informasi_stnk;type:boolean;not null; default:false" json:"informasi_stnk_kendaraan_kurir"`
 	BPKB            bool       `gorm:"column:informasi_bpkb;type:boolean;not null; default:false" json:"informasi_bpkb_kendaraan_kurir"`
-	StatusPerizinan string     `gorm:"column:informasi_status_perizinan:type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_perizinan_kendaraan_kurir"`
+	StatusPerizinan string     `gorm:"column:informasi_status_perizinan;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_perizinan_kendaraan_kurir"`
 	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       *time.Time `gorm:"index" json:"deleted_at,omitempty"`
@@ -279,7 +279,7 @@ type InformasiKurir struct {
 	Alasan          string     `gorm:"column:alasan;type:text" json:"informasi_alasan_kurir"`
 	Ktp             bool       `gorm:"column:informasi_ktp;type:boolean;not null;default:false" json:"informasi_ktp_kurir"`
 	Alamat          string     `gorm:"column:alamat;type:text" json:"informasi_alamat_kurir"`
-	StatusPerizinan string     `gorm:"column:informasi_status_perizinan:type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_perizinan_kendaraan_kurir"`
+	StatusPerizinan string     `gorm:"column:informasi_status_perizinan;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_perizinan_kendaraan_kurir"`
 	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       *time.Time `gorm:"index" json:"deleted_at,omitempty"`
