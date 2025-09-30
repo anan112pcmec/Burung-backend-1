@@ -164,7 +164,6 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			Message:      "Berhasil",
 			DataResponse: responseData,
 			LayananPengiriman: response_transaction_pengguna.LayananPengiriman{
-				LayananKurir:      data.LayananKurir,
 				JenisLayananKurir: data.JenisLayananKurir,
 			},
 		},

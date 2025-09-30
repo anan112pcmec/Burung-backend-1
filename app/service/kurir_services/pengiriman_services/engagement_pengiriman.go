@@ -4,11 +4,12 @@ import (
 	"net/http"
 
 	"gorm.io/gorm"
+func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB
+func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_pengiriman_services_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/pengiriman_services/response_pengiriman_services"
-)
 
 func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.ResponseForm {
 	const MAX_PENGIRIMAN = 5
@@ -17,9 +18,10 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	var kurir models.Kurir
 
 	if err := db.Model(&models.Kurir{}).Where(models.Kurir{
-		ID:       data.Kredensial.IdKurir,
-		Username: data.Kredensial.UsernameKurir,
-		Email:    data.Kredensial.EmailKurir,
+		ID:            data.Kredensial.IdKurir,
+		Username:      data.Kredensial.UsernameKurir,
+		Email:         data.Kredensial.EmailKurir,
+		VerifiedKurir: true,
 	}).Limit(1).Take(&kurir).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -74,25 +76,50 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 			var status response_pengiriman_services_kurir.AmbilPengirimanDetail
 			status.DataPengiriman = pengiriman
 
-			result := tx.Model(&models.Pengiriman{}).
-				Where(models.Pengiriman{
+			var existingPengiriman models.Pengiriman
+			_ = tx.Model(&models.Pengiriman{}).
+				Where(&models.Pengiriman{
 					ID:          pengiriman.ID,
 					IdTransaksi: pengiriman.IdTransaksi,
 					IdKurir:     0,
 					IdAlamat:    pengiriman.IdAlamat,
-				}).
-				Update("id_kurir", kurir.ID)
+				}).Take(&existingPengiriman)
 
-			if result.Error != nil {
+			if existingPengiriman.ID == 0 {
 				status.Status = false
+				hasilPengirimanStatus = append(hasilPengirimanStatus, status)
 				continue
-
-			}
-
-			if result.RowsAffected == 0 {
-				status.Status = false
 			} else {
-				status.Status = true
+				var kendaraanKurir string
+
+				_ = tx.Model(&models.Kurir{}).
+					Select("tipe_kendaraan").
+					Where(models.Kurir{
+						ID: existingPengiriman.IdKurir,
+					}).Take(&kendaraanKurir)
+
+				if kendaraanKurir != pengiriman.Layanan {
+					status.Status = false
+					hasilPengirimanStatus = append(hasilPengirimanStatus, status)
+					continue
+				}
+
+				result := tx.Model(&models.Pengiriman{}).
+					Where(models.Pengiriman{
+						ID: existingPengiriman.ID,
+					}).
+					Update("id_kurir", data.Kredensial.IdKurir)
+
+				if result.Error != nil {
+					status.Status = false
+					hasilPengirimanStatus = append(hasilPengirimanStatus, status)
+					continue
+				}
+				if result.RowsAffected == 0 {
+					status.Status = false
+				} else {
+					status.Status = true
+				}
 			}
 
 			hasilPengirimanStatus = append(hasilPengirimanStatus, status)

@@ -24,7 +24,7 @@ func UpEnumsEntity(db *gorm.DB) error {
 		"status_keranjang":           {"Ready", "UnReady"},
 		"nama_bank":                  {"BCA", "BRI", "BNI", "MANDIRI", "BTN", "CIMB", "PERMATA"},
 		"status_perizinan_kendaraan": {"Pending", "Diizinkan", "Dilarang"},
-		"jenis_kendaraan_kurir":      {"Motor", "Mobil", "Truk", "Pickup", "Lainnya"},
+		"jenis_kendaraan_kurir":      {"Motor", "Mobil", "Truk", "Pickup", "Lainnya", "Unknown"},
 		"roda_kendaraan_kurir":       {"2", "3", "4"},
 		"status_kurir_narik":         {"Idle", "OnDelivery", "Off"},
 	}

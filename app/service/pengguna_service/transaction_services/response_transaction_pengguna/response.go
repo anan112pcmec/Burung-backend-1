@@ -26,7 +26,6 @@ type CheckoutData struct {
 }
 
 type LayananPengiriman struct {
-	LayananKurir      string `json:"layanan_kurir_keranjang"`
 	JenisLayananKurir string `json:"jenis_layanan_kurir_keranjang"`
 }
 

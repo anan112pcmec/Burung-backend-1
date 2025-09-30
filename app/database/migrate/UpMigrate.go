@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-
 )
 
 func UpEntity(db *gorm.DB) {
@@ -98,14 +97,22 @@ func UpTransaksi(db *gorm.DB) {
 		log.Println("Berhasil Membuat Table Pembayaran ✅")
 	}
 
-	layanankurir := [2]models.LayananPengirimanKurir{
+	layanankurir := [4]models.LayananPengirimanKurir{
 		{
-			NamaLayanan:  "motor",
+			NamaLayanan:  "Motor",
 			HargaLayanan: 7000,
 		},
 		{
-			NamaLayanan:  "cargo",
+			NamaLayanan:  "Mobil",
+			HargaLayanan: 11000,
+		},
+		{
+			NamaLayanan:  "Pickup",
 			HargaLayanan: 15000,
+		},
+		{
+			NamaLayanan:  "Truk",
+			HargaLayanan: 19000,
 		},
 	}
 
