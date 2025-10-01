@@ -288,3 +288,22 @@ type InformasiKurir struct {
 func (InformasiKurir) TableName() string {
 	return "informasi_kurir"
 }
+
+type AlamatGudang struct {
+	ID              int64   `gorm:"primaryKey;autoIncrement" json:"id_alamat_gudang"`
+	IDSeller        int32   `gorm:"column:id_seller;not null" json:"id_seller_alamat_gudang"`
+	Seller          Seller  `gorm:"foreignKey:IDSeller;references:ID" json:"-"`
+	PanggilanAlamat string  `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_gudang"`
+	NomorTelephone  string  `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_gudang"`
+	NamaAlamat      string  `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_gudang"`
+	Kota            string  `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_gudang"`
+	KodePos         string  `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_gudang"`
+	KodeNegara      string  `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_gudang"`
+	Deskripsi       string  `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_gudang"`
+	Longitude       float64 `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_gudang"`
+	Latitude        float64 `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_gudang"`
+}
+
+func (AlamatGudang) TableName() string {
+	return "alamat_gudang"
+}

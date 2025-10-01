@@ -1,6 +1,9 @@
 package seller_service
 
-import "github.com/anan112pcmec/Burung-backend-1/app/database/models"
+import (
+	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/identity_seller"
+)
 
 // ////////////////////////////////////////////////////////////////////////////////
 // BARANG INDUK
@@ -71,4 +74,21 @@ type PayloadDownKategoriBarang struct {
 	IdBarangInduk    int32 `json:"id_barang_induk_down"`
 	IdKategoriBarang int64 `json:"id_kategori_barang_down"`
 	IdSeller         int32 `json:"id_seller_barang_induk_down"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////
+// ALAMAT BARANG
+// ////////////////////////////////////////////////////////////////////////////////
+
+type PayloadEditAlamatBarangInduk struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdBarangInduk   int32                          `json:"id_barang_induk"`
+	IdAlamatGudang  int64                          `json:"id_alamat_gudang"`
+}
+
+type PayloadEditAlamatBarangKategori struct {
+	IdentitasSeller  identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdBarangInduk    int32                          `json:"id_barang_induk"`
+	IdKategoriBarang int64                          `json:"id_kategori_barang"`
+	IdAlamatGudang   int64                          `json:"id_alamat_gudang"`
 }

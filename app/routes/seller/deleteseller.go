@@ -29,19 +29,19 @@ func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 		}
 		hasil = seller_service.HapusKategoriBarang(db, data)
-	case "/seller/alamat/hapus-alamat":
-		var data seller_alamat_services.PayloadHapusAlamatSeller
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-		}
-		hasil = seller_alamat_services.HapusAlamatSeller(data, db)
 	case "/seller/credential/hapus-rekening":
 		var data seller_credential_services.PayloadHapusNorekSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 		}
 		hasil = seller_credential_services.HapusRekeningSeller(data, db)
-
+	case "/seller/alamat/hapus-alamat-gudang":
+		var data seller_alamat_services.PayloadHapusAlamatGudang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_alamat_services.HapusAlamatGudang(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

@@ -47,3 +47,15 @@ type ResponseDownBarang struct {
 type ResponseDownKategori struct {
 	Message string `json:"pesan_down_stok_kategori_barang"`
 }
+
+// ////////////////////////////////////////////////////////////////////////////////
+// ALAMAT BARANG
+// ////////////////////////////////////////////////////////////////////////////////
+
+type ResponseEditAlamatBarangInduk struct {
+	Message string `json:"pesan_edit_alamat_barang_induk"`
+}
+
+type ResponseEditAlamatBarangKategori struct {
+	Message string `json:"pesan_edit_alamat_barang_kategori"`
+}

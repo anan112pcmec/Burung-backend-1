@@ -4,12 +4,11 @@ import (
 	"net/http"
 
 	"gorm.io/gorm"
-func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB
-func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_pengiriman_services_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/pengiriman_services/response_pengiriman_services"
+)
 
 func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.ResponseForm {
 	const MAX_PENGIRIMAN = 5
@@ -79,10 +78,10 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 			var existingPengiriman models.Pengiriman
 			_ = tx.Model(&models.Pengiriman{}).
 				Where(&models.Pengiriman{
-					ID:          pengiriman.ID,
-					IdTransaksi: pengiriman.IdTransaksi,
-					IdKurir:     0,
-					IdAlamat:    pengiriman.IdAlamat,
+					ID:                 pengiriman.ID,
+					IdTransaksi:        pengiriman.IdTransaksi,
+					IdKurir:            0,
+					IdAlamatPengiriman: pengiriman.IdAlamatPengiriman,
 				}).Take(&existingPengiriman)
 
 			if existingPengiriman.ID == 0 {

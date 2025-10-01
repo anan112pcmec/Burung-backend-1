@@ -1,9 +1,13 @@
 package response_alamat_services_seller
 
-type ResponseMasukanAlamatSeller struct {
-	Messages string `json:"pesan_masukan_alamat_seller"`
+type ResponseTambahAlamatGudang struct {
+	Message string `json:"pesan_tambah_alamat_gudang"`
 }
 
-type ResponseHapusAlamatSeller struct {
-	Messages string `json:"pesan_hapus_alamat_seller"`
+type ResponseEditAlamatGudang struct {
+	Message string `json:"pesan_edit_alamat_gudang"`
+}
+
+type ResponseHapusAlamatGudang struct {
+	Message string `json:"pesan_hapus_alamat_gudang"`
 }

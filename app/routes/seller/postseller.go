@@ -31,13 +31,6 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_service.TambahKategoriBarang(db, data)
-	case "/seller/alamat/masukan-alamat":
-		var data seller_alamat_services.PayloadMasukanAlamatSeller
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = seller_alamat_services.MasukanAlamatSeller(data, db)
 	case "/seller/credential/tambah-rekening":
 		var data seller_credential_services.PayloadTambahkanNorekSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -45,7 +38,13 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_credential_services.TambahRekeningSeller(data, db)
-
+	case "/seller/alamat/tambah-alamat-gudang":
+		var data seller_alamat_services.PayloadTambahAlamatGudang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_alamat_services.TambahAlamatGudang(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

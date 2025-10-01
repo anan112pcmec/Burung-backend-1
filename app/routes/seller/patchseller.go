@@ -9,6 +9,7 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
+	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
@@ -92,6 +93,27 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = jenis_seller_services.AjukanUbahJenisSeller(data, db)
+	case "/seller/alamat/edit-alamat-gudang":
+		var data seller_alamat_services.PayloadEditAlamatGudang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_alamat_services.EditAlamatGudang(data, db)
+	case "/seller/barang/edit-alamat-barang-induk":
+		var data seller_service.PayloadEditAlamatBarangInduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditAlamatGudangBarangInduk(data, db)
+	case "/seller/barang/edit-alamat-barang-kategori":
+		var data seller_service.PayloadEditAlamatBarangKategori
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditAlamatGudangBarangKategori(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

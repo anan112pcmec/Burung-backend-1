@@ -651,3 +651,102 @@ func DownKategoriBarang(db *gorm.DB, data PayloadDownKategoriBarang) *response.R
 		},
 	}
 }
+
+func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB) *response.ResponseForm {
+	services := "TambahAlamatGudangBarangInduk"
+
+	_, status := data.IdentitasSeller.Validating(db)
+
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+				Message: "Gagal, Kredensial Seller tidak valid",
+			},
+		}
+	}
+
+	var valid_id int32 = 0
+	_ = db.Model(models.BarangInduk{}).Select("id").Where(models.BarangInduk{
+		ID:       data.IdBarangInduk,
+		SellerID: data.IdentitasSeller.IdSeller,
+	}).Take(&valid_id)
+
+	if valid_id == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+				Message: "Gagal, Kredensial Seller tidak valid",
+			},
+		}
+	}
+
+	if err_edit := db.Model(models.KategoriBarang{}).Where(models.KategoriBarang{
+		IdBarangInduk: valid_id,
+	}).Update("id_alamat_gudang", data.IdAlamatGudang).Error; err_edit != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+	}
+}
+
+func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *gorm.DB) *response.ResponseForm {
+	services := "TambahAlamatGudangBarangKategori"
+
+	_, status := data.IdentitasSeller.Validating(db)
+
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+				Message: "Gagal, Kredensial Seller tidak valid",
+			},
+		}
+	}
+
+	var valid_id int32 = 0
+	_ = db.Model(models.BarangInduk{}).Select("id").Where(models.BarangInduk{
+		ID:       data.IdBarangInduk,
+		SellerID: data.IdentitasSeller.IdSeller,
+	}).Take(&valid_id)
+
+	if valid_id == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+				Message: "Gagal, Kredensial Seller tidak valid",
+			},
+		}
+	}
+
+	if err_edit := db.Model(models.KategoriBarang{}).Where(models.KategoriBarang{
+		IdBarangInduk: valid_id,
+		ID:            data.IdKategoriBarang,
+	}).Update("id_alamat_gudang", data.IdAlamatGudang).Error; err_edit != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+	}
+}
