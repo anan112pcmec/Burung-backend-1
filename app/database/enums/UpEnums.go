@@ -135,7 +135,6 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		return err
 	}
 
-	// Insert data ongkir sekaligus
 	if err := tx.Create(&enumOngkir).Error; err != nil {
 		tx.Rollback()
 		return err

@@ -13,32 +13,9 @@ import (
 func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
 	services := "AjukanInformasiKendaraanKurir"
 
-	if !data.DataIdentitasKurir.Validate() {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, Kredensial Kosong",
-			},
-		}
-	}
+	_, status := data.DataIdentitasKurir.Validating(db)
 
-	var kurir int64 = 0
-	if validasi_kurir := db.Model(models.Kurir{}).Select("id").Where(models.Kurir{
-		ID:       data.DataIdentitasKurir.IDKurir,
-		Username: data.DataIdentitasKurir.Username,
-		Email:    data.DataIdentitasKurir.Email,
-	}).Take(&kurir).Error; validasi_kurir != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, Kredensial Tidak Valid",
-			},
-		}
-	}
-
-	if kurir == 0 {
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -50,7 +27,7 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 
 	var id_pengajuan int64 = 0
 	_ = db.Model(models.InformasiKendaraanKurir{}).Select("id").Where(models.InformasiKendaraanKurir{
-		IDkurir: data.DataIdentitasKurir.IDKurir,
+		IDkurir: data.DataIdentitasKurir.IdKurir,
 	}).Take(&id_pengajuan)
 
 	if id_pengajuan != 0 {
@@ -93,32 +70,9 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
 	services := "EditInformasiKendaraan"
 
-	if !data.DataIdentitasKurir.Validate() {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
-				Message: "Gagal, Kredensial Seller Tidak Valid",
-			},
-		}
-	}
+	_, status := data.DataIdentitasKurir.Validating(db)
 
-	var kurir int64 = 0
-	if validasi_kurir := db.Model(models.Kurir{}).Select("id").Where(models.Kurir{
-		ID:       data.DataIdentitasKurir.IDKurir,
-		Username: data.DataIdentitasKurir.Username,
-		Email:    data.DataIdentitasKurir.Email,
-	}).Take(&kurir).Error; validasi_kurir != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
-				Message: "Gagal, Kredensial Tidak Valid",
-			},
-		}
-	}
-
-	if kurir == 0 {
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -132,7 +86,7 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 		data.DataInformasiKendaraan.StatusPerizinan = "Pending"
 		if err_updateInformasi := tx.Model(models.InformasiKendaraanKurir{}).Where(models.InformasiKendaraanKurir{
 			ID:      data.DataInformasiKendaraan.ID,
-			IDkurir: data.DataIdentitasKurir.IDKurir,
+			IDkurir: data.DataIdentitasKurir.IdKurir,
 		}).Limit(1).Updates(&data.DataInformasiKendaraan).Error; err_updateInformasi != nil {
 			return err_updateInformasi
 		}
@@ -141,7 +95,7 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
+			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
 				Message: "Gagal, Server sedang sibuk coba lain waktu",
 			},
 		}
@@ -150,7 +104,7 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
+		Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
 			Message: "Berhasil",
 		},
 	}
@@ -159,32 +113,10 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 
 func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
 	services := "AjukanInformasiKurir"
-	if !data.DataIdentitasKurir.Validate() {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal, Kredensial Tidak Ditemukan",
-			},
-		}
-	}
 
-	var kurir int64 = 0
-	if validasi_kurir := db.Model(models.Kurir{}).Select("id").Where(models.Kurir{
-		ID:       data.DataIdentitasKurir.IDKurir,
-		Username: data.DataIdentitasKurir.Username,
-		Email:    data.DataIdentitasKurir.Email,
-	}).Take(&kurir).Error; validasi_kurir != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal, Kredensial Tidak Valid",
-			},
-		}
-	}
+	_, status := data.DataIdentitasKurir.Validating(db)
 
-	if kurir == 0 {
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -195,15 +127,15 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 	}
 
 	var id_pengajuan int64 = 0
-	_ = db.Model(models.InformasiKurir{}).Select("id").Where(models.InformasiKendaraanKurir{
-		IDkurir: data.DataIdentitasKurir.IDKurir,
+	_ = db.Model(models.InformasiKurir{}).Select("id").Where(models.InformasiKurir{
+		IDkurir: data.DataIdentitasKurir.IdKurir,
 	}).Take(&id_pengajuan)
 
 	if id_pengajuan != 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
+			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
 				Message: "Gagal, Tunggu Pengajuan Sebelum nya ditindak kami",
 			},
 		}
@@ -220,7 +152,7 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
+			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
 				Message: "Gagal, Server sedang sibuk coba lain waktu",
 			},
 		}
@@ -238,32 +170,9 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
 	services := "EditInformasiKurir"
 
-	if !data.DataIdentitasKurir.Validate() {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
-				Message: "Gagal, kredensial tidak ditemukan",
-			},
-		}
-	}
+	_, status := data.DataIdentitasKurir.Validating(db)
 
-	var kurir int64 = 0
-	if validasi_kurir := db.Model(models.Kurir{}).Select("id").Where(models.Kurir{
-		ID:       data.DataIdentitasKurir.IDKurir,
-		Username: data.DataIdentitasKurir.Username,
-		Email:    data.DataIdentitasKurir.Email,
-	}).Take(&kurir).Error; validasi_kurir != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
-				Message: "Gagal, Kredensial Tidak Valid",
-			},
-		}
-	}
-
-	if kurir == 0 {
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -277,7 +186,7 @@ func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *respon
 		data.DataInformasiKurir.StatusPerizinan = "Pending"
 		if err_edit_informasi := tx.Model(models.InformasiKurir{}).Where(models.InformasiKurir{
 			ID:      data.DataInformasiKurir.ID,
-			IDkurir: data.DataIdentitasKurir.IDKurir,
+			IDkurir: data.DataIdentitasKurir.IdKurir,
 		}).Updates(&data.DataInformasiKurir).Error; err_edit_informasi != nil {
 			return err_edit_informasi
 		}

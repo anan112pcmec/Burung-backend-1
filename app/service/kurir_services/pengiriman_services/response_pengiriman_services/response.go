@@ -11,3 +11,7 @@ type ResponseAmbilPengiriman struct {
 	Message       string                  `json:"pesan_ambil_pengiriman_kurir"`
 	HasilResponse []AmbilPengirimanDetail `json:"response_ambil_pengiriman"`
 }
+
+type ResponseUpdatePengiriman struct {
+	Message string `json:"pesan_update_pengiriman_kurir"`
+}

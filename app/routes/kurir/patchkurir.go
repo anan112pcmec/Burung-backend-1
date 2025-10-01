@@ -9,6 +9,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	kurir_informasi_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/informasi_services"
+	kurir_pengiriman_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/pengiriman_services"
 	kurir_profiling_service "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services"
 )
 
@@ -36,6 +37,13 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = kurir_informasi_services.EditInformasiKurir(data, db)
+	case "/kurir/pengiriman/update-pengiriman":
+		var data kurir_pengiriman_services.PayloadUpdatePengiriman
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.UpdatePengirimanKurir(data, db)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

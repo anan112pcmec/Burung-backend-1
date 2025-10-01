@@ -1,6 +1,7 @@
 package kurir_pengiriman_services
 
 import (
+	"fmt"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -42,7 +43,9 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	}
 
 	var jumlahPengirimanAktif int64
-	if err := db.Model(&models.Pengiriman{}).Where("id_kurir = ?", kurir.ID).Count(&jumlahPengirimanAktif).Error; err != nil {
+	if err := db.Model(&models.Pengiriman{}).Where(models.Pengiriman{
+		IdKurir: kurir.ID,
+	}).Count(&jumlahPengirimanAktif).Error; err != nil {
 		jumlahPengirimanAktif = 0
 	}
 
@@ -120,7 +123,6 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 					status.Status = true
 				}
 			}
-
 			hasilPengirimanStatus = append(hasilPengirimanStatus, status)
 		}
 		return nil
@@ -140,6 +142,61 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 		Payload: response_pengiriman_services_kurir.ResponseAmbilPengiriman{
 			Message:       "Berhasil",
 			HasilResponse: hasilPengirimanStatus,
+		},
+	}
+}
+
+func UpdatePengirimanKurir(data PayloadUpdatePengiriman, db *gorm.DB) *response.ResponseForm {
+	services := "UpdatePengirimanKurir"
+
+	_, status := data.Kredensial.Validating(db)
+
+	if !status {
+		fmt.Println("Gagal cuks")
+		fmt.Println(data.Kredensial)
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_pengiriman_services_kurir.ResponseUpdatePengiriman{
+				Message: "Gagal, Kredensial Kurir Tidak Valid",
+			},
+		}
+	}
+
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		var statusP string
+		_ = tx.Model(models.Pengiriman{}).Select("status").Where(models.Pengiriman{
+			ID: data.DataJejakPengiriman.IdPengiriman,
+		}).Take(&statusP)
+
+		if statusP != data.StatusPengiriman {
+			if err_update := tx.Model(models.Pengiriman{}).Where(models.Pengiriman{
+				ID: data.DataJejakPengiriman.IdPengiriman,
+			}).Limit(1).Update("status", data.StatusPengiriman).Error; err_update != nil {
+				return err_update
+			}
+		}
+
+		if err_buatjejakpengiriman := tx.Create(&data.DataJejakPengiriman).Error; err_buatjejakpengiriman != nil {
+			return err_buatjejakpengiriman
+		}
+
+		return nil
+	}); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_pengiriman_services_kurir.ResponseUpdatePengiriman{
+				Message: "Gagal, Server Sedang Sibuk coba ulang lagi",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_pengiriman_services_kurir.ResponseUpdatePengiriman{
+			Message: "Berhasil",
 		},
 	}
 }
