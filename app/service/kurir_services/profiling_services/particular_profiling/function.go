@@ -140,9 +140,9 @@ func UbahEmail(id_kurir int64, username, email string, db *gorm.DB) ResponseUbah
 
 }
 
-func UbahDeskripsi(id_kurir int64, username, deskripsi string, db *gorm.DB) *ResponseUbahDeskripsi {
+func UbahDeskripsi(id_kurir int64, username, deskripsi string, db *gorm.DB) ResponseUbahDeskripsi {
 	if username == "" && id_kurir == 0 {
-		return &ResponseUbahDeskripsi{
+		return ResponseUbahDeskripsi{
 			Message: "Gagal",
 		}
 	}
@@ -151,12 +151,12 @@ func UbahDeskripsi(id_kurir int64, username, deskripsi string, db *gorm.DB) *Res
 		ID:       id_kurir,
 		Username: username,
 	}).Limit(1).Update("deskripsi", deskripsi).Error; err_ubah_deskripsi != nil {
-		return &ResponseUbahDeskripsi{
+		return ResponseUbahDeskripsi{
 			Message: "Gagal",
 		}
 	}
 
-	return &ResponseUbahDeskripsi{
+	return ResponseUbahDeskripsi{
 		Message: "Berhasil",
 	}
 }

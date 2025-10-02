@@ -28,7 +28,7 @@ func PatchHandler(db *gorm.DB, rds_barang *redis.Client, rds_engagement *redis.C
 		}
 
 		if len(r.URL.Path) >= 7 && r.URL.Path[:7] == "/kurir/" {
-			kurir.PatchKurirHandler(db, w, r)
+			kurir.PatchKurirHandler(db, w, r, rds_engagement)
 			return
 		}
 

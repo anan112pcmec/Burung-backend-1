@@ -55,7 +55,7 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_profiling_kurir.ResponseProfilingGeneralKurir{
+		Payload: response_profiling_kurir.ResponseProfilingPersonalKurir{
 			UpdateNama:     hasilresponsenama,
 			UpdateUsername: hasilresponseusername,
 			UpdateEmail:    hasilresponseemail,
@@ -63,12 +63,29 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 	}
 }
 
-func GeneralProfilingKurir(data PayloadGeneralProfiling, db *gorm.DB) {
+func GeneralProfilingKurir(data PayloadGeneralProfiling, db *gorm.DB) *response.ResponseForm {
 	services := "GeneralProfilingKurir"
+	var hasil_update_deskripsi particular_profiling_kurir.ResponseUbahDeskripsi
 
 	_, status := data.DataIdentitas.Validating(db)
 
 	if !status {
-
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
 	}
+
+	if data.Deskripsi != "" {
+		hasil_update_deskripsi = particular_profiling_kurir.UbahDeskripsi(data.DataIdentitas.IdKurir, data.DataIdentitas.UsernameKurir, data.Deskripsi, db)
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_profiling_kurir.ResponseProfilingGeneralKurir{
+			UpdateDeskripsi: hasil_update_deskripsi,
+		},
+	}
+
 }
