@@ -30,7 +30,6 @@ func UpEnumsEntity(db *gorm.DB) error {
 	}
 
 	for enumName, values := range enumMap {
-		// Cek apakah enum sudah ada
 		var exists bool
 		checkSQL := "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = ?);"
 		if err := tx.Raw(checkSQL, enumName).Scan(&exists).Error; err != nil {
@@ -39,7 +38,6 @@ func UpEnumsEntity(db *gorm.DB) error {
 		}
 
 		if !exists {
-			// Create type baru
 			createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
 			if err := tx.Exec(createSQL).Error; err != nil {
 				tx.Rollback()
@@ -91,11 +89,10 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 
 	enumMap := map[string][]string{
 		"status_transaksi":  {"Dibayar", "Diproses", "Waiting", "Dikirim", "Selesai", "Dibatalkan"},
-		"status_pengiriman": {"Packaging", "Picked Up", "Diperjalanan", "Sampai"},
+		"status_pengiriman": {"Packaging", "Picked Up", "Diperjalanan", "Sampai", "Trouble"},
 	}
 
 	for enumName, values := range enumMap {
-		// Cek apakah enum sudah ada
 		var exists bool
 		checkSQL := "SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = ?);"
 		if err := tx.Raw(checkSQL, enumName).Scan(&exists).Error; err != nil {
@@ -104,7 +101,6 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		}
 
 		if !exists {
-			// Create type baru
 			createSQL := fmt.Sprintf("CREATE TYPE %s AS ENUM (%s);", enumName, joinWithQuotes(values))
 			if err := tx.Exec(createSQL).Error; err != nil {
 				tx.Rollback()
@@ -122,14 +118,12 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		{7000, "ekonomi"},
 	}
 
-	// Drop table dulu kalau ada
 	dropSQL := `DROP TABLE IF EXISTS ongkir;`
 	if err := tx.Exec(dropSQL).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Create table baru lewat migrasi GORM
 	if err := tx.AutoMigrate(&models.Ongkir{}); err != nil {
 		tx.Rollback()
 		return err

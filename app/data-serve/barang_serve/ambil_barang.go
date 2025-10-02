@@ -1,4 +1,4 @@
-package barang_service
+package barang_serve
 
 import (
 	"context"
@@ -14,10 +14,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/data-serve/barang_serve/response_barang"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/barang_service/response_barang"
 )
 
 var wg sync.WaitGroup

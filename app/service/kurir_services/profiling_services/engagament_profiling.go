@@ -63,6 +63,12 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 	}
 }
 
-func GeneralProfilingKurir(db *gorm.DB) {
+func GeneralProfilingKurir(data PayloadGeneralProfiling, db *gorm.DB) {
+	services := "GeneralProfilingKurir"
 
+	_, status := data.DataIdentitas.Validating(db)
+
+	if !status {
+
+	}
 }

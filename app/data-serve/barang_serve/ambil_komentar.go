@@ -1,4 +1,4 @@
-package barang_service
+package barang_serve
 
 func AmbilKomentarBarangInduk() {
 

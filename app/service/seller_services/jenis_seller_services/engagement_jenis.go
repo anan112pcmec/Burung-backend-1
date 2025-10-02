@@ -13,8 +13,9 @@ import (
 func AjukanUbahJenisSeller(data PayloadAjukanUbahJenisSeller, db *gorm.DB) *response.ResponseForm {
 	services := "AjukanUbahJenisSeller"
 
-	// Cek identitas seller minimal salah satu ada
-	if data.IdentitasSeller.IdSeller == 0 && data.IdentitasSeller.Username == "" && data.IdentitasSeller.EmailSeller == "" {
+	_, status := data.IdentitasSeller.Validating(db)
+
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -49,7 +50,6 @@ func AjukanUbahJenisSeller(data PayloadAjukanUbahJenisSeller, db *gorm.DB) *resp
 		}
 	}
 
-	// Cek apakah jenis yang diajukan sama dengan yang sekarang
 	if seller.Jenis == data.DataDiajukan.TargetJenis {
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
