@@ -15,6 +15,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
+	seller_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services"
 )
 
 func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
@@ -114,6 +115,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_service.EditAlamatGudangBarangKategori(data, db)
+	case "/seller/social-media/social-media-engage":
+		var data seller_social_media_services.PayloadEngageSocialMedia
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_social_media_services.EngageSocialMediaSeller(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

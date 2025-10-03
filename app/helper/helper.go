@@ -194,3 +194,25 @@ func GenerateItemDetail(data response_transaction_pengguna.ResponseDataCheckout)
 
 	return hasil
 }
+
+func UpdateSocialMediaDispatch(data models.EntitySocialMedia) []string {
+	var hasil []string
+	if data.Instagram != "" {
+		hasil = append(hasil, "instagram")
+	}
+
+	if data.Whatsapp != "" {
+		hasil = append(hasil, "whatsapp")
+	}
+
+	if data.Facebook != "" {
+		hasil = append(hasil, "facebook")
+	}
+
+	if data.TikTok != "" {
+		hasil = append(hasil, "tiktok")
+
+	}
+
+	return hasil
+}
