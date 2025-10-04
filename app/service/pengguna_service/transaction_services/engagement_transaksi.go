@@ -437,7 +437,6 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 				return err
 			}
 
-			// Kalau ada ID, update balik jadi Ready
 			if len(varianIDs) > 0 {
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).

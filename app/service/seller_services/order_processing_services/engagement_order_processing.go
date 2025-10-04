@@ -19,47 +19,24 @@ func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.Respons
 	var wg sync.WaitGroup
 
 	var approveddata []response_order_processing_seller.ApprovedStatus
-	if data.Seller.Validating() != nil {
+
+	seller, status := data.IdentitasSeller.Validating(db)
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_order_processing_seller.ResponseApproveTransaksiSeller{
-				Message: "Gagal Kredensial Seller Tidak Valid",
+				Message: "Gagal, Data Seller Tidak Valid",
 			},
 		}
 	}
-
-	var namaSeller string = ""
-	if err_nama := db.Model(models.Seller{}).Select("nama").
-		Where(models.Seller{ID: data.Seller.ID, Username: data.Seller.Username}).
-		Limit(1).
-		Take(&namaSeller).Error; err_nama != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
-			Services: services,
-			Payload: response_order_processing_seller.ResponseApproveTransaksiSeller{
-				Message: "Gagal Data Seller Tidak Valid",
-			},
-		}
-	}
-
-	if namaSeller == "" {
-		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
-			Services: services,
-			Payload: response_order_processing_seller.ResponseApproveTransaksiSeller{
-				Message: "Gagal Data Seller Tidak Valid",
-			},
-		}
-	}
-
 	for _, transaksi := range data.DataTransaction {
 		wg.Add(1)
 		go func(transaksi models.Transaksi) {
 			defer wg.Done()
 			var approvingstatus response_order_processing_seller.ApprovedStatus
 			if err_approve := db.Model(models.Transaksi{}).Where(models.Transaksi{
-				IdSeller:      data.Seller.ID,
+				IdSeller:      seller.ID,
 				IdPengguna:    transaksi.IdPengguna,
 				IdBarangInduk: transaksi.IdBarangInduk,
 				Status:        "Dibayar",
@@ -94,19 +71,21 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 	services := "UnApproveOrderBarang"
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	if data.Seller.Validating() != nil {
+
+	seller, status := data.IdentitasSeller.Validating(db)
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_order_processing_seller.ResponseUnApproveTransaksiSeller{
-				Message: "Gagal Data Seller Tidak Valid",
+				Message: "Gagal, Kredensial Seller Tidak Valid",
 			},
 		}
 	}
 
 	var namaSeller string = ""
 	if err_nama := db.Model(models.Seller{}).Select("nama").
-		Where(models.Seller{ID: data.Seller.ID, Username: data.Seller.Username}).
+		Where(models.Seller{ID: seller.ID, Username: seller.Username}).
 		Limit(1).
 		Take(&namaSeller).Error; err_nama != nil {
 		return &response.ResponseForm{
@@ -128,7 +107,7 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 				var unapprovingstatus response_order_processing_seller.UnApprovedStatus
 
 				if errUpdate := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
-					IdSeller:      data.Seller.ID,
+					IdSeller:      seller.ID,
 					IdPengguna:    transaksi.IdPengguna,
 					IdBarangInduk: transaksi.IdBarangInduk,
 					Status:        "Dibayar",
