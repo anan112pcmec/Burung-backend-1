@@ -35,12 +35,10 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 	var existing models.BarangDisukai
 	err := db.Where("id_pengguna = ? AND id_barang_induk = ?", data.IDUser, data.IDBarang).First(&existing).Error
 
-	// ✅ case: belum pernah like
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		go func() {
 			ctx := context.Background()
 
-			// insert barang disukai
 			if err := db.Create(&models.BarangDisukai{
 				IdPengguna:    data.IDUser,
 				IdBarangInduk: data.IDBarang,
@@ -48,28 +46,11 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 				fmt.Println("Gagal likes:", err)
 			}
 
-			var likes int64
-			if err_ambil := db.Model(models.BarangInduk{}).
-				Select("likes").
-				Where(models.BarangInduk{ID: data.IDBarang}).
-				Take(&likes).Error; err_ambil != nil {
-				return
-			}
-
-			// increment likes di DB
-			if err_incr_db := db.Model(&models.BarangInduk{}).
-				Where("id = ?", data.IDBarang).
-				Update("likes", likes+1).Error; err_incr_db != nil {
-				fmt.Println("Gagal increment likes di DB:", err_incr_db)
-				return
-			}
-
-			// increment likes di Redis
 			if err_incr_rds := rds.HIncrBy(
 				ctx,
-				fmt.Sprintf("barang:%v", data.IDBarang),
-				"likes_barang_induk",
-				likes+1,
+				fmt.Sprintf("barang:%v", data.IDBarang), // pakai ID barang induk
+				"likes_barang_induk",                    // field yang di-increment
+				1,                                       // nilai increment, contoh tambah 1
 			).Err(); err_incr_rds != nil {
 				fmt.Println("Gagal increment likes di Redis:", err_incr_rds)
 			}
@@ -84,7 +65,6 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 		}
 	}
 
-	// ✅ case: sudah pernah like
 	if err == nil {
 		go func() {
 			if err := db.Model(models.BarangDisukai{}).
@@ -96,22 +76,6 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 				return
 			}
 
-			var likes int64
-			if err_ambil := db.Model(models.BarangInduk{}).
-				Select("likes").
-				Where(models.BarangInduk{ID: data.IDBarang}).
-				Take(&likes).Error; err_ambil != nil {
-				return
-			}
-
-			// decrement likes di DB (⚠️ sebelumnya salah +1, sekarang -1)
-			if err_decr_db := db.Model(&models.BarangInduk{}).
-				Where("id = ?", data.IDBarang).
-				Update("likes", likes-1).Error; err_decr_db != nil {
-				fmt.Println("Gagal decrement likes di DB:", err_decr_db)
-			}
-
-			// decrement likes di Redis
 			if err_decr_rds := rds.HIncrBy(
 				context.Background(),
 				fmt.Sprintf("barang:%v", data.IDBarang),
