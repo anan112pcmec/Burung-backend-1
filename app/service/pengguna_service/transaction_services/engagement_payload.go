@@ -5,15 +5,14 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/payment/payment_response_models"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
 type PayloadCheckoutBarangCentang struct {
-	IDPengguna        int64              `json:"id_pengguna_checkout_barang"`
-	Username          string             `json:"username_pengguna_checkout_barang"`
-	DataCheckout      []models.Keranjang `json:"data_checkout"`
-	LayananKurir      string             `json:"layanan_kurir_checkout_barang"`
-	JenisLayananKurir string             `json:"jenis_layanan_kurir_checkout_barang"`
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"data_identitas_pengguna"`
+	DataCheckout      []models.Keranjang                 `json:"data_checkout"`
+	JenisLayananKurir string                             `json:"jenis_layanan_kurir_checkout_barang"`
 }
 
 type PayloadSnapTransaksiRequest struct {

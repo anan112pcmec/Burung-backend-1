@@ -22,14 +22,13 @@ import (
 func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
 
-	if data.IDPengguna == 0 && data.Username == "" {
+	if _, status := data.IdentitasPengguna.Validating(db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 		}
 	}
 
-	// Validasi semua seller sama
 	var firstSellerID int64 = 0
 	for i, keranjang := range data.DataCheckout {
 		if i == 0 {
@@ -71,7 +70,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			}
 
 			var kategori models.KategoriBarang
-			if err := tx.Select("nama", "harga").
+			if err := tx.Select("nama", "harga", "stok").
 				Where("id = ?", keranjang.IdKategori).
 				First(&kategori).Error; err != nil {
 				return err
@@ -86,7 +85,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			}
 
 			resp := response_transaction_pengguna.CheckoutData{
-				IDUser:           data.IDPengguna,
+				IDUser:           data.IdentitasPengguna.ID,
 				IDSeller:         keranjang.IdSeller,
 				NamaSeller:       nama_seller,
 				JenisBarang:      barang.JenisBarang,
@@ -123,14 +122,22 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 					Where("id IN ?", varianIDs).
 					Updates(map[string]interface{}{
 						"status":        "Dipesan",
-						"hold_by":       data.IDPengguna,
+						"hold_by":       data.IdentitasPengguna.ID,
 						"holder_entity": "Pengguna",
 					}).Error; err != nil {
-
 					resp.Message = "Coba Lagi Nanti"
 					resp.Status = false
 					responseData = append(responseData, resp)
 					return err
+				} else {
+
+					var stok_saat_ini int64 = 0
+					_ = db.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
+						ID: keranjang.IdKategori,
+					}).Take(&stok_saat_ini)
+					_ = db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{ID: keranjang.IdKategori}).Updates(map[string]interface{}{
+						"stok": int32(stok_saat_ini) - int32(keranjang.Count),
+					})
 				}
 
 				resp.Message = "Berhasil Siap Transaksi"
@@ -197,7 +204,6 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 				return err
 			}
 
-			// Kalau ada ID, update balik jadi Ready
 			if len(varianIDs) > 0 {
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
@@ -210,6 +216,17 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 					resp.Status = false
 					responseData = append(responseData, resp)
 					return err
+				} else {
+					var stok_saat_ini int64 = 0
+					_ = db.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
+						ID: keranjang.IdKategoriBarang,
+					}).Take(&stok_saat_ini)
+
+					_ = db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+						ID: keranjang.IdKategoriBarang,
+					}).Updates(&models.KategoriBarang{
+						Stok: keranjang.Dipesan + int32(stok_saat_ini),
+					})
 				}
 
 				resp.Message = "Berhasil Dibatalkan"
