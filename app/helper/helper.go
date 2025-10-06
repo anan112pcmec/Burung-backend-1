@@ -175,11 +175,52 @@ func GenerateAutoPaymentId(db *gorm.DB) (string, error) {
 	return final, nil
 }
 
-func GenerateItemDetail(data response_transaction_pengguna.ResponseDataCheckout) []midtrans.ItemDetails {
+func Hitungtotal(input []int64) int64 {
+	var total int64 = 0
+	for _, biaya := range input {
+		total += biaya
+	}
+	return total
+}
+
+func GenerateItemDetail(data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, jenisLayanan string) ([]midtrans.ItemDetails, int64) {
 	var hasil []midtrans.ItemDetails
+	var total int64 = 0
+	var pengiriman_count = 0
+	const biaya_platform = 5000
+	var biayaKendaraan []int64
+
 	for _, Item := range data.DataResponse {
+		subtotal := int64(Item.HargaKategori) * int64(Item.Dipesan)
+
+		var kategorinya models.KategoriBarang
+		_ = db.Model(&models.KategoriBarang{}).
+			Where(&models.KategoriBarang{ID: Item.IdKategoriBarang}).
+			Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm", "id_alamat_gudang").
+			Take(&kategorinya).Error
+
+		beratTotalBarangPengirian := kategorinya.BeratGram * int16(Item.Dipesan) / 1000
+
+		var biayajk int64
+		var layanan string
+		switch {
+		case beratTotalBarangPengirian <= 10:
+			layanan = "Motor"
+		case beratTotalBarangPengirian <= 20:
+			layanan = "Mobil"
+		case beratTotalBarangPengirian <= 30:
+			layanan = "Pickup"
+		default:
+			layanan = "Truk"
+		}
+
+		_ = db.Model(&models.LayananPengirimanKurir{}).
+			Where("nama_layanan = ?", layanan).
+			Select("harga_layanan").
+			Scan(&biayajk)
+
 		itemDetail := midtrans.ItemDetails{
-			ID:           fmt.Sprintf("%s--%s", Item.IdBarangInduk, Item.IdKategoriBarang),
+			ID:           fmt.Sprintf("%v--%v", Item.IdBarangInduk, Item.IdKategoriBarang),
 			Price:        int64(Item.HargaKategori),
 			Qty:          Item.Dipesan,
 			Name:         fmt.Sprintf("%s - %s", Item.NamaBarang, Item.NamaKategori),
@@ -187,10 +228,47 @@ func GenerateItemDetail(data response_transaction_pengguna.ResponseDataCheckout)
 			Category:     Item.JenisBarang,
 		}
 
+		pengiriman_count++
 		hasil = append(hasil, itemDetail)
+		total += subtotal
+		biayaKendaraan = append(biayaKendaraan, biayajk)
 	}
 
-	return hasil
+	var biaya_ongkir int64
+	err := db.Model(&models.Ongkir{}).
+		Select("value").
+		Where("nama = ?", strings.ToLower(jenisLayanan)).
+		Scan(&biaya_ongkir).Error
+	if err != nil {
+		biaya_ongkir = 0
+	}
+
+	totalBiayaKendaraan := Hitungtotal(biayaKendaraan)
+	totalBiayaKurir := biaya_ongkir*int64(pengiriman_count) + totalBiayaKendaraan - biaya_platform
+
+	courierFee := midtrans.ItemDetails{
+		ID:           "fee-courier",
+		Price:        totalBiayaKurir,
+		Qty:          1,
+		Name:         "Biaya Kurir",
+		MerchantName: "Courier",
+		Category:     "fee",
+	}
+	hasil = append(hasil, courierFee)
+	total += totalBiayaKurir
+
+	appFee := midtrans.ItemDetails{
+		ID:           "fee-app",
+		Price:        biaya_platform,
+		Qty:          1,
+		Name:         "Biaya Aplikasi",
+		MerchantName: "Platform",
+		Category:     "fee",
+	}
+	hasil = append(hasil, appFee)
+	total += biaya_platform
+
+	return hasil, total
 }
 
 func UpdateSocialMediaDispatch(data models.EntitySocialMedia) []string {

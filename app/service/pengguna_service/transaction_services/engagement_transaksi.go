@@ -267,7 +267,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 // TRANSAKSI
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod string) (*response.ResponseForm, *snap.Request) {
+func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod, jenis_layanan string) (*response.ResponseForm, *snap.Request) {
 	services := "ValidateTransaksi"
 	if user.ID == 0 && user.Username == "" {
 		return &response.ResponseForm{
@@ -316,23 +316,6 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 		}, nil
 	}
 
-	var TotalHarga int64 = 0
-
-	for _, barang := range data.DataResponse {
-		if barang.Dipesan != 0 && barang.HargaKategori != 0 {
-			TotalHarga += int64(barang.Dipesan) * int64(barang.HargaKategori)
-		} else {
-			continue
-		}
-	}
-
-	if TotalHarga == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
-			Services: services,
-		}, nil
-	}
-
 	AlamatPengguna := midtrans.CustomerAddress{
 		Address:     alamat.NamaAlamat,
 		City:        alamat.Kota,
@@ -340,7 +323,7 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 		CountryCode: alamat.KodeNegara,
 	}
 
-	items := helper.GenerateItemDetail(data)
+	items, TotalHarga := helper.GenerateItemDetail(data, db, jenis_layanan)
 
 	var PM []snap.SnapPaymentType
 
@@ -437,7 +420,7 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 		}
 	}
 
-	SnapErr, SnapReq := FormattingTransaksi(data.UserInformation, data.AlamatInformation, data.DataCheckout, db, data.PaymentMethod)
+	SnapErr, SnapReq := FormattingTransaksi(data.UserInformation, data.AlamatInformation, data.DataCheckout, db, data.PaymentMethod, data.DataCheckout.LayananPengiriman.JenisLayananKurir)
 	if SnapErr.Status != http.StatusOK {
 		return &response.ResponseForm{
 			Status:   SnapErr.Status,
@@ -481,13 +464,13 @@ func PendingTransaksi(ctx context.Context, data PayloadPendingTransaksi, db *gor
 		}
 	}
 
-	key := fmt.Sprintf("transaction_pending_id:%v:transaction_id:%s",
-		data.IdentitasPengguna.ID, data.DataPending.TransactionId)
+	key := fmt.Sprintf("transaction_pengguna_pending_id:%v:transaction_code:%s",
+		data.IdentitasPengguna.ID, data.DataPending.OrderId)
 
 	fields := map[string]interface{}{
 		"finish_redirect_url": data.DataPending.FinishRedirectUrl,
 		"fraud_status":        data.DataPending.FraudStatus,
-		"gross_amount":        data.DataPending.GrossAmout, // typo diperbaiki
+		"gross_amount":        data.DataPending.GrossAmout,
 		"order_id":            data.DataPending.OrderId,
 		"payment_type":        data.DataPending.PaymentType,
 		"status_code":         data.DataPending.StatusCode,
@@ -586,14 +569,12 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		// gross amount aman
 		grossFloat, err := strconv.ParseFloat(data.PaymentResult.GrossAmount, 64)
 		if err != nil {
 			return fmt.Errorf("invalid gross amount format: %v", err)
 		}
 		Grossamount := int(grossFloat)
 
-		// provider aman
 		provider := ""
 		if len(data.PaymentResult.VaNumbers) > 0 {
 			provider = data.PaymentResult.VaNumbers[0].Bank
