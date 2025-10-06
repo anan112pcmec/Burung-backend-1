@@ -24,15 +24,13 @@ func DecodeJSONBody(r *http.Request, dst interface{}) error {
 	defer r.Body.Close()
 
 	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields() // kalau ada field asing diabaikan
+	dec.DisallowUnknownFields()
 
-	// coba decode, tapi jangan maksa kalau ada field kosong
 	if err := dec.Decode(dst); err != nil {
-		// kalau body kosong total
 		if errors.Is(err, io.EOF) {
-			return nil // biarin struct dst default
+			return nil
 		}
-		return err // JSON rusak atau tipe salah
+		return err
 	}
 
 	return nil

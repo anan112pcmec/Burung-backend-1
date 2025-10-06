@@ -1,12 +1,14 @@
 package pengguna_transaction_services
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
@@ -209,8 +211,8 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 					Where("id IN ?", varianIDs).
 					Updates(map[string]interface{}{
 						"status":        "Ready",
-						"hold_by":       0,  // misalnya ambil dari data user
-						"holder_entity": "", // atau dari variabel
+						"hold_by":       0,
+						"holder_entity": "",
 					}).Error; err != nil {
 					resp.Message = "Gagal Membatalkan, Coba Lagi Nanti"
 					resp.Status = false
@@ -265,7 +267,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 // TRANSAKSI
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB) (*response.ResponseForm, *snap.Request) {
+func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod string) (*response.ResponseForm, *snap.Request) {
 	services := "ValidateTransaksi"
 	if user.ID == 0 && user.Username == "" {
 		return &response.ResponseForm{
@@ -340,6 +342,38 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 
 	items := helper.GenerateItemDetail(data)
 
+	var PM []snap.SnapPaymentType
+
+	if PaymentMethod == "VA" {
+		PM = []snap.SnapPaymentType{
+			snap.PaymentTypeBCAVA,
+			snap.PaymentTypeBNIVA,
+			snap.PaymentTypeBRIVA,
+			snap.PaymentTypePermataVA,
+		}
+	}
+
+	if PaymentMethod == "E-Wallet" {
+		PM = []snap.SnapPaymentType{
+			snap.PaymentTypeGopay,
+			snap.PaymentTypeShopeepay,
+		}
+	}
+
+	if PaymentMethod == "Gerai" {
+		PM = []snap.SnapPaymentType{
+			snap.PaymentTypeIndomaret,
+			snap.PaymentTypeAlfamart,
+		}
+	}
+
+	if PaymentMethod == "Debit" {
+		PM = []snap.SnapPaymentType{
+			snap.PaymentTypeBCAKlikpay,
+			snap.PaymentTypeBRIEpay,
+		}
+	}
+
 	SnapReqeust := &snap.Request{
 		TransactionDetails: midtrans.TransactionDetails{
 			OrderID:  PaymentCode,
@@ -356,13 +390,8 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 			BillAddr: &AlamatPengguna,
 			ShipAddr: &AlamatPengguna,
 		},
-		Items: &items,
-		EnabledPayments: []snap.SnapPaymentType{
-			snap.PaymentTypeBCAVA, // ✅ enum bawaan dari midtrans-go
-			snap.PaymentTypeBNIVA,
-			snap.PaymentTypeBRIVA,
-			snap.PaymentTypePermataVA,
-		},
+		Items:           &items,
+		EnabledPayments: PM,
 	}
 
 	return &response.ResponseForm{
@@ -408,7 +437,7 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 		}
 	}
 
-	SnapErr, SnapReq := FormattingTransaksi(data.UserInformation, data.AlamatInformation, data.DataCheckout, db)
+	SnapErr, SnapReq := FormattingTransaksi(data.UserInformation, data.AlamatInformation, data.DataCheckout, db, data.PaymentMethod)
 	if SnapErr.Status != http.StatusOK {
 		return &response.ResponseForm{
 			Status:   SnapErr.Status,
@@ -435,6 +464,55 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 			},
 			DataCheckout: data.DataCheckout.DataResponse,
 			DataAlamat:   data.AlamatInformation,
+		},
+	}
+}
+
+func PendingTransaksi(ctx context.Context, data PayloadPendingTransaksi, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+	services := "PendingTransaksi"
+
+	if _, status := data.IdentitasPengguna.Validating(db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
+				Message: "Gagal Kredensial User Tidak Valid",
+			},
+		}
+	}
+
+	key := fmt.Sprintf("transaction_pending_id:%v:transaction_id:%s",
+		data.IdentitasPengguna.ID, data.DataPending.TransactionId)
+
+	fields := map[string]interface{}{
+		"finish_redirect_url": data.DataPending.FinishRedirectUrl,
+		"fraud_status":        data.DataPending.FraudStatus,
+		"gross_amount":        data.DataPending.GrossAmout, // typo diperbaiki
+		"order_id":            data.DataPending.OrderId,
+		"payment_type":        data.DataPending.PaymentType,
+		"status_code":         data.DataPending.StatusCode,
+		"status_message":      data.DataPending.StatusMessage,
+		"transaction_id":      data.DataPending.TransactionId,
+		"transaction_status":  data.DataPending.TransactionStatus,
+		"transaction_time":    data.DataPending.TransactionTime,
+	}
+
+	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
+		fmt.Println("⚠️ Gagal menyimpan ke Redis:", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
+				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponsePendingTransaksi{
+			Message: "Berhasil",
 		},
 	}
 }

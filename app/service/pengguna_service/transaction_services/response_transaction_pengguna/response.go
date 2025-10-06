@@ -4,6 +4,7 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -56,4 +57,8 @@ type ResponseBatalTransaksi struct {
 
 type ResponseLockTransaksi struct {
 	Message string `json:"pesan_lock_transaksi"`
+}
+
+type ResponsePendingTransaksi struct {
+	Message string `json:"pesan_pending_transaksi"`
 }
