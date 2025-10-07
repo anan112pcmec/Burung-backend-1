@@ -307,7 +307,7 @@ func (server *Server) initialize(appconfig Appsetting) {
 
 	server.Router = mux.NewRouter()
 
-	server.Router.Use(enableCORS) // 🚀 ini bikin semua route auto kena CORS
+	server.Router.Use(enableCORS)
 	// server.Router.Use(rateLimitMiddleware)        // kalau mau aktifin rate limiter
 	// server.Router.Use(blockBadRequestsMiddleware) // kalau mau blok request jahat
 

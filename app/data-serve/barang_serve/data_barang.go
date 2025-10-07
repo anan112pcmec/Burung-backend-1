@@ -74,11 +74,11 @@ func AmbilRandomBarang(ctx context.Context, rds *redis.Client) *response.Respons
 			}
 
 			mu.Lock()
-			if len(barang) < maxBarang { // pastikan tidak lebih dari maxBarang
+			if len(barang) < maxBarang {
 				barang = append(barang, b)
 			}
 			mu.Unlock()
-		}(key) // kirim key sebagai parameter
+		}(key)
 	}
 
 	wg.Wait()
