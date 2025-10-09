@@ -4,45 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
-	"github.com/meilisearch/meilisearch-go"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/time/rate"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-
-	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
-	"github.com/anan112pcmec/Burung-backend-1/app/database/enums"
-	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
 )
-
-type Server struct {
-	DB     *gorm.DB
-	Router *mux.Router
-}
-
-type Appsetting struct {
-	AppName, AppConf, AppPort string
-}
-
-type Dataconfig struct {
-	dbHost, dbUser, dbPass, dbName, dbPort string
-}
-
-type RedisConfig struct {
-	dbPort string
-}
 
 // enableCORS sama seperti sebelumnya
 func enableCORS(next http.Handler) http.Handler {
@@ -300,149 +270,4 @@ func blockBadRequestsMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-}
-
-func (server *Server) initialize(appconfig Appsetting) {
-	fmt.Println("Inisialisasi server:", appconfig.AppName)
-
-	server.Router = mux.NewRouter()
-
-	server.Router.Use(enableCORS)
-	// server.Router.Use(rateLimitMiddleware)        // kalau mau aktifin rate limiter
-	// server.Router.Use(blockBadRequestsMiddleware) // kalau mau blok request jahat
-
-	var dbConfig = Dataconfig{
-		dbHost: Getenvi("DBHOST", "localhost"),
-		dbUser: Getenvi("DBUSER", "postgres"),
-		dbPass: Getenvi("DBPASS", "Faiz"),
-		dbName: Getenvi("DBNAME", "perpustakaan"),
-		dbPort: Getenvi("DBPORT", "8082"),
-	}
-
-	redis_entity_cache := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       1,
-	})
-
-	redis_barang_cache := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       2,
-	})
-
-	redis_engagement_cache := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       3,
-	})
-
-	keysnya := "SuperSecureKey1234567890"
-
-	SearchEngine := meilisearch.New("http://localhost:7700", meilisearch.WithAPIKey(keysnya))
-
-	var err error
-	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
-		dbConfig.dbHost, dbConfig.dbUser, dbConfig.dbPass, dbConfig.dbName, dbConfig.dbPort,
-	)
-
-	fmt.Println("DSN yang digunakan:", dsn)
-	server.DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
-	if err != nil {
-		panic("Server Gagal Menyambungkan ke database")
-	} else {
-		fmt.Println("Berhasil terhubung ke database:", Getenvi("DBNAME", "DBMU"))
-		fmt.Println("DB_NAME dari .env:", os.Getenv("DB_NAME"))
-	}
-
-	sqlDB, err := server.DB.DB()
-	if err != nil {
-		panic(err)
-	}
-
-	sqlDB.SetMaxOpenConns(98)           // Maks 50 koneksi aktif
-	sqlDB.SetMaxIdleConns(50)           // Maks 25 koneksi idle standby
-	sqlDB.SetConnMaxLifetime(time.Hour) // Koneksi dibuang kalau lebih dari 1 jam
-
-	var currentDB string
-	server.DB.Raw("SELECT current_database();").Scan(&currentDB)
-	fmt.Println("Database yang sedang digunakan:", currentDB)
-
-	server.Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Halo dari " + appconfig.AppName))
-	})
-
-	if err := enums.UpEnumsEntity(server.DB); err != nil {
-		return
-	}
-
-	if err := enums.UpBarangEnums(server.DB); err != nil {
-		return
-	}
-
-	if err := enums.UpEnumsTransaksi(server.DB); err != nil {
-		return
-	}
-
-	migrate.UpEntity(server.DB)
-	migrate.UpBarang(server.DB)
-	migrate.UpTransaksi(server.DB)
-	migrate.UpEngagementEntity(server.DB)
-
-	server.Router.Methods(http.MethodOptions).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.GetHandler(server.DB, redis_barang_cache, SearchEngine),
-	)).Methods("GET")
-
-	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.PostHandler(server.DB, redis_entity_cache, redis_engagement_cache),
-	)).Methods("POST")
-
-	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.PutHandler(server.DB),
-	)).Methods("PUT")
-
-	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.PatchHandler(server.DB, redis_barang_cache, redis_engagement_cache),
-	)).Methods("PATCH")
-
-	server.Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.DeleteHandler(server.DB),
-	)).Methods("DELETE")
-
-}
-
-func (server *Server) Run(alamat string) {
-	fmt.Printf("Berjalan di port %s\n", alamat)
-	log.Fatal(http.ListenAndServe(alamat, server.Router))
-}
-
-func Getenvi(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-func Run() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error di env")
-	}
-
-	var server = Server{}
-	var appconfig = Appsetting{
-		AppName: Getenvi("APPNAME", "backend"),
-		AppConf: Getenvi("APPENV", "developmentcoy"),
-		AppPort: Getenvi("APPPORT", "8081"),
-	}
-
-	server.initialize(appconfig)
-	server.Run(appconfig.AppPort)
 }
