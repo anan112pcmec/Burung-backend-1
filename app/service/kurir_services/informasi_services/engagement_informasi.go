@@ -1,6 +1,7 @@
 package kurir_informasi_services
 
 import (
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -16,11 +17,12 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 	_, status := data.DataIdentitasKurir.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, Kredensial Tidak Valid",
+				Message: "Gagal, kredensial tidak valid.",
 			},
 		}
 	}
@@ -31,11 +33,12 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 	}).Take(&id_pengajuan)
 
 	if id_pengajuan != 0 {
+		log.Printf("[WARN] Sudah ada pengajuan kendaraan yang belum diproses untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, Tunggu Pengajuan Sebelum nya ditindak kami",
+				Message: "Gagal, tunggu pengajuan sebelumnya ditindak kami.",
 			},
 		}
 	}
@@ -44,25 +47,27 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 		data.DataInformasiKendaraan.StatusPerizinan = "Pending"
 		data.DataInformasiKendaraan.ID = 0
 		if err_ajukan := tx.Create(&data.DataInformasiKendaraan).Error; err_ajukan != nil {
+			log.Printf("[ERROR] Gagal mengajukan informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err_ajukan)
 			return err_ajukan
 		}
-
 		return nil
 	}); err != nil {
+		log.Printf("[ERROR] Gagal transaksi pengajuan informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, Server sedang sibuk coba lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Pengajuan informasi kendaraan berhasil untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-			Message: "Berhasil",
+			Message: "Berhasil.",
 		},
 	}
 }
@@ -73,11 +78,12 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 	_, status := data.DataIdentitasKurir.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
-				Message: "Gagal, Kredensial Tidak Valid",
+				Message: "Gagal, kredensial tidak valid.",
 			},
 		}
 	}
@@ -88,24 +94,27 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 			ID:      data.DataInformasiKendaraan.ID,
 			IDkurir: data.DataIdentitasKurir.IdKurir,
 		}).Limit(1).Updates(&data.DataInformasiKendaraan).Error; err_updateInformasi != nil {
+			log.Printf("[ERROR] Gagal mengedit informasi kendaraan ID %d untuk kurir ID %d: %v", data.DataInformasiKendaraan.ID, data.DataIdentitasKurir.IdKurir, err_updateInformasi)
 			return err_updateInformasi
 		}
 		return nil
 	}); err != nil {
+		log.Printf("[ERROR] Gagal transaksi edit informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
-				Message: "Gagal, Server sedang sibuk coba lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Edit informasi kendaraan berhasil untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
-			Message: "Berhasil",
+			Message: "Berhasil.",
 		},
 	}
 
@@ -117,11 +126,12 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 	_, status := data.DataIdentitasKurir.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal, Kredensial Tidak Valid",
+				Message: "Gagal, kredensial tidak valid.",
 			},
 		}
 	}
@@ -132,11 +142,12 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 	}).Take(&id_pengajuan)
 
 	if id_pengajuan != 0 {
+		log.Printf("[WARN] Sudah ada pengajuan data kurir yang belum diproses untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal, Tunggu Pengajuan Sebelum nya ditindak kami",
+				Message: "Gagal, tunggu pengajuan sebelumnya ditindak kami.",
 			},
 		}
 	}
@@ -145,24 +156,27 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 		data.DataInformasiKurir.StatusPerizinan = "Pending"
 		data.DataInformasiKurir.ID = 0
 		if err_ajukan := tx.Create(&data.DataInformasiKurir).Error; err_ajukan != nil {
+			log.Printf("[ERROR] Gagal mengajukan data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err_ajukan)
 			return err_ajukan
 		}
 		return nil
 	}); err != nil {
+		log.Printf("[ERROR] Gagal transaksi pengajuan data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal, Server sedang sibuk coba lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Pengajuan data kurir berhasil untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-			Message: "Berhasil",
+			Message: "Berhasil.",
 		},
 	}
 }
@@ -173,11 +187,12 @@ func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *respon
 	_, status := data.DataIdentitasKurir.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
-				Message: "Gagal, Kredensial Tidak Valid",
+				Message: "Gagal, kredensial tidak valid.",
 			},
 		}
 	}
@@ -188,24 +203,27 @@ func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *respon
 			ID:      data.DataInformasiKurir.ID,
 			IDkurir: data.DataIdentitasKurir.IdKurir,
 		}).Updates(&data.DataInformasiKurir).Error; err_edit_informasi != nil {
+			log.Printf("[ERROR] Gagal mengedit data kurir ID %d untuk kurir ID %d: %v", data.DataInformasiKurir.ID, data.DataIdentitasKurir.IdKurir, err_edit_informasi)
 			return err_edit_informasi
 		}
 		return nil
 	}); err != nil {
+		log.Printf("[ERROR] Gagal transaksi edit data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
-				Message: "Gagal, server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Edit data kurir berhasil untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
-			Message: "Berhasil",
+			Message: "Berhasil.",
 		},
 	}
 }

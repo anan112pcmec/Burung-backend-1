@@ -24,42 +24,46 @@ func PreUbahPasswordKurir(data PayloadPreUbahPassword, db *gorm.DB, rds *redis.C
 	kurir, status := data.DataIdentitas.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Identitas kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_credential_kurir.ResponsePreUbahPassword{
-				Message: "Gagal, identitas kurir tidak valid",
+				Message: "Gagal, identitas kurir tidak valid.",
 			},
 		}
 	}
 
-	if data.PasswordBaru == "" && data.PasswordLama == "" {
+	if data.PasswordBaru == "" || data.PasswordLama == "" {
+		log.Println("[WARN] Password lama atau baru kosong pada permintaan ubah password kurir.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
 			Payload: response_credential_kurir.ResponsePreUbahPassword{
-				Message: "Gagal, Isi Password Yang Benar",
+				Message: "Gagal, isi password lama dan baru dengan benar.",
 			},
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(kurir.PasswordHash), []byte(data.PasswordLama)); err != nil {
+		log.Printf("[WARN] Password lama salah untuk kurir ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotAcceptable,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_credential_kurir.ResponsePreUbahPassword{
-				Message: "Gagal, Password Lama Mu Salah",
+				Message: "Gagal, password lama yang dimasukkan salah.",
 			},
 		}
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.PasswordBaru), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("[ERROR] Gagal mengenkripsi password baru untuk kurir ID %d: %v", data.DataIdentitas.IdKurir, err)
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_credential_kurir.ResponsePreUbahPassword{
-				Message: "Gagal, server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
@@ -73,10 +77,10 @@ func PreUbahPasswordKurir(data PayloadPreUbahPassword, db *gorm.DB, rds *redis.C
 		message := fmt.Sprintf("Kode Anda: %s\nMasa berlaku 3 menit.", otp)
 
 		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-			fmt.Println("Gagal Kirim Email Untuk Otp:", otp)
+			log.Printf("[ERROR] Gagal mengirim email OTP ke %s: %v", data.DataIdentitas.EmailKurir, err)
+		} else {
+			log.Printf("[INFO] Email OTP berhasil dikirim ke %s", data.DataIdentitas.EmailKurir)
 		}
-
-		log.Println("[TRACE] Email sent successfully")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -90,25 +94,21 @@ func PreUbahPasswordKurir(data PayloadPreUbahPassword, db *gorm.DB, rds *redis.C
 		hset := pipe.HSet(ctx, key, fields)
 		exp := pipe.Expire(ctx, key, 3*time.Minute)
 
-		res, err := pipe.Exec(ctx)
-		if err != nil {
-			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
+		if _, err := pipe.Exec(ctx); err != nil {
+			log.Printf("[ERROR] Redis pipeline gagal: %v", err)
 		}
 
 		_ = hset
 		_ = exp
-		_ = res
-
 	}()
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_credential_kurir.ResponsePreUbahPassword{
-			Message: fmt.Sprintf("Berhasil, Selanjutnya silahkan input kode otp yang dikirim ke email anda: %s", data.DataIdentitas.EmailKurir),
+			Message: fmt.Sprintf("Berhasil, silakan input kode OTP yang dikirim ke email Anda: %s", data.DataIdentitas.EmailKurir),
 		},
 	}
-
 }
 
 func ValidateUbahPasswordKurir(data PayloadValidateUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
@@ -117,11 +117,12 @@ func ValidateUbahPasswordKurir(data PayloadValidateUbahPassword, db *gorm.DB, rd
 	_, status := data.DataIdentitas.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Identitas kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_credential_kurir.ResponseValidateUbahPassword{
-				Message: "Gagal, identitas kurir tidak valid",
+				Message: "Gagal, identitas kurir tidak valid.",
 			},
 		}
 	}
@@ -131,25 +132,34 @@ func ValidateUbahPasswordKurir(data PayloadValidateUbahPassword, db *gorm.DB, rd
 
 	result, err_rds := rds.HGetAll(ctx, key).Result()
 
-	if err_rds != nil {
+	if err_rds != nil || len(result) == 0 {
+		log.Printf("[WARN] OTP tidak valid atau sudah kadaluarsa untuk kurir ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
+			Payload: response_credential_kurir.ResponseValidateUbahPassword{
+				Message: "OTP tidak valid atau sudah kadaluarsa.",
+			},
 		}
 	}
 
 	if err_change_pass := db.Model(models.Kurir{}).Where(models.Kurir{ID: data.DataIdentitas.IdKurir}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+		log.Printf("[ERROR] Gagal mengubah password kurir ID %d: %v", data.DataIdentitas.IdKurir, err_change_pass)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
+			Payload: response_credential_kurir.ResponseValidateUbahPassword{
+				Message: "Terjadi kesalahan pada server saat mengubah password.",
+			},
 		}
 	}
 
+	log.Printf("[INFO] Password kurir ID %d berhasil diubah via OTP.", data.DataIdentitas.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_credential_kurir.ResponseValidateUbahPassword{
-			Message: "Berhasil",
+			Message: "Password berhasil diubah.",
 		},
 	}
 }

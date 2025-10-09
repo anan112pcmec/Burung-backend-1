@@ -15,6 +15,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
+
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -26,8 +27,11 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 
 	if _, status := data.IdentitasPengguna.Validating(db); !status {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
+			Payload: response_transaction_pengguna.ResponseDataCheckout{
+				Message: "Kredensial pengguna tidak valid.",
+			},
 		}
 	}
 
@@ -41,7 +45,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 					Status:   http.StatusBadRequest,
 					Services: services,
 					Payload: response_transaction_pengguna.ResponseDataCheckout{
-						Message: "Gagal, semua barang harus dari seller yang sama",
+						Message: "Semua barang harus dari seller yang sama.",
 					},
 				}
 			}
@@ -106,7 +110,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 					Limit(int(keranjang.Count)).
 					Pluck("id", &varianIDs).Error; err != nil {
 
-					resp.Message = "Coba Lagi Nanti"
+					resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
 					resp.Status = false
 					responseData = append(responseData, resp)
 					return err
@@ -114,7 +118,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 
 				if len(varianIDs) < int(keranjang.Count) {
 					shortfall := int64(keranjang.Count) - int64(len(varianIDs))
-					resp.Message = fmt.Sprintf("Gagal, stok kurang %v barang", shortfall)
+					resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
 					resp.Status = false
 					responseData = append(responseData, resp)
 					continue
@@ -127,7 +131,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 						"hold_by":       data.IdentitasPengguna.ID,
 						"holder_entity": "Pengguna",
 					}).Error; err != nil {
-					resp.Message = "Coba Lagi Nanti"
+					resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
 					resp.Status = false
 					responseData = append(responseData, resp)
 					return err
@@ -142,11 +146,11 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 					})
 				}
 
-				resp.Message = "Berhasil Siap Transaksi"
+				resp.Message = "Barang siap untuk transaksi."
 				resp.Status = true
 			} else {
 				shortfall := int64(keranjang.Count) - jumlahStok
-				resp.Message = fmt.Sprintf("Gagal, stok kurang %v barang", shortfall)
+				resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
 				resp.Status = false
 			}
 
@@ -161,7 +165,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_transaction_pengguna.ResponseDataCheckout{
-				Message: "Gagal, Server Sedang Sibuk Coba Lagi Nanti",
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 			},
 		}
 	}
@@ -170,7 +174,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_transaction_pengguna.ResponseDataCheckout{
-			Message:      "Berhasil",
+			Message:      "Checkout berhasil.",
 			DataResponse: responseData,
 			LayananPengiriman: response_transaction_pengguna.LayananPengiriman{
 				JenisLayananKurir: data.JenisLayananKurir,
@@ -200,7 +204,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: "Dipesan", HoldBy: keranjang.IDUser}).
 				Limit(int(keranjang.Dipesan)).
 				Pluck("id", &varianIDs).Error; err != nil {
-				resp.Message = "Gagal Membatalkan, Coba Lagi Nanti"
+				resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
 				resp.Status = false
 				responseData = append(responseData, resp)
 				return err
@@ -214,7 +218,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 						"hold_by":       0,
 						"holder_entity": "",
 					}).Error; err != nil {
-					resp.Message = "Gagal Membatalkan, Coba Lagi Nanti"
+					resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
 					resp.Status = false
 					responseData = append(responseData, resp)
 					return err
@@ -231,10 +235,10 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 					})
 				}
 
-				resp.Message = "Berhasil Dibatalkan"
+				resp.Message = "Checkout berhasil dibatalkan."
 				resp.Status = true
 			} else {
-				resp.Message = "Tidak Ada Barang Dipesan Untuk Dibatalkan"
+				resp.Message = "Tidak ada barang dipesan untuk dibatalkan."
 				resp.Status = false
 			}
 
@@ -248,7 +252,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_transaction_pengguna.ResponseDataCheckout{
-				Message: "Gagal, Server Sedang Sibuk Coba Lagi Nanti",
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 			},
 		}
 	}
@@ -257,7 +261,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_transaction_pengguna.ResponseDataCheckout{
-			Message:      "Berhasil Membatalkan Checkout",
+			Message:      "Berhasil membatalkan checkout.",
 			DataResponse: responseData,
 		},
 	}
@@ -535,7 +539,7 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_transaction_pengguna.ResponseBatalTransaksi{
-				Message: "Gagal, Server Sedang Sibuk Coba Lagi Nanti",
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 			},
 		}
 	}
@@ -544,7 +548,7 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_transaction_pengguna.ResponseBatalTransaksi{
-			Message: "Berhasil",
+			Message: "Transaksi berhasil dibatalkan.",
 		},
 	}
 }
@@ -555,16 +559,22 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 	for _, keranjang := range data.DataHold {
 		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
 			return &response.ResponseForm{
-				Status:   http.StatusNotFound,
+				Status:   http.StatusBadRequest,
 				Services: services,
+				Payload: response_transaction_pengguna.ResponseLockTransaksi{
+					Message: "Data keranjang tidak valid.",
+				},
 			}
 		}
 	}
 
 	if data.PaymentResult.OrderId == "" {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_transaction_pengguna.ResponseLockTransaksi{
+				Message: "Order ID tidak ditemukan.",
+			},
 		}
 	}
 
@@ -606,7 +616,7 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 			}
 
 			if pembayaranObj.ID == 0 {
-				return fmt.Errorf("gagal, kredensial pembayaran tidak valid")
+				return fmt.Errorf("Kredensial pembayaran tidak valid.")
 			}
 
 			transaksi := models.Transaksi{
@@ -645,12 +655,12 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 
 		return nil
 	}); err != nil {
-		fmt.Printf("[FATAL] Transaction rollback | Err=%v\n", err)
+		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_transaction_pengguna.ResponseLockTransaksi{
-				Message: "Gaga",
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 			},
 		}
 	}
@@ -659,7 +669,7 @@ func LockTransaksi(data PayloadLockTransaksi, db *gorm.DB) *response.ResponseFor
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_transaction_pengguna.ResponseLockTransaksi{
-			Message: "Berhasil",
+			Message: "Transaksi berhasil dikunci.",
 		},
 	}
 }

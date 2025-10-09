@@ -1,6 +1,7 @@
 package seller_social_media_services
 
 import (
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -14,11 +15,12 @@ func EngageSocialMediaSeller(data PayloadEngageSocialMedia, db *gorm.DB) *respon
 	services := "EngagementSocialMediaSeller"
 
 	if _, status := data.IdentitasSeller.Validating(db); !status {
+		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_social_media_seller.ResponseEngageSocialMedia{
-				Message: "Gagal, Kredensial Seller tidak valid",
+				Message: "Kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -38,20 +40,22 @@ func EngageSocialMediaSeller(data PayloadEngageSocialMedia, db *gorm.DB) *respon
 			Instagram:  data.Data.Instagram,
 			EntityType: "Seller",
 		}).Error; err_buat_kolom != nil {
+			log.Printf("[ERROR] Gagal menambah data social media untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err_buat_kolom)
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
 				Payload: response_social_media_seller.ResponseEngageSocialMedia{
-					Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+					Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 				},
 			}
 		}
 
+		log.Printf("[INFO] Data social media berhasil ditambahkan untuk seller ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
 			Payload: response_social_media_seller.ResponseEngageSocialMedia{
-				Message: "Berhasil",
+				Message: "Data social media berhasil ditambahkan.",
 			},
 		}
 	}
@@ -64,20 +68,22 @@ func EngageSocialMediaSeller(data PayloadEngageSocialMedia, db *gorm.DB) *respon
 		TikTok:    data.Data.TikTok,
 		Instagram: data.Data.Instagram,
 	}).Error; err_update != nil {
+		log.Printf("[ERROR] Gagal memperbarui data social media untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err_update)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_social_media_seller.ResponseEngageSocialMedia{
-				Message: "Gagal, Server Sedang sibuk coba lagi lain waktu",
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Data social media berhasil diperbarui untuk seller ID %d", data.IdentitasSeller.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_social_media_seller.ResponseEngageSocialMedia{
-			Message: "Berhasil",
+			Message: "Data social media berhasil diperbarui.",
 		},
 	}
 }

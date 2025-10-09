@@ -18,6 +18,7 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 	data.BarangInduk.SellerID = data.IdSeller
 
 	if validasi := data.BarangInduk.Validating(); validasi != "Data Lengkap" {
+		log.Printf("[WARN] Data barang tidak lengkap untuk seller ID %d", data.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
@@ -32,14 +33,13 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 		Take(&namabarang).Error
 
 	if errnama == nil {
+		log.Printf("[WARN] Seller ID %d sudah memiliki barang dengan nama '%s'", data.IdSeller, data.BarangInduk.NamaBarang)
 		return &response.ResponseForm{
 			Status:   http.StatusConflict,
 			Services: services,
-			Payload:  "Gagal: Oops Kamu Coba Ganti Nama Barang, Kamu Sudah Punya Barang Itu",
+			Payload:  "Gagal: Nama barang sudah terdaftar untuk seller ini",
 		}
 	}
-
-	fmt.Println("errnama udh ada tapi gajalan")
 
 	var sellerID int32
 	err := db.Model(&models.Seller{}).
@@ -48,6 +48,7 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 		Take(&sellerID).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("[WARN] Seller ID %d tidak ditemukan", data.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
@@ -55,6 +56,7 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 		}
 	}
 	if err != nil {
+		log.Printf("[ERROR] Terjadi kesalahan saat validasi seller ID %d: %v", data.IdSeller, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -103,15 +105,16 @@ func MasukanBarang(db *gorm.DB, data PayloadMasukanBarang) *response.ResponseFor
 
 			return nil
 		}); err != nil {
-			log.Printf("[MasukanBarang] gagal insert data: %v", err)
+			log.Printf("[ERROR] MasukanBarang gagal insert data untuk seller ID %d: %v", data.IdSeller, err)
 		}
 	}()
 
+	log.Printf("[INFO] Barang berhasil dimasukkan untuk seller ID %d", data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_barang_service.ResponseMasukanBarang{
-			Message: "Berhasil",
+			Message: "Barang berhasil ditambahkan.",
 		},
 	}
 }
@@ -125,14 +128,16 @@ func HapusBarang(db *gorm.DB, data PayloadHapusBarang) *response.ResponseForm {
 		Select("id").
 		Take(&barangdihapus).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("[WARN] Barang tidak ditemukan untuk seller ID %d dengan nama '%s'", data.IdSeller, data.BarangInduk.NamaBarang)
 			return &response.ResponseForm{
 				Status:   http.StatusNotFound,
 				Services: services,
 				Payload:  "Barang tidak ditemukan atau tidak sesuai kredensial seller",
 			}
 		}
+		log.Printf("[ERROR] Terjadi kesalahan pada database saat hapus barang: %v", err)
 		return &response.ResponseForm{
-			Status:   http.StatusBadGateway,
+			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload:  "Terjadi kesalahan pada database",
 		}
@@ -140,19 +145,21 @@ func HapusBarang(db *gorm.DB, data PayloadHapusBarang) *response.ResponseForm {
 
 	var jumlah_dalam_transaksi int64
 	if err_stock := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: barangdihapus, Status: "Dipesan"}).Or(models.VarianBarang{Status: "Diproses"}).Count(&jumlah_dalam_transaksi).Error; err_stock != nil {
+		log.Printf("[ERROR] Gagal cek stok dalam transaksi saat hapus barang: %v", err_stock)
 		return &response.ResponseForm{
-			Status:   http.StatusBadGateway,
+			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload:  "Terjadi kesalahan pada database",
 		}
 	}
 
 	if jumlah_dalam_transaksi != 0 {
+		log.Printf("[WARN] Masih ada %v barang dalam transaksi untuk barang ID %d", jumlah_dalam_transaksi, barangdihapus)
 		return &response.ResponseForm{
-			Status:   http.StatusBadGateway,
+			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_barang_service.ResponseHapusBarang{
-				Message: fmt.Sprintf("Masih Ada Sejumlah: %v Barang Dalam Transaksi", jumlah_dalam_transaksi),
+				Message: fmt.Sprintf("Masih ada sejumlah: %v barang dalam transaksi", jumlah_dalam_transaksi),
 			},
 		}
 	}
@@ -177,15 +184,16 @@ func HapusBarang(db *gorm.DB, data PayloadHapusBarang) *response.ResponseForm {
 
 			return nil
 		}); err != nil {
-			fmt.Println("Rollback HapusBarang:", err)
+			log.Printf("[ERROR] Rollback HapusBarang untuk barang ID %d: %v", barangdihapus, err)
 		}
 	}()
 
+	log.Printf("[INFO] Barang berhasil dihapus untuk seller ID %d", data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_barang_service.ResponseHapusBarang{
-			Message: "Berhasil",
+			Message: "Barang berhasil dihapus.",
 		},
 	}
 }
@@ -195,11 +203,12 @@ func EditBarang(db *gorm.DB, data PayloadEditBarang) *response.ResponseForm {
 	data.BarangInduk.SellerID = data.IdSeller
 
 	if validasi := data.BarangInduk.Validating(); validasi != "Data Lengkap" {
+		log.Printf("[WARN] Data barang tidak lengkap untuk edit seller ID %d", data.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
 			Payload: response_barang_service.ResponseEditBarang{
-				Message: "Gagal Mengubah Data Barang: Data Tidak Lengkap",
+				Message: "Gagal mengubah data barang: Data tidak lengkap",
 			},
 		}
 	}
@@ -211,24 +220,25 @@ func EditBarang(db *gorm.DB, data PayloadEditBarang) *response.ResponseForm {
 		Take(&id).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("[WARN] Barang tidak valid untuk edit seller ID %d", data.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_barang_service.ResponseEditBarang{
-				Message: "Barang Tidak Valid",
+				Message: "Barang tidak valid",
 			},
 		}
 	} else if err != nil {
+		log.Printf("[ERROR] Terjadi kesalahan server saat validasi barang: %v", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_barang_service.ResponseEditBarang{
-				Message: "Terjadi kesalahan server saat validasi Barang",
+				Message: "Terjadi kesalahan server saat validasi barang",
 			},
 		}
 	}
 
-	// Async update (fire-and-forget)
 	go func() {
 		if err := db.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Model(&models.BarangInduk{}).
@@ -238,15 +248,16 @@ func EditBarang(db *gorm.DB, data PayloadEditBarang) *response.ResponseForm {
 			}
 			return nil
 		}); err != nil {
-			log.Printf("[EditBarang] Gagal update BarangInduk ID %d: %v", data.BarangInduk.ID, err)
+			log.Printf("[ERROR] EditBarang gagal update BarangInduk ID %d: %v", data.BarangInduk.ID, err)
 		}
 	}()
 
+	log.Printf("[INFO] Barang berhasil diubah untuk seller ID %d", data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_barang_service.ResponseEditBarang{
-			Message: "Berhasil",
+			Message: "Barang berhasil diubah.",
 		},
 	}
 }
@@ -268,10 +279,11 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 		Where(&barangIndukFilter).
 		Select("id").
 		First(&idBarangIndukGet).Error; err != nil {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk tambah kategori. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusOK,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload:  "Gagal Mendapatkan Barang Yang Dituju",
+			Payload:  "Gagal mendapatkan barang yang dituju",
 		}
 	}
 
@@ -286,19 +298,22 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 					First(&existingKategori).Error
 
 				if err == nil {
+					log.Printf("[WARN] Kategori '%s' sudah ada pada barang induk ID %d", data.KategoriBarang[i].Nama, data.IdBarangInduk)
 					continue
 				} else if err != gorm.ErrRecordNotFound {
-					log.Printf("[TambahKategoriBarang] Error cek kategori %s: %v", data.KategoriBarang[i].Nama, err)
+					log.Printf("[ERROR] Gagal cek kategori '%s' pada barang induk ID %d: %v", data.KategoriBarang[i].Nama, data.IdBarangInduk, err)
 					continue
 				}
 
 				if err := tx.Create(&data.KategoriBarang[i]).Error; err != nil {
+					log.Printf("[ERROR] Gagal menambah kategori '%s' pada barang induk ID %d: %v", data.KategoriBarang[i].Nama, data.IdBarangInduk, err)
 					return err
 				}
 
 				var kategoriBaru models.KategoriBarang
 				if err := tx.Where("nama = ? AND id_barang_induk = ?", data.KategoriBarang[i].Nama, data.IdBarangInduk).
 					First(&kategoriBaru).Error; err != nil {
+					log.Printf("[ERROR] Gagal mengambil kategori baru '%s' pada barang induk ID %d: %v", data.KategoriBarang[i].Nama, data.IdBarangInduk, err)
 					return err
 				}
 
@@ -314,6 +329,7 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 
 				if len(varianBatch) > 0 {
 					if err := tx.Create(&varianBatch).Error; err != nil {
+						log.Printf("[ERROR] Gagal membuat varian untuk kategori '%s' pada barang induk ID %d: %v", data.KategoriBarang[i].Nama, data.IdBarangInduk, err)
 						return err
 					}
 				}
@@ -321,15 +337,16 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 
 			return nil
 		}); err != nil {
-			log.Printf("[TambahKategoriBarang] Gagal proses kategori & varian untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
+			log.Printf("[ERROR] TambahKategoriBarang gagal proses kategori & varian untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
 		}
 	}(data)
 
+	log.Printf("[INFO] Kategori barang berhasil ditambahkan pada barang induk ID %d oleh seller ID %d", data.IdBarangInduk, data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_barang_service.ResponseTambahKategori{
-			Message: "Berhasil",
+			Message: "Kategori barang berhasil ditambahkan.",
 		},
 	}
 }
@@ -347,29 +364,34 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 		Where(&barangIndukFilter).
 		Select("id").
 		First(&idBarangIndukGet).Error; err != nil {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk hapus kategori. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusOK,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload:  "Gagal Mendapatkan Barang Yang Dituju",
+			Payload:  "Gagal mendapatkan barang yang dituju",
 		}
 	}
 
 	for _, kat := range data.KategoriBarang {
 		var barang_dalam_transaksi int64
-		if err_stock := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: kat.ID, Status: "Dipesan"}).Or(models.VarianBarang{Status: "Diproses"}).Count(&barang_dalam_transaksi).Error; err_stock != nil {
+		if err_stock := db.Model(models.VarianBarang{}).
+			Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: kat.ID, Status: "Dipesan"}).
+			Or(models.VarianBarang{Status: "Diproses"}).
+			Count(&barang_dalam_transaksi).Error; err_stock != nil {
+			log.Printf("[ERROR] Gagal cek stok dalam transaksi untuk kategori ID %d: %v", kat.ID, err_stock)
 			continue
 		}
 
 		if barang_dalam_transaksi != 0 {
+			log.Printf("[WARN] Tidak bisa hapus kategori %s, masih ada %v stok dalam transaksi", kat.Nama, barang_dalam_transaksi)
 			return &response.ResponseForm{
-				Status:   http.StatusOK,
+				Status:   http.StatusConflict,
 				Services: services,
 				Payload: response_barang_service.ResponseHapusKategori{
 					Message: fmt.Sprintf("Tidak Bisa Menghapus Kategori %s, Masih Ada %v Stok Dalam Transaksi", kat.Nama, barang_dalam_transaksi),
 				},
 			}
 		}
-
 	}
 
 	go func() {
@@ -383,9 +405,10 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 
 				if err != nil {
 					if err == gorm.ErrRecordNotFound {
+						log.Printf("[WARN] Kategori ID %d tidak ditemukan untuk barang induk ID %d", data.KategoriBarang[i].ID, data.IdBarangInduk)
 						continue
 					} else {
-						log.Printf("[HapusKategoriBarang] Error cek kategori ID %d: %v", data.KategoriBarang[i].ID, err)
+						log.Printf("[ERROR] Error cek kategori ID %d: %v", data.KategoriBarang[i].ID, err)
 						continue
 					}
 				}
@@ -393,27 +416,27 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 				if err := tx.Unscoped().
 					Where("id_kategori = ? AND id_barang_induk = ?", existingKategori.ID, data.IdBarangInduk).
 					Delete(&models.VarianBarang{}).Error; err != nil {
-					log.Printf("[HapusKategoriBarang] Gagal hapus varian untuk kategori ID %d: %v", existingKategori.ID, err)
+					log.Printf("[ERROR] Gagal hapus varian untuk kategori ID %d: %v", existingKategori.ID, err)
 					return err
 				}
 
 				if err := tx.Unscoped().Delete(&existingKategori).Error; err != nil {
-					log.Printf("[HapusKategoriBarang] Gagal hapus kategori ID %d: %v", existingKategori.ID, err)
+					log.Printf("[ERROR] Gagal hapus kategori ID %d: %v", existingKategori.ID, err)
 					return err
 				}
 			}
-
 			return nil
 		}); err != nil {
-			log.Printf("[HapusKategoriBarang] Gagal hapus kategori & varian untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
+			log.Printf("[ERROR] HapusKategoriBarang gagal proses hapus kategori & varian untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
 		}
 	}()
 
+	log.Printf("[INFO] Kategori barang berhasil dihapus pada barang induk ID %d oleh seller ID %d", data.IdBarangInduk, data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_barang_service.ResponseHapusKategori{
-			Message: "Berhasil",
+			Message: "Kategori barang berhasil dihapus.",
 		},
 	}
 }
@@ -431,10 +454,11 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 		Where(&barangIndukFilter).
 		Select("id").
 		First(&idBarangIndukGet).Error; err != nil {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk edit kategori. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
-			Payload:  "Gagal Mendapatkan Barang Yang Dituju",
+			Payload:  "Gagal mendapatkan barang yang dituju",
 		}
 	}
 
@@ -445,6 +469,7 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 				if err := tx.Model(&models.KategoriBarang{}).
 					Where("id = ?", data.KategoriBarang[i].ID).
 					Updates(&data.KategoriBarang[i]).Error; err != nil {
+					log.Printf("[ERROR] Gagal update kategori ID %d: %v", data.KategoriBarang[i].ID, err)
 					return err
 				}
 
@@ -455,20 +480,21 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 				if err := tx.Model(&models.VarianBarang{}).
 					Where(&varBarangFilter).
 					Update("sku", data.KategoriBarang[i].Sku).Error; err != nil {
-					log.Printf("[EditKategoriBarang] Gagal update SKU: %v", err)
+					log.Printf("[ERROR] Gagal update SKU varian untuk kategori ID %d: %v", data.KategoriBarang[i].ID, err)
 				}
 			}
 			return nil
 		}); err != nil {
-			log.Printf("[EditKategoriBarang] Gagal mengupdate kategori untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
+			log.Printf("[ERROR] EditKategoriBarang gagal update kategori untuk BarangInduk ID %s: %v", idBarangIndukGet, err)
 		}
 	}()
 
+	log.Printf("[INFO] Kategori barang berhasil diubah pada barang induk ID %d oleh seller ID %d", data.IdBarangInduk, data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_barang_service.ResponseEditKategori{
-			Message: "Berhasil",
+			Message: "Kategori barang berhasil diubah.",
 		},
 	}
 }
@@ -485,7 +511,7 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 		Where(&models.BarangInduk{ID: data.IdBarangInduk, SellerID: data.IdSeller}).
 		Select("id").
 		Take(&idbaranginduk).Error; err != nil {
-		log.Printf("[TRACE] Barang induk tidak ditemukan: IdBarangInduk=%d, IdSeller=%d, Error=%v\n", data.IdBarangInduk, data.IdSeller, err)
+		log.Printf("[WARN] Barang induk tidak ditemukan: IdBarangInduk=%d, IdSeller=%d, Error=%v", data.IdBarangInduk, data.IdSeller, err)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -497,14 +523,14 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 		if err := db.
 			Where(&models.KategoriBarang{IdBarangInduk: data.IdBarangInduk, ID: b.IdKategoriBarang}).
 			Take(&models.KategoriBarang{}).Error; err != nil {
-			log.Printf("[TRACE] Kategori tidak ditemukan: IdKategori=%d, NamaKategori=%s, Error=%v\n", b.IdKategoriBarang, b.NamaKategoriBarang, err)
+			log.Printf("[WARN] Kategori tidak ditemukan: IdKategori=%d, NamaKategori=%s, Error=%v", b.IdKategoriBarang, b.NamaKategoriBarang, err)
 			return &response.ResponseForm{
 				Status:   http.StatusNotFound,
 				Services: services,
 				Payload:  fmt.Sprintf("Kategori %s tidak ditemukan", b.NamaKategoriBarang),
 			}
 		}
-		log.Printf("[TRACE] Kategori ditemukan: IdKategori=%d, NamaKategori=%s\n", b.IdKategoriBarang, b.NamaKategoriBarang)
+		log.Printf("[INFO] Kategori ditemukan: IdKategori=%d, NamaKategori=%s", b.IdKategoriBarang, b.NamaKategoriBarang)
 	}
 
 	go func() {
@@ -514,25 +540,25 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 			if err := db.Model(&models.VarianBarang{}).
 				Where(&models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: b.IdKategoriBarang, Status: "Ready"}).
 				Count(&jumlah).Error; err != nil {
-				log.Printf("[TRACE] Gagal menghitung stok: IdKategori=%d, Error=%v\n", b.IdKategoriBarang, err)
+				log.Printf("[ERROR] Gagal menghitung stok: IdKategori=%d, Error=%v", b.IdKategoriBarang, err)
 				continue
 			}
 
 			if jumlah == int64(b.JumlahStok) {
-				return
+				continue
 			}
 
 			if jumlah > int64(b.JumlahStok) {
 				hapus := jumlah - int64(b.JumlahStok)
-				log.Printf("[TRACE] Perlu hapus varian: IdKategori=%d, JumlahHapus=%d\n", b.IdKategoriBarang, hapus)
+				log.Printf("[INFO] Perlu hapus varian: IdKategori=%d, JumlahHapus=%d", b.IdKategoriBarang, hapus)
 				for j := int64(0); j < hapus; j++ {
 					if err := db.
 						Where("id_barang_induk = ? AND id_kategori = ? AND status = ?", data.IdBarangInduk, b.IdKategoriBarang, "Ready").
 						Limit(1).
 						Delete(&models.VarianBarang{}).Error; err != nil {
-						log.Printf("[TRACE] Gagal menghapus varian: IdKategori=%d, Iterasi=%d, Error=%v\n", b.IdKategoriBarang, j, err)
+						log.Printf("[ERROR] Gagal menghapus varian: IdKategori=%d, Iterasi=%d, Error=%v", b.IdKategoriBarang, j, err)
 					} else {
-						log.Printf("[TRACE] Berhasil menghapus varian: IdKategori=%d, Iterasi=%d\n", b.IdKategoriBarang, j)
+						log.Printf("[INFO] Berhasil menghapus varian: IdKategori=%d, Iterasi=%d", b.IdKategoriBarang, j)
 					}
 				}
 			}
@@ -543,18 +569,20 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 					newVarian := models.VarianBarang{
 						IdBarangInduk: data.IdBarangInduk,
 						IdKategori:    b.IdKategoriBarang,
+						Status:        "Ready",
 						Sku:           b.SkuKategoriBarang,
 					}
 					if err := db.Create(&newVarian).Error; err != nil {
-						log.Printf("[TRACE] Gagal membuat varian: IdKategori=%d, Iterasi=%d, Error=%v\n", b.IdKategoriBarang, j, err)
+						log.Printf("[ERROR] Gagal membuat varian: IdKategori=%d, Iterasi=%d, Error=%v", b.IdKategoriBarang, j, err)
 					} else {
-						log.Printf("[TRACE] Berhasil membuat varian: IdKategori=%d, Iterasi=%d\n", b.IdKategoriBarang, j)
+						log.Printf("[INFO] Berhasil membuat varian: IdKategori=%d, Iterasi=%d", b.IdKategoriBarang, j)
 					}
 				}
 			}
 		}
 	}()
 
+	log.Printf("[INFO] Proses update stok sedang berjalan untuk barang induk ID %d oleh seller ID %d", data.IdBarangInduk, data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -569,36 +597,43 @@ func DownStokBarangInduk(db *gorm.DB, data PayloadDownBarangInduk) *response.Res
 
 	var count_barang int64
 	if err_db := db.Model(models.BarangInduk{}).Where(models.BarangInduk{ID: data.IdBarangInduk, SellerID: data.IdSeller}).Count(&count_barang).Limit(1).Error; err_db != nil {
+		log.Printf("[ERROR] Gagal mengambil data barang induk ID %d untuk seller ID %d: %v", data.IdBarangInduk, data.IdSeller, err_db)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_barang_service.ResponseDownBarang{
-				Message: "Gagal Coba Lagi Nanti",
+				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
 	}
 
 	if count_barang != 1 {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk down stok. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_barang_service.ResponseDownBarang{
-				Message: "Gagal Barang Tidak Ditemukan, Coba Lagi Nanti",
+				Message: "Gagal, barang tidak ditemukan.",
 			},
 		}
 	} else {
 		go func() {
 			if err := db.Transaction(func(tx *gorm.DB) error {
-				if err_updates := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, Status: "Ready"}).Or(models.VarianBarang{Status: "Terjual"}).Update("status", "Down").Error; err_updates != nil {
+				if err_updates := db.Model(models.VarianBarang{}).
+					Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, Status: "Ready"}).
+					Or(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, Status: "Terjual"}).
+					Update("status", "Down").Error; err_updates != nil {
+					log.Printf("[ERROR] Gagal menurunkan stok semua varian barang induk ID %d: %v", data.IdBarangInduk, err_updates)
 					return err_updates
 				}
 				return nil
 			}); err != nil {
-				log.Printf("Gagal Downkan Semua stok Barang")
+				log.Printf("[ERROR] Gagal downkan semua stok barang induk ID %d: %v", data.IdBarangInduk, err)
 			}
 		}()
 	}
 
+	log.Printf("[INFO] Semua stok barang induk ID %d berhasil di-down-kan oleh seller ID %d", data.IdBarangInduk, data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -613,36 +648,43 @@ func DownKategoriBarang(db *gorm.DB, data PayloadDownKategoriBarang) *response.R
 
 	var count_barang int64
 	if err_db := db.Model(models.BarangInduk{}).Where(models.BarangInduk{ID: data.IdBarangInduk, SellerID: data.IdSeller}).Count(&count_barang).Error; err_db != nil {
+		log.Printf("[ERROR] Gagal mengambil data barang induk ID %d untuk seller ID %d: %v", data.IdBarangInduk, data.IdSeller, err_db)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_barang_service.ResponseDownKategori{
-				Message: "Gagal, Server Sedang sibuk coba lagi nanti",
+				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
 	}
 
 	if count_barang != 1 {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk down stok kategori. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_barang_service.ResponseDownKategori{
-				Message: "Gagal, Barang Tidak Ditemukan",
+				Message: "Gagal, barang tidak ditemukan.",
 			},
 		}
 	} else {
 		go func() {
 			if err_db := db.Transaction(func(tx *gorm.DB) error {
-				if err_updates := db.Model(models.VarianBarang{}).Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: data.IdKategoriBarang, Status: "Ready"}).Or(models.VarianBarang{Status: "Terjual"}).Update("status", "Down").Error; err_updates != nil {
+				if err_updates := db.Model(models.VarianBarang{}).
+					Where(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: data.IdKategoriBarang, Status: "Ready"}).
+					Or(models.VarianBarang{IdBarangInduk: data.IdBarangInduk, IdKategori: data.IdKategoriBarang, Status: "Terjual"}).
+					Update("status", "Down").Error; err_updates != nil {
+					log.Printf("[ERROR] Gagal menurunkan stok kategori ID %d pada barang induk ID %d: %v", data.IdKategoriBarang, data.IdBarangInduk, err_updates)
 					return err_updates
 				}
 				return nil
 			}); err_db != nil {
-				log.Printf("Gagal Downkan stok kategori")
+				log.Printf("[ERROR] Gagal downkan stok kategori ID %d pada barang induk ID %d: %v", data.IdKategoriBarang, data.IdBarangInduk, err_db)
 			}
 		}()
 	}
 
+	log.Printf("[INFO] Semua stok kategori ID %d pada barang induk ID %d berhasil di-down-kan oleh seller ID %d", data.IdKategoriBarang, data.IdBarangInduk, data.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -658,11 +700,12 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 	_, status := data.IdentitasSeller.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
-				Message: "Gagal, Kredensial Seller tidak valid",
+				Message: "Gagal, kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -674,11 +717,12 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 	}).Take(&valid_id)
 
 	if valid_id == 0 {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk edit alamat gudang. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
-				Message: "Gagal, Kredensial Seller tidak valid",
+				Message: "Gagal, barang induk tidak ditemukan atau kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -686,18 +730,23 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 	if err_edit := db.Model(models.KategoriBarang{}).Where(models.KategoriBarang{
 		IdBarangInduk: valid_id,
 	}).Update("id_alamat_gudang", data.IdAlamatGudang).Error; err_edit != nil {
+		log.Printf("[ERROR] Gagal update alamat gudang untuk semua kategori barang induk ID %d: %v", valid_id, err_edit)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Alamat gudang berhasil diubah untuk semua kategori barang induk ID %d oleh seller ID %d", valid_id, data.IdentitasSeller.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
+		Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+			Message: "Alamat gudang berhasil diubah.",
+		},
 	}
 }
 
@@ -707,11 +756,12 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 	_, status := data.IdentitasSeller.Validating(db)
 
 	if !status {
+		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
-				Message: "Gagal, Kredensial Seller tidak valid",
+				Message: "Gagal, kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -723,11 +773,12 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 	}).Take(&valid_id)
 
 	if valid_id == 0 {
+		log.Printf("[WARN] Barang induk tidak ditemukan untuk edit alamat gudang kategori. IdBarangInduk=%d, IdSeller=%d", data.IdBarangInduk, data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
-				Message: "Gagal, Kredensial Seller tidak valid",
+				Message: "Gagal, barang induk tidak ditemukan atau kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -736,17 +787,22 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 		IdBarangInduk: valid_id,
 		ID:            data.IdKategoriBarang,
 	}).Update("id_alamat_gudang", data.IdAlamatGudang).Error; err_edit != nil {
+		log.Printf("[ERROR] Gagal update alamat gudang untuk kategori ID %d pada barang induk ID %d: %v", data.IdKategoriBarang, valid_id, err_edit)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Alamat gudang berhasil diubah untuk kategori ID %d pada barang induk ID %d oleh seller ID %d", data.IdKategoriBarang, valid_id, data.IdentitasSeller.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
+		Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+			Message: "Alamat gudang berhasil diubah.",
+		},
 	}
 }

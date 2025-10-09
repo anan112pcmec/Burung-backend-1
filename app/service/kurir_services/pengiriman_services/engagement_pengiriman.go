@@ -1,7 +1,7 @@
 package kurir_pengiriman_services
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -23,8 +23,9 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 		Email:         data.Kredensial.EmailKurir,
 		VerifiedKurir: true,
 	}).Limit(1).Take(&kurir).Error; err != nil {
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.Kredensial.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_pengiriman_services_kurir.ResponseAmbilPengiriman{
 				Message: "Gagal, Kredensial Tidak Valid",
@@ -33,8 +34,9 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	}
 
 	if len(data.DataPengiriman) > MAX_PENGIRIMAN {
+		log.Printf("[WARN] Kurir ID %d mencoba mengambil lebih dari %d pengiriman", data.Kredensial.IdKurir, MAX_PENGIRIMAN)
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusBadRequest,
 			Services: services,
 			Payload: response_pengiriman_services_kurir.ResponseAmbilPengiriman{
 				Message: "Gagal, Maksimal hanya boleh mengambil 5 pengiriman di waktu bersamaan",
@@ -46,12 +48,14 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	if err := db.Model(&models.Pengiriman{}).Where(models.Pengiriman{
 		IdKurir: kurir.ID,
 	}).Count(&jumlahPengirimanAktif).Error; err != nil {
+		log.Printf("[ERROR] Gagal mengambil jumlah pengiriman aktif untuk kurir ID %d: %v", kurir.ID, err)
 		jumlahPengirimanAktif = 0
 	}
 
 	if jumlahPengirimanAktif >= MAX_PENGIRIMAN {
+		log.Printf("[WARN] Kurir ID %d sudah memiliki %d pengiriman tertunda", kurir.ID, MAX_PENGIRIMAN)
 		return &response.ResponseForm{
-			Status:   http.StatusNotAcceptable,
+			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_pengiriman_services_kurir.ResponseAmbilPengiriman{
 				Message: "Gagal, Kamu sudah memiliki 5 pengiriman tertunda",
@@ -60,8 +64,9 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	}
 	sisaSlot := int(MAX_PENGIRIMAN - jumlahPengirimanAktif)
 	if sisaSlot <= 0 {
+		log.Printf("[WARN] Tidak ada slot pengiriman tersedia untuk kurir ID %d", kurir.ID)
 		return &response.ResponseForm{
-			Status:   http.StatusNotAcceptable,
+			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_pengiriman_services_kurir.ResponseAmbilPengiriman{
 				Message: "Gagal, Tidak ada slot pengiriman yang tersedia",
@@ -70,6 +75,7 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	}
 
 	if len(data.DataPengiriman) > sisaSlot {
+		log.Printf("[INFO] Pengiriman yang diambil melebihi slot, hanya %d yang diproses untuk kurir ID %d", sisaSlot, kurir.ID)
 		data.DataPengiriman = data.DataPengiriman[:sisaSlot]
 	}
 
@@ -88,6 +94,7 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 				}).Take(&existingPengiriman)
 
 			if existingPengiriman.ID == 0 {
+				log.Printf("[WARN] Pengiriman ID %d tidak ditemukan atau sudah diambil", pengiriman.ID)
 				status.Status = false
 				hasilPengirimanStatus = append(hasilPengirimanStatus, status)
 				continue
@@ -101,6 +108,7 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 					}).Take(&kendaraanKurir)
 
 				if kendaraanKurir != pengiriman.Layanan {
+					log.Printf("[WARN] Tipe kendaraan tidak sesuai untuk pengiriman ID %d oleh kurir ID %d", pengiriman.ID, kurir.ID)
 					status.Status = false
 					hasilPengirimanStatus = append(hasilPengirimanStatus, status)
 					continue
@@ -113,13 +121,16 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 					Update("id_kurir", data.Kredensial.IdKurir)
 
 				if result.Error != nil {
+					log.Printf("[ERROR] Gagal update pengiriman ID %d: %v", existingPengiriman.ID, result.Error)
 					status.Status = false
 					hasilPengirimanStatus = append(hasilPengirimanStatus, status)
 					continue
 				}
 				if result.RowsAffected == 0 {
+					log.Printf("[WARN] Tidak ada perubahan pada pengiriman ID %d", existingPengiriman.ID)
 					status.Status = false
 				} else {
+					log.Printf("[INFO] Pengiriman ID %d berhasil diambil oleh kurir ID %d", existingPengiriman.ID, kurir.ID)
 					status.Status = true
 				}
 			}
@@ -127,6 +138,7 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 		}
 		return nil
 	}); err != nil {
+		log.Printf("[ERROR] Gagal mengambil pengiriman untuk kurir ID %d: %v", kurir.ID, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -136,6 +148,7 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 		}
 	}
 
+	log.Printf("[INFO] Proses pengambilan pengiriman selesai untuk kurir ID %d", kurir.ID)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -152,10 +165,9 @@ func UpdatePengirimanKurir(data PayloadUpdatePengiriman, db *gorm.DB) *response.
 	_, status := data.Kredensial.Validating(db)
 
 	if !status {
-		fmt.Println("Gagal cuks")
-		fmt.Println(data.Kredensial)
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.Kredensial.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_pengiriman_services_kurir.ResponseUpdatePengiriman{
 				Message: "Gagal, Kredensial Kurir Tidak Valid",
@@ -173,16 +185,19 @@ func UpdatePengirimanKurir(data PayloadUpdatePengiriman, db *gorm.DB) *response.
 			if err_update := tx.Model(models.Pengiriman{}).Where(models.Pengiriman{
 				ID: data.DataJejakPengiriman.IdPengiriman,
 			}).Limit(1).Update("status", data.StatusPengiriman).Error; err_update != nil {
+				log.Printf("[ERROR] Gagal update status pengiriman ID %d: %v", data.DataJejakPengiriman.IdPengiriman, err_update)
 				return err_update
 			}
 		}
 
 		if err_buatjejakpengiriman := tx.Create(&data.DataJejakPengiriman).Error; err_buatjejakpengiriman != nil {
+			log.Printf("[ERROR] Gagal membuat jejak pengiriman untuk pengiriman ID %d: %v", data.DataJejakPengiriman.IdPengiriman, err_buatjejakpengiriman)
 			return err_buatjejakpengiriman
 		}
 
 		return nil
 	}); err != nil {
+		log.Printf("[ERROR] Gagal update pengiriman untuk kurir ID %d: %v", data.Kredensial.IdKurir, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -192,6 +207,7 @@ func UpdatePengirimanKurir(data PayloadUpdatePengiriman, db *gorm.DB) *response.
 		}
 	}
 
+	log.Printf("[INFO] Pengiriman ID %d berhasil diupdate oleh kurir ID %d", data.DataJejakPengiriman.IdPengiriman, data.Kredensial.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,

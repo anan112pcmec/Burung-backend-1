@@ -1,6 +1,7 @@
 package pengguna_social_media_service
 
 import (
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -14,11 +15,12 @@ func EngageSocialMediaPengguna(data PayloadEngageSocialMedia, db *gorm.DB) *resp
 	services := "TambahkanSocialMediaPenguna"
 
 	if _, status := data.IdentitasPengguna.Validating(db); !status {
+		log.Printf("[WARN] Kredensial pengguna tidak valid untuk ID %d", data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_social_media_pengguna.ResponseEngageSocialMedia{
-				Message: "Gagal, Kredensial Pengguna tidak valid",
+				Message: "Kredensial pengguna tidak valid.",
 			},
 		}
 	}
@@ -38,20 +40,22 @@ func EngageSocialMediaPengguna(data PayloadEngageSocialMedia, db *gorm.DB) *resp
 			Instagram:  data.Data.Instagram,
 			EntityType: "Pengguna",
 		}).Error; err_buat_kolom != nil {
+			log.Printf("[ERROR] Gagal membuat data social media untuk pengguna ID %d: %v", data.IdentitasPengguna.ID, err_buat_kolom)
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
 				Payload: response_social_media_pengguna.ResponseEngageSocialMedia{
-					Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+					Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 				},
 			}
 		}
 
+		log.Printf("[INFO] Data social media berhasil ditambahkan untuk pengguna ID %d", data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
 			Payload: response_social_media_pengguna.ResponseEngageSocialMedia{
-				Message: "Berhasil",
+				Message: "Data social media berhasil ditambahkan.",
 			},
 		}
 	}
@@ -64,20 +68,22 @@ func EngageSocialMediaPengguna(data PayloadEngageSocialMedia, db *gorm.DB) *resp
 		TikTok:    data.Data.TikTok,
 		Instagram: data.Data.Instagram,
 	}).Error; err_update != nil {
+		log.Printf("[ERROR] Gagal memperbarui data social media untuk pengguna ID %d: %v", data.IdentitasPengguna.ID, err_update)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_social_media_pengguna.ResponseEngageSocialMedia{
-				Message: "Gagal, Server Sedang sibuk coba lagi lain waktu",
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Data social media berhasil diperbarui untuk pengguna ID %d", data.IdentitasPengguna.ID)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_social_media_pengguna.ResponseEngageSocialMedia{
-			Message: "Berhasil",
+			Message: "Data social media berhasil diperbarui.",
 		},
 	}
 }

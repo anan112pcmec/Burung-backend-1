@@ -1,6 +1,7 @@
 package kurir_social_media_services
 
 import (
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -14,9 +15,13 @@ func EngagementSocialMediaKurir(data PayloadEngageSocialMedia, db *gorm.DB) *res
 	services := "EngagementSocialMediaKurir"
 
 	if _, status := data.DataIdentitas.Validating(db); !status {
+		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
+			Payload: response_social_media_kurir.ResponseEngageSocialMedia{
+				Message: "Kredensial kurir tidak valid.",
+			},
 		}
 	}
 
@@ -35,20 +40,22 @@ func EngagementSocialMediaKurir(data PayloadEngageSocialMedia, db *gorm.DB) *res
 			Instagram:  data.Data.Instagram,
 			EntityType: "Kurir",
 		}).Error; err_buat_kolom != nil {
+			log.Printf("[ERROR] Gagal menambah data social media untuk kurir ID %d: %v", data.DataIdentitas.IdKurir, err_buat_kolom)
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
 				Payload: response_social_media_kurir.ResponseEngageSocialMedia{
-					Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+					Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 				},
 			}
 		}
 
+		log.Printf("[INFO] Data social media berhasil ditambahkan untuk kurir ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
 			Payload: response_social_media_kurir.ResponseEngageSocialMedia{
-				Message: "Berhasil",
+				Message: "Data social media berhasil ditambahkan.",
 			},
 		}
 	}
@@ -61,17 +68,22 @@ func EngagementSocialMediaKurir(data PayloadEngageSocialMedia, db *gorm.DB) *res
 		TikTok:    data.Data.TikTok,
 		Instagram: data.Data.Instagram,
 	}).Error; err_update != nil {
+		log.Printf("[ERROR] Gagal memperbarui data social media untuk kurir ID %d: %v", data.DataIdentitas.IdKurir, err_update)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_social_media_kurir.ResponseEngageSocialMedia{
-				Message: "Gagal, Server Sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Data social media berhasil diperbarui untuk kurir ID %d", data.DataIdentitas.IdKurir)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
+		Payload: response_social_media_kurir.ResponseEngageSocialMedia{
+			Message: "Data social media berhasil diperbarui.",
+		},
 	}
 }

@@ -17,6 +17,9 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+				Messages: "Pengguna tidak ditemukan.",
+			},
 		}
 	}
 
@@ -30,7 +33,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 			Status:   http.StatusForbidden,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-				Messages: "Gagal, maksimal hanya boleh menyimpan 5 alamat",
+				Messages: "Batas maksimum penyimpanan alamat tercapai (maksimal 5 alamat).",
 			},
 		}
 	}
@@ -58,7 +61,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 				Status:   http.StatusInternalServerError,
 				Services: services,
 				Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-					Messages: "Gagal server sedang sibuk coba lagi nanti",
+					Messages: "Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.",
 				},
 			}
 		}
@@ -67,7 +70,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-				Messages: "Gagal Alamat Dengan Panggilan itu sudah ada ganti panggilan nya",
+				Messages: "Alamat dengan panggilan tersebut sudah ada. Silakan gunakan panggilan lain.",
 			},
 		}
 	}
@@ -76,7 +79,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-			Messages: "Berhasil",
+			Messages: "Alamat berhasil ditambahkan.",
 		},
 	}
 }
@@ -88,6 +91,9 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
+				Messages: "Pengguna tidak ditemukan.",
+			},
 		}
 	}
 
@@ -99,7 +105,7 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-				Messages: "Gagal hapus server sedang sibuk, Coba lagi lain waktu",
+				Messages: "Terjadi kesalahan pada server saat menghapus alamat. Silakan coba beberapa saat lagi.",
 			},
 		}
 	}
@@ -108,7 +114,7 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-			Messages: "Berhasil",
+			Messages: "Alamat berhasil dihapus.",
 		},
 	}
 }

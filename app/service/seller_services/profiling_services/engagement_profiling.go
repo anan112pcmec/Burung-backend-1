@@ -2,7 +2,7 @@ package seller_profiling_services
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -13,36 +13,37 @@ import (
 )
 
 func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdateProfilePersonalSeller) *response.ResponseForm {
-	fmt.Println("Trace UpdatePersonalSeller:")
 	services := "UpdatePersonalSeller"
 	var hasil_update_nama *seller_particular_profiling.ResponseUbahNama
 	var hasil_update_username *seller_particular_profiling.ResponseUbahUsername
 	var hasil_update_gmail *seller_particular_profiling.ResponseUbahEmail
 
 	if data.ID_Seller == 0 {
+		log.Println("[WARN] ID seller tidak ditemukan pada permintaan update profil personal.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotAcceptable,
+			Status:   http.StatusBadRequest,
 			Services: services,
 		}
 	}
 
 	if data.Username == "" {
-		fmt.Println("❌ username: kosong (tidak diupdate)")
+		log.Println("[INFO] Username kosong, tidak diupdate.")
 	} else {
 		hasil_update_username = seller_particular_profiling.UbahUsernameSeller(data.ID_Seller, data.Username, db)
 	}
 
 	if data.Nama == "" {
-		fmt.Println("❌ nama: kosong (tidak diupdate)")
+		log.Println("[INFO] Nama kosong, tidak diupdate.")
 	} else {
 		hasil_update_nama = seller_particular_profiling.UbahNamaSeller(data.ID_Seller, data.Nama, db)
 	}
 
 	if data.Email == "" {
-		fmt.Println("❌ email: kosong (tidak diupdate)")
+		log.Println("[INFO] Email kosong, tidak diupdate.")
 	} else {
 		hasil_update_gmail = seller_particular_profiling.UbahEmailSeller(ctx, data.ID_Seller, data.Email, db)
 	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -61,22 +62,29 @@ func UpdateInfoGeneralPublic(db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *
 	var hasil_update_jam_operasional seller_particular_profiling.ResponseUbahJamOperasional
 
 	if data.ID_Seller == 0 {
+		log.Println("[WARN] ID seller tidak ditemukan pada permintaan update info umum.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotAcceptable,
+			Status:   http.StatusBadRequest,
 			Services: services,
 		}
 	}
 
 	if data.Deskripsi != "" {
 		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(data.ID_Seller, data.Username, data.Deskripsi, db)
+	} else {
+		log.Println("[INFO] Deskripsi kosong, tidak diupdate.")
 	}
 
 	if data.Punchline != "" {
 		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(data.ID_Seller, data.Username, data.Punchline, db)
+	} else {
+		log.Println("[INFO] Punchline kosong, tidak diupdate.")
 	}
 
 	if data.JamOperasional != "" {
 		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(data.ID_Seller, data.Username, data.JamOperasional, db)
+	} else {
+		log.Println("[INFO] Jam operasional kosong, tidak diupdate.")
 	}
 
 	return &response.ResponseForm{

@@ -2,6 +2,7 @@ package seller_credential_services
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -15,9 +16,13 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 	services := "TambahRekeningSeller"
 
 	if data.Data.IDSeller == 0 {
+		log.Println("[WARN] ID seller tidak ditemukan pada permintaan tambah rekening.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_credential_seller.ResponseTambahRekeningSeller{
+				Message: "ID seller tidak ditemukan.",
+			},
 		}
 	}
 
@@ -26,22 +31,23 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 		Select("id").
 		Where(models.Seller{ID: data.Data.IDSeller}).
 		First(&id_seller).Error; check_seller != nil {
-
+		log.Printf("[ERROR] Gagal validasi seller ID %d: %v", data.Data.IDSeller, check_seller)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_credential_seller.ResponseTambahRekeningSeller{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
 	if id_seller == 0 {
+		log.Printf("[WARN] Seller ID %d tidak ditemukan saat tambah rekening.", data.Data.IDSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_credential_seller.ResponseTambahRekeningSeller{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+				Message: "Seller tidak ditemukan.",
 			},
 		}
 	}
@@ -68,28 +74,31 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 
 	if err != nil {
 		if err.Error() == "rekening sudah ada" {
+			log.Printf("[WARN] Rekening sudah ada untuk seller ID %d: %s - %s", data.Data.IDSeller, data.Data.NamaBank, data.Data.NomorRekening)
 			return &response.ResponseForm{
 				Status:   http.StatusConflict,
 				Services: services,
 				Payload: response_credential_seller.ResponseTambahRekeningSeller{
-					Message: "Data Rekening itu sudah ada dan tercatat di akun mu",
+					Message: "Data rekening tersebut sudah ada dan tercatat di akun Anda.",
 				},
 			}
 		}
+		log.Printf("[ERROR] Gagal menambah rekening untuk seller ID %d: %v", data.Data.IDSeller, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_credential_seller.ResponseTambahRekeningSeller{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Rekening berhasil ditambahkan untuk seller ID %d", data.Data.IDSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_credential_seller.ResponseTambahRekeningSeller{
-			Message: "Berhasil",
+			Message: "Rekening berhasil ditambahkan.",
 		},
 	}
 }
@@ -98,9 +107,13 @@ func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.Re
 	services := "HapusRekeningSeller"
 
 	if data.IDSeller == 0 {
+		log.Println("[WARN] ID seller tidak ditemukan pada permintaan hapus rekening.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_credential_seller.ResponseHapusRekeningSeller{
+				Message: "ID seller tidak ditemukan.",
+			},
 		}
 	}
 
@@ -116,14 +129,12 @@ func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.Re
 				NomorRekening:   data.NomorRekening,
 			}).
 			First(&id_rekening).Error; check_rekening != nil {
-
 			return check_rekening
 		}
 
 		if hapus_rekening := tx.Model(&models.RekeningSeller{}).
 			Where(models.RekeningSeller{ID: id_rekening}).
 			Delete(&models.RekeningSeller{}).Error; hapus_rekening != nil {
-
 			return hapus_rekening
 		}
 
@@ -131,20 +142,22 @@ func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.Re
 	})
 
 	if err != nil {
+		log.Printf("[ERROR] Gagal menghapus rekening untuk seller ID %d: %v", data.IDSeller, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_credential_seller.ResponseHapusRekeningSeller{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
 	}
 
+	log.Printf("[INFO] Rekening berhasil dihapus untuk seller ID %d", data.IDSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_credential_seller.ResponseHapusRekeningSeller{
-			Message: "Berhasil",
+			Message: "Rekening berhasil dihapus.",
 		},
 	}
 }

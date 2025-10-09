@@ -16,22 +16,31 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/authservices"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services/response_credential_seller"
+
 )
 
 func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordSeller"
 
 	if data.IDSeller == 0 {
+		log.Println("[WARN] ID seller tidak ditemukan pada permintaan.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "ID seller tidak ditemukan.",
+			},
 		}
 	}
 
 	if data.Username == "" {
+		log.Println("[WARN] Username tidak ditemukan pada permintaan.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "Username tidak ditemukan.",
+			},
 		}
 	}
 
@@ -40,26 +49,36 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		Select("password_hash").
 		Where(&models.Seller{ID: data.IDSeller, Username: data.Username}).
 		Pluck("password_hash", &pass).Error; err != nil {
+		log.Printf("[WARN] Seller tidak ditemukan atau kredensial salah: %v", err)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload:  "Data Mu Tidak Valid",
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "Seller tidak ditemukan atau kredensial salah.",
+			},
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(pass), []byte(data.PasswordLama)); err != nil {
+		log.Println("[WARN] Password lama yang dimasukkan salah.")
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload:  "Password Salah",
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "Password lama yang dimasukkan salah.",
+			},
 		}
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.PasswordBaru), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("[ERROR] Gagal mengenkripsi password baru: %v", err)
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusInternalServerError,
 			Services: services,
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "Terjadi kesalahan pada server saat mengenkripsi password.",
+			},
 		}
 	}
 
@@ -72,6 +91,7 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		if err := db.Model(&models.Seller{}).
 			Where(&models.Seller{ID: data.IDSeller, Username: data.Username}).
 			Pluck("email", &email).Error; err != nil {
+			log.Printf("[ERROR] Gagal mengambil email seller ID %d: %v", data.IDSeller, err)
 			return
 		}
 
@@ -80,10 +100,10 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		message := fmt.Sprintf("Kode Anda: %s\nMasa berlaku 3 menit.", otp)
 
 		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-			fmt.Println("Gagal Kirim Email Untuk Otp:", otp)
+			log.Printf("[ERROR] Gagal mengirim email OTP ke %s: %v", email, err)
+		} else {
+			log.Printf("[INFO] Email OTP berhasil dikirim ke %s", email)
 		}
-
-		log.Println("[TRACE] Email sent successfully")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -98,7 +118,7 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		exp := pipe.Expire(ctx, key, 3*time.Minute)
 
 		if _, err := pipe.Exec(ctx); err != nil {
-			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
+			log.Printf("[ERROR] Redis pipeline gagal: %v", err)
 		}
 
 		_ = hset
@@ -109,7 +129,7 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
-			Message: "Berhasil",
+			Message: "Kode OTP telah dikirim ke email Anda. Silakan cek email untuk melanjutkan proses ubah password.",
 		},
 	}
 }
@@ -118,24 +138,36 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 	services := "ValidateUbahPasswordSeller"
 
 	if data.IDSeller == 0 {
+		log.Println("[WARN] ID seller tidak ditemukan pada permintaan validasi OTP.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
+				Message: "ID seller tidak ditemukan.",
+			},
 		}
 	}
 
 	if data.OtpKeyValidateSeller == "" {
+		log.Println("[WARN] OTP tidak ditemukan pada permintaan validasi OTP.")
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusBadRequest,
 			Services: services,
+			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
+				Message: "OTP tidak ditemukan.",
+			},
 		}
 	}
 
 	var id_seller int32
 	if check_seller := db.Model(models.Seller{}).Select("id").Where(models.Seller{ID: data.IDSeller}).First(&id_seller).Error; check_seller != nil {
+		log.Printf("[WARN] Seller tidak ditemukan untuk validasi OTP: %v", check_seller)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
+			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
+				Message: "Seller tidak ditemukan.",
+			},
 		}
 	}
 
@@ -144,25 +176,34 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 
 	result, err_rds := rds.HGetAll(ctx, key).Result()
 
-	if err_rds != nil {
+	if err_rds != nil || len(result) == 0 {
+		log.Printf("[WARN] OTP tidak valid atau sudah kadaluarsa: %v", err_rds)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
+			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
+				Message: "OTP tidak valid atau sudah kadaluarsa.",
+			},
 		}
 	}
 
 	if err_change_pass := db.Model(models.Seller{}).Where(models.Seller{ID: data.IDSeller}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+		log.Printf("[ERROR] Gagal mengubah password seller ID %d: %v", data.IDSeller, err_change_pass)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
+			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
+				Message: "Terjadi kesalahan pada server saat mengubah password.",
+			},
 		}
 	}
 
+	log.Printf("[INFO] Password seller ID %d berhasil diubah via OTP.", data.IDSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
-			Message: "Berhasil",
+			Message: "Password berhasil diubah.",
 		},
 	}
 }

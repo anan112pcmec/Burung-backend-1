@@ -1,7 +1,7 @@
 package seller_order_processing_services
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -22,11 +22,12 @@ func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.Respons
 
 	seller, status := data.IdentitasSeller.Validating(db)
 	if !status {
+		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_order_processing_seller.ResponseApproveTransaksiSeller{
-				Message: "Gagal, Data Seller Tidak Valid",
+				Message: "Gagal, kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -44,8 +45,10 @@ func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.Respons
 				KodeOrder:     transaksi.KodeOrder,
 				Total:         transaksi.Total,
 			}).Update("status", "Diproses").Error; err_approve != nil {
+				log.Printf("[ERROR] Gagal approve transaksi ID %d: %v", transaksi.ID, err_approve)
 				approvingstatus.Status = false
 			} else {
+				log.Printf("[INFO] Transaksi ID %d berhasil di-approve oleh seller ID %d", transaksi.ID, seller.ID)
 				approvingstatus.Status = true
 			}
 			approvingstatus.DataApproved = transaksi
@@ -61,7 +64,7 @@ func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.Respons
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_order_processing_seller.ResponseApproveTransaksiSeller{
-			Message: "Berhasil",
+			Message: "Proses approve transaksi selesai.",
 			Hasil:   &approveddata,
 		},
 	}
@@ -74,11 +77,12 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 
 	seller, status := data.IdentitasSeller.Validating(db)
 	if !status {
+		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_order_processing_seller.ResponseUnApproveTransaksiSeller{
-				Message: "Gagal, Kredensial Seller Tidak Valid",
+				Message: "Gagal, kredensial seller tidak valid.",
 			},
 		}
 	}
@@ -88,11 +92,12 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 		Where(models.Seller{ID: seller.ID, Username: seller.Username}).
 		Limit(1).
 		Take(&namaSeller).Error; err_nama != nil {
+		log.Printf("[WARN] Data seller tidak valid untuk ID %d", seller.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_order_processing_seller.ResponseUnApproveTransaksiSeller{
-				Message: "Gagal Data Seller Tidak Valid",
+				Message: "Gagal, data seller tidak valid.",
 			},
 		}
 	}
@@ -114,8 +119,10 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 					Kuantitas:     transaksi.Kuantitas,
 					KodeOrder:     transaksi.KodeOrder,
 				}).Limit(int(transaksi.Kuantitas)).Update("status", "Dibatalkan").Error; errUpdate != nil {
+					log.Printf("[ERROR] Gagal unapprove transaksi ID %d: %v", transaksi.ID, errUpdate)
 					unapprovingstatus.Status = false
 				} else {
+					log.Printf("[INFO] Transaksi ID %d berhasil di-unapprove oleh seller ID %d", transaksi.ID, seller.ID)
 					unapprovingstatus.Status = true
 				}
 
@@ -130,12 +137,13 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 					Alasan:         data.Alasan,
 					CreatedAt:      time.Now(),
 				}).Error; errBatal != nil {
+					log.Printf("[ERROR] Gagal mencatat pembatalan transaksi ID %d: %v", transaksi.ID, errBatal)
 					return errBatal
 				}
 
 				return nil
 			}); err != nil {
-				fmt.Println("❌ Gagal Membatalkan transaksi:", transaksi.ID, err)
+				log.Printf("[ERROR] Gagal membatalkan transaksi ID %d: %v", transaksi.ID, err)
 			}
 		}(transaksi)
 	}
@@ -146,7 +154,7 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_order_processing_seller.ResponseUnApproveTransaksiSeller{
-			Message: "Berhasil",
+			Message: "Proses unapprove transaksi selesai.",
 			Hasil:   &unApprovedData,
 		},
 	}
