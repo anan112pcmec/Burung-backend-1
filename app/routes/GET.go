@@ -14,19 +14,19 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
 )
 
-func GetHandler(db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) http.HandlerFunc {
+func GetHandler(db *gorm.DB, redis_barang *redis.Client, redis_entity *redis.Client, SE meilisearch.ServiceManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("GetHandler dijalankan...")
 
 		// Jika path diawali "/user/"
 		if len(r.URL.Path) >= 6 && r.URL.Path[:6] == "/user/" {
-			userroute.GetUserHandler(db, w, r, rds, SE)
+			userroute.GetUserHandler(db, w, r, redis_barang, redis_entity, SE)
 			return
 		}
 
 		// Jika path diawali "/seller/"
 		if len(r.URL.Path) >= 8 && r.URL.Path[:8] == "/seller/" {
-			seller.GetSellerHandler(db, w, r, rds, SE)
+			seller.GetSellerHandler(db, w, r, redis_barang, SE)
 			return
 		}
 

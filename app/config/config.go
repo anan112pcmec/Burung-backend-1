@@ -75,10 +75,6 @@ func (e *Environment) RunConnectionEnvironment() (
 		log.Println("✅ Berhasil terkoneksi ke database:", currentDB)
 	}
 
-	// ====================================================
-	// Redis & lainnya tetap sama (belum diubah)
-	// ====================================================
-	fmt.Println(fmt.Sprintf("%s:%s", e.RDSHOST, e.RDSPORT))
 	redis_entity = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", e.RDSHOST, e.RDSPORT),
 		Password: "",

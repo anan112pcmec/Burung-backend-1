@@ -89,7 +89,7 @@ func Run() {
 	})
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.GetHandler(database, redis_barang_cache, searchengine),
+		routes.GetHandler(database, redis_barang_cache, redis_entity_cache, searchengine),
 	)).Methods("GET")
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
