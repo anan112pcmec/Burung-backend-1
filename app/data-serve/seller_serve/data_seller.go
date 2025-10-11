@@ -306,6 +306,72 @@ func AmbilSellerByJenis(ctx context.Context, jenis string, db *gorm.DB, rds *red
 	}
 }
 
+func AmbilSellerByDedication(ctx context.Context, dedication string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+	services := "AmbilSellerByDedication"
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var sellers []models.Seller
+	var key_seller []string
+
+	keys := fmt.Sprintf(`"seller_dedication:%s"`, dedication)
+
+	if hasil, err := rds.SRandMemberN(ctx, keys, 10).Result(); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	} else {
+		key_seller = append(key_seller, hasil...)
+	}
+
+	for _, ks := range key_seller {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			seller, err := rds.HGetAll(ctx, key).Result()
+			if err != nil || len(seller) == 0 {
+				return
+			}
+
+			idSeller, errID := strconv.Atoi(seller["id_seller"])
+			if errID != nil {
+				return
+			}
+			followerTotal, errFollower := strconv.Atoi(seller["follower_total_seller"])
+			if errFollower != nil {
+				return
+			}
+
+			sellerData := models.Seller{
+				ID:               int32(idSeller),
+				Username:         seller["username_seller"],
+				Email:            seller["email_seller"],
+				JamOperasional:   seller["jam_operasional_seller"],
+				Jenis:            seller["jenis_seller"],
+				Punchline:        seller["punchline_seller"],
+				Deskripsi:        seller["deskripsi_seller"],
+				Nama:             seller["nama_seller"],
+				SellerDedication: seller["seller_dedication_seller"],
+				FollowerTotal:    int32(followerTotal),
+			}
+
+			if sellerData.Username != "" {
+				mu.Lock()
+				sellers = append(sellers, sellerData)
+				mu.Unlock()
+			}
+		}(ks)
+	}
+
+	wg.Wait()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload:  sellers,
+	}
+}
+
 func AmbilSellerByNamaDanJenis(ctx context.Context, nama, jenis string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
 	services := "AmbilSellerByNamaDanJenis"
 	var wg sync.WaitGroup
@@ -313,10 +379,11 @@ func AmbilSellerByNamaDanJenis(ctx context.Context, nama, jenis string, db *gorm
 	var idSeller []search_engine.Seller
 	var sellers []models.Seller
 
-	start := time.Now() // ⏱️ untuk tracing waktu eksekusi
+	start := time.Now()
 
 	ResultSe, err := SE.Index("seller_all").Search(nama, &meilisearch.SearchRequest{
 		Filter: fmt.Sprintf("jenis_seller = '%s'", jenis),
+		Limit:  10,
 	})
 	if err != nil {
 		log.Printf("[%s] ❌ Meilisearch error: %v\n", services, err)
@@ -391,8 +458,8 @@ func AmbilSellerByNamaDanDedication(ctx context.Context, nama, dedication string
 
 	ResultSe, err := SE.Index("seller_all").Search(nama, &meilisearch.SearchRequest{
 		Filter: fmt.Sprintf("seller_dedication_seller = '%s'", dedication),
+		Limit:  10,
 	})
-
 	if err == nil {
 		hitsjson, _ := json.Marshal(ResultSe.Hits)
 
@@ -453,6 +520,87 @@ func AmbilSellerByNamaDanDedication(ctx context.Context, nama, dedication string
 	}
 }
 
-// func AmbilSellerByJenisDanDedication(ctx context.Context, jenis, dedication string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) {
+func AmbilSellerByJenisDanDedication(ctx context.Context, jenis, dedication string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+	services := "AmbilSellerByJenisDanDedication"
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var sellers []models.Seller
+	var rawKeysSeller []string
+	var keysSeller []string
 
-// }
+	keyJenis := fmt.Sprintf("seller_jenis:%s", jenis)
+	if hasil, err := rds.SRandMemberN(ctx, keyJenis, 10).Result(); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	} else {
+		rawKeysSeller = append(rawKeysSeller, hasil...)
+	}
+
+	keyDedication := fmt.Sprintf("seller_dedication:%s", dedication)
+	if hasilDed, err := rds.SMembers(ctx, keyDedication).Result(); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	} else {
+		dedMap := make(map[string]struct{}, len(hasilDed))
+		for _, k := range hasilDed {
+			dedMap[k] = struct{}{}
+		}
+
+		for _, ks := range rawKeysSeller {
+			if _, ok := dedMap[ks]; ok {
+				keysSeller = append(keysSeller, ks)
+			}
+		}
+	}
+
+	for _, ks := range keysSeller {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			seller, err := rds.HGetAll(ctx, key).Result()
+			if err != nil || len(seller) == 0 {
+				return
+			}
+
+			idSeller, errID := strconv.Atoi(seller["id_seller"])
+			if errID != nil {
+				return
+			}
+			followerTotal, errFollower := strconv.Atoi(seller["follower_total_seller"])
+			if errFollower != nil {
+				return
+			}
+
+			sellerData := models.Seller{
+				ID:               int32(idSeller),
+				Username:         seller["username_seller"],
+				Email:            seller["email_seller"],
+				JamOperasional:   seller["jam_operasional_seller"],
+				Jenis:            seller["jenis_seller"],
+				Punchline:        seller["punchline_seller"],
+				Deskripsi:        seller["deskripsi_seller"],
+				Nama:             seller["nama_seller"],
+				SellerDedication: seller["seller_dedication_seller"],
+				FollowerTotal:    int32(followerTotal),
+			}
+
+			if sellerData.Username != "" {
+				mu.Lock()
+				sellers = append(sellers, sellerData)
+				mu.Unlock()
+			}
+		}(ks)
+	}
+
+	wg.Wait()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload:  sellers,
+	}
+}
