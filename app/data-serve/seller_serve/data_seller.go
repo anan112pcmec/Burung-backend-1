@@ -604,3 +604,103 @@ func AmbilSellerByJenisDanDedication(ctx context.Context, jenis, dedication stri
 		Payload:  sellers,
 	}
 }
+
+func AmbilSellerByNamaJenisDedication(ctx context.Context, nama, jenis, dedication string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
+	services := "AmbilSellerByNamaJenisDedication"
+	const LIMIT = 10
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var sellers []models.Seller
+	var idSeller []search_engine.Seller
+	var hitsjson []byte
+
+	ResultSe, err := SE.Index("seller_all").Search(nama, &meilisearch.SearchRequest{
+		Filter: fmt.Sprintf("seller_dedication_seller = '%s' AND jenis_seller = '%s' ", dedication, jenis),
+		Limit:  LIMIT,
+	})
+
+	if err != nil {
+		log.Printf("[%s] ⚠️ Gagal melakukan pencarian di Meilisearch: %v\n", services, err)
+		goto FALLBACKDB
+	}
+
+	hitsjson, _ = json.Marshal(ResultSe.Hits)
+	if err := json.Unmarshal(hitsjson, &idSeller); err != nil {
+		log.Printf("[%s] ⚠️ Gagal unmarshal hasil Meilisearch: %v\n", services, err)
+	}
+
+	if len(idSeller) == 0 {
+		log.Printf("[%s] ⚠️ Tidak ada hasil ditemukan untuk '%s' jenis '%s'\n", services, nama, jenis)
+	}
+
+	for _, ds := range idSeller {
+		wg.Add(1)
+		go func(id search_engine.Seller) {
+			defer wg.Done()
+
+			sellerMap, err := rds.HGetAll(ctx, fmt.Sprintf("seller_data:%v", id.IdSeller)).Result()
+			if err != nil {
+				log.Printf("[%s] ⚠️ Gagal mengambil data seller dari Redis: %v\n", services, err)
+				return
+			}
+
+			id_seller, errID := strconv.Atoi(sellerMap["id_seller"])
+			if errID != nil {
+				return
+			}
+
+			follower_total, errFollower := strconv.Atoi(sellerMap["follower_total_seller"])
+			if errFollower != nil {
+				return
+			}
+
+			sellerData := models.Seller{
+				ID:               int32(id_seller),
+				Username:         sellerMap["username_seller"],
+				Email:            sellerMap["email_seller"],
+				JamOperasional:   sellerMap["jam_operasional_seller"],
+				Jenis:            sellerMap["jenis_seller"],
+				Punchline:        sellerMap["punchline_seller"],
+				Deskripsi:        sellerMap["deskripsi_seller"],
+				Nama:             sellerMap["nama_seller"],
+				SellerDedication: sellerMap["seller_dedication_seller"],
+				FollowerTotal:    int32(follower_total),
+			}
+
+			if sellerData.Username != "" {
+				mu.Lock()
+				sellers = append(sellers, sellerData)
+				mu.Unlock()
+			}
+		}(ds)
+	}
+
+	wg.Wait()
+
+	if len(sellers) > 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  sellers,
+		}
+	}
+
+FALLBACKDB:
+	var sellersFallback []models.Seller
+	if errDB := db.Model(&models.Seller{}).
+		Where("nama LIKE ? AND jenis = ? AND seller_dedication = ?", "%"+nama+"%", jenis, dedication).
+		Limit(LIMIT).
+		Find(&sellersFallback).Error; errDB != nil {
+		log.Printf("[%s] ⚠️ Gagal fallback DB: %v\n", services, errDB)
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload:  sellersFallback,
+	}
+}

@@ -73,8 +73,25 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_b
 			hasil = seller_serve.AmbilSellerByJenis(ctx, jenis, db, redis_entity)
 		}
 
+		dedication := r.URL.Query().Get("dedication")
+		if dedication != "" {
+			hasil = seller_serve.AmbilSellerByDedication(ctx, dedication, db, redis_entity)
+		}
+
 		if nama != "" && jenis != "" {
 			hasil = seller_serve.AmbilSellerByNamaDanJenis(ctx, nama, jenis, db, redis_entity, SE)
+		}
+
+		if nama != "" && dedication != "" {
+			hasil = seller_serve.AmbilSellerByNamaDanDedication(ctx, nama, dedication, db, redis_entity, SE)
+		}
+
+		if jenis != "" && dedication != "" {
+			hasil = seller_serve.AmbilSellerByJenisDanDedication(ctx, jenis, dedication, db, redis_entity)
+		}
+
+		if nama != "" && dedication != "" && jenis != "" {
+			hasil = seller_serve.AmbilSellerByNamaJenisDedication(ctx, nama, jenis, dedication, db, redis_entity, SE)
 		}
 	default:
 		hasil = &response.ResponseForm{
