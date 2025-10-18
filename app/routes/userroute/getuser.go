@@ -61,37 +61,56 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_b
 			}
 		}
 	case "/user/data-seller-all":
-		hasil = seller_serve.AmbilRandomSeller(ctx, db, redis_entity)
+		finalTake := r.URL.Query().Get("finalTake")
+		finalNumber, err := strconv.Atoi(finalTake)
+		if err != nil {
+			hasil = &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: "Seller Services",
+				Payload:  "Gagal Coba Lagi Nanti",
+			}
+		}
+		hasil = seller_serve.AmbilRandomSeller(int64(finalNumber), ctx, db, redis_entity)
 	case "/user/data-seller-spesified":
+		finalTake := r.URL.Query().Get("finalTake")
+		finalNumber, err := strconv.Atoi(finalTake)
+		if err != nil {
+			hasil = &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: "Seller Services",
+				Payload:  "Gagal Coba Lagi Nanti",
+			}
+		}
+
 		nama := r.URL.Query().Get("nama")
 		if nama != "" {
-			hasil = seller_serve.AmbilSellerByNama(ctx, nama, db, redis_entity, SE)
+			hasil = seller_serve.AmbilSellerByNama(int64(finalNumber), ctx, nama, db, redis_entity, SE)
 		}
 
 		jenis := r.URL.Query().Get("jenis")
 		if jenis != "" {
-			hasil = seller_serve.AmbilSellerByJenis(ctx, jenis, db, redis_entity)
+			hasil = seller_serve.AmbilSellerByJenis(int64(finalNumber), ctx, jenis, db, redis_entity)
 		}
 
 		dedication := r.URL.Query().Get("dedication")
 		if dedication != "" {
-			hasil = seller_serve.AmbilSellerByDedication(ctx, dedication, db, redis_entity)
+			hasil = seller_serve.AmbilSellerByDedication(int64(finalNumber), ctx, dedication, db, redis_entity)
 		}
 
 		if nama != "" && jenis != "" {
-			hasil = seller_serve.AmbilSellerByNamaDanJenis(ctx, nama, jenis, db, redis_entity, SE)
+			hasil = seller_serve.AmbilSellerByNamaDanJenis(int64(finalNumber), ctx, nama, jenis, db, redis_entity, SE)
 		}
 
 		if nama != "" && dedication != "" {
-			hasil = seller_serve.AmbilSellerByNamaDanDedication(ctx, nama, dedication, db, redis_entity, SE)
+			hasil = seller_serve.AmbilSellerByNamaDanDedication(int64(finalNumber), ctx, nama, dedication, db, redis_entity, SE)
 		}
 
 		if jenis != "" && dedication != "" {
-			hasil = seller_serve.AmbilSellerByJenisDanDedication(ctx, jenis, dedication, db, redis_entity)
+			hasil = seller_serve.AmbilSellerByJenisDanDedication(int64(finalNumber), ctx, jenis, dedication, db, redis_entity)
 		}
 
 		if nama != "" && dedication != "" && jenis != "" {
-			hasil = seller_serve.AmbilSellerByNamaJenisDedication(ctx, nama, jenis, dedication, db, redis_entity, SE)
+			hasil = seller_serve.AmbilSellerByNamaJenisDedication(int64(finalNumber), ctx, nama, jenis, dedication, db, redis_entity, SE)
 		}
 	default:
 		hasil = &response.ResponseForm{

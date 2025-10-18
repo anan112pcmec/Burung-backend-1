@@ -21,15 +21,33 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/search_engine"
 )
 
-func AmbilRandomSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+const MAXTAKE = 10
+
+func MatchSearch(sellers []models.Seller, SearchRes []search_engine.Seller) []int32 {
+	var hasil []int32
+	sellerMap := make(map[int32]struct{})
+
+	for _, s := range sellers {
+		sellerMap[s.ID] = struct{}{}
+	}
+
+	for _, data := range SearchRes {
+		if _, found := sellerMap[data.IDKey]; !found {
+			hasil = append(hasil, data.IDKey)
+		}
+	}
+
+	return hasil
+}
+
+func AmbilRandomSeller(FinalTake int64, ctx context.Context, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	services := "AmbilRandomSeller"
 	var sellers []models.Seller
-	const maxSeller = 20
 
 	// ambil random key dari Redis
-	keys, err := rds.SRandMemberN(ctx, "all_seller_keys", int64(maxSeller)).Result()
+	keys, err := rds.SMembers(ctx, "all_seller_keys").Result()
 	if err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -46,8 +64,20 @@ func AmbilRandomSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) *res
 		}
 	}
 
-	for _, rawKey := range keys {
-		key := strings.Trim(rawKey, `"`) // hapus kutip ganda kalau ada
+	if int(FinalTake) >= len(keys) {
+		return &response.ResponseForm{
+			Status:   http.StatusBadRequest,
+			Services: services,
+			Payload:  "FinalTake melebihi jumlah seller yang tersedia di Redis",
+		}
+	}
+
+	end := int(FinalTake) + MAXTAKE
+	if end > len(keys) {
+		end = len(keys)
+	}
+	for _, rawKey := range keys[FinalTake:end] {
+		key := strings.Trim(rawKey, `"`)
 		if key == "_init_" {
 			continue
 		}
@@ -104,7 +134,7 @@ func AmbilRandomSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) *res
 	// fallback ke database jika data Redis kosong total
 	if len(sellers) == 0 {
 		fmt.Println("[INFO] Data cache kosong, mengambil seller dari database sebagai fallback")
-		if errDB := db.Model(&models.Seller{}).Limit(maxSeller).Find(&sellers).Error; errDB != nil {
+		if errDB := db.Model(&models.Seller{}).Limit(MAXTAKE).Find(&sellers).Error; errDB != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
@@ -121,6 +151,7 @@ func AmbilRandomSeller(ctx context.Context, db *gorm.DB, rds *redis.Client) *res
 }
 
 func AmbilSellerByNama(
+	FinalTake int64,
 	ctx context.Context,
 	nama_seller string,
 	db *gorm.DB,
@@ -136,7 +167,11 @@ func AmbilSellerByNama(
 	fmt.Printf("[TRACE] 🔍 Memulai pencarian seller nama: %s\n", nama_seller)
 
 	// --- Pencarian Meilisearch ---
-	searchRes, err := SE.Index("seller_all").Search(nama_seller, &meilisearch.SearchRequest{})
+	searchRes, err := SE.Index("seller_all").Search(nama_seller, &meilisearch.SearchRequest{
+		Limit:  MAXTAKE,
+		Sort:   []string{"follower_total:desc"},
+		Offset: FinalTake,
+	})
 	if err != nil {
 		fmt.Printf("[ERROR] ❌ Meilisearch gagal: %v\n", err)
 		return &response.ResponseForm{
@@ -156,17 +191,35 @@ func AmbilSellerByNama(
 	}
 
 	// --- Parsing hasil Meilisearch ---
-	hitsjson, errMarshal := json.Marshal(searchRes.Hits)
-	if errMarshal != nil {
-		fmt.Printf("[ERROR] ❌ Gagal marshal hasil pencarian Meili: %v\n", errMarshal)
+	hitsBytes, err := json.Marshal(searchRes.Hits)
+	if err != nil {
+		fmt.Printf("[ERROR] ❌ Gagal marshal hasil Meili ke bytes: %v\n", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  fmt.Sprintf("Gagal memproses hasil Meilisearch: %v", err),
+		}
 	}
-	if errUnmarshal := json.Unmarshal(hitsjson, &idsellers); errUnmarshal != nil {
-		fmt.Printf("[ERROR] ❌ Gagal unmarshal hasil Meili ke struct idsellers: %v\n", errUnmarshal)
+
+	if err := json.Unmarshal(hitsBytes, &idsellers); err != nil {
+		fmt.Printf("[ERROR] ❌ Gagal unmarshal hasil Meili ke struct idsellers: %v\n", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  fmt.Sprintf("Gagal decode hasil Meilisearch: %v", err),
+		}
 	}
 
 	fmt.Printf("[TRACE] ✅ Meilisearch mengembalikan %d hasil\n", len(idsellers))
 
-	for _, ds := range idsellers {
+	// --- Ambil data dari Redis secara paralel ---
+	startIdx := int(FinalTake)
+	endIdx := startIdx + int(MAXTAKE)
+	if endIdx > len(idsellers) {
+		endIdx = len(idsellers)
+	}
+
+	for _, ds := range idsellers[startIdx:endIdx] {
 		wg.Add(1)
 		go func(ds search_engine.Seller) {
 			defer wg.Done()
@@ -182,20 +235,17 @@ func AmbilSellerByNama(
 				return
 			}
 
-			var seller models.Seller
 			idSeller, errID := strconv.Atoi(data["id_seller"])
 			follower, _ := strconv.Atoi(data["follower_total_seller"])
 			if errID != nil || idSeller == 0 {
 				return
 			}
 
-			seller = models.Seller{
+			seller := models.Seller{
 				ID:               int32(idSeller),
 				Username:         data["username_seller"],
 				Nama:             data["nama_seller"],
 				JamOperasional:   data["jam_operasional_seller"],
-				Password:         "",
-				Norek:            "",
 				SellerDedication: data["seller_dedication_seller"],
 				Deskripsi:        data["deskripsi_seller"],
 				FollowerTotal:    int32(follower),
@@ -214,17 +264,17 @@ func AmbilSellerByNama(
 
 	wg.Wait()
 
-	// --- Jika Redis kosong semua, fallback ke database ---
-	if len(sellers) == 0 {
-		fmt.Println("[TRACE] ⚠️ Semua data Redis kosong, fallback ambil dari database...")
-		if errDB := db.Model(&models.Seller{}).
-			Where("nama_seller LIKE ?", "%"+nama_seller+"%").
-			Limit(10).Find(&sellers).Error; errDB != nil {
-			fmt.Printf("[ERROR] ❌ Gagal ambil dari database: %v\n", errDB)
-			return &response.ResponseForm{
-				Status:   http.StatusInternalServerError,
-				Services: services,
-				Payload:  fmt.Sprintf("Gagal ambil dari database: %v", errDB),
+	// --- Fallback: ambil dari DB kalau Redis tidak lengkap ---
+	if len(sellers) < int(MAXTAKE) {
+		var hasilDB []models.Seller
+		missingIDs := MatchSearch(sellers, idsellers)
+		if len(missingIDs) > 0 {
+			if err := db.Model(&models.Seller{}).Where("id IN ?", missingIDs).Find(&hasilDB).Error; err != nil {
+				fmt.Printf("[ERROR] ❌ Gagal ambil fallback DB: %v\n", err)
+			} else {
+				mu.Lock()
+				sellers = append(sellers, hasilDB...)
+				mu.Unlock()
 			}
 		}
 	}
@@ -238,25 +288,30 @@ func AmbilSellerByNama(
 	}
 }
 
-func AmbilSellerByJenis(ctx context.Context, jenis string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func AmbilSellerByJenis(FinalTake int64, ctx context.Context, jenis string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "AmbilSellerByJenis"
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-
 	var sellers []models.Seller
 
-	keys, err := rds.SRandMemberN(ctx, fmt.Sprintf("seller_jenis:%s", jenis), 10).Result()
-	if err != nil || len(keys) == 0 {
-		if err_db := db.Model(&models.Seller{}).Where(&models.Seller{
-			Jenis: jenis,
-		}).Limit(10).Find(&sellers).Error; err_db != nil {
+	keys, err := rds.SMembers(ctx, fmt.Sprintf("seller_jenis:%s", jenis)).Result()
+	if err != nil {
+		fmt.Printf("[ERROR] Gagal ambil key Redis: %v\n", err)
+		keys = nil
+	}
+
+	if len(keys) == 0 {
+		if errDB := db.Model(&models.Seller{}).
+			Where(&models.Seller{Jenis: jenis}).
+			Offset(int(FinalTake)).
+			Limit(MAXTAKE).
+			Find(&sellers).Error; errDB != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
 				Payload:  response_seller.ResponseAmbilJenisSeller{Message: "Gagal mengambil data dari DB"},
 			}
 		}
-
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
@@ -264,22 +319,62 @@ func AmbilSellerByJenis(ctx context.Context, jenis string, db *gorm.DB, rds *red
 		}
 	}
 
-	for _, key := range keys {
-		if key == "_init_" {
+	if int(FinalTake) >= len(keys) {
+		var dbSellers []models.Seller
+
+		if errDB := db.Where("jenis = ?", jenis).
+			Offset(int(FinalTake)).
+			Limit(MAXTAKE).
+			Find(&dbSellers).Error; errDB != nil {
+			fmt.Printf("[INFO] Tidak ada data seller jenis '%s' di offset %d (DB fallback error: %v)\n", jenis, FinalTake, errDB)
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+
+		if len(dbSellers) == 0 {
+			fmt.Printf("[INFO] Data seller jenis '%s' habis di offset %d\n", jenis, FinalTake)
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  dbSellers,
+		}
+	}
+
+	end := int(FinalTake) + MAXTAKE
+	if end > len(keys) {
+		end = len(keys)
+	}
+
+	// Looping ambil data dari Redis
+	for _, key := range keys[FinalTake:end] {
+		if key == "_init_" || strings.TrimSpace(key) == "" {
 			continue
 		}
 
 		wg.Add(1)
-		go func(key string) {
+		go func(k string) {
 			defer wg.Done()
 
-			data, errData := rds.HGetAll(ctx, key).Result()
+			data, errData := rds.HGetAll(ctx, k).Result()
 			if errData != nil || len(data) == 0 {
 				return
 			}
 
 			var seller models.Seller
-			jsonData, _ := json.Marshal(data)
+			jsonData, errMarshal := json.Marshal(data)
+			if errMarshal != nil {
+				return
+			}
 			if errUnmarshal := json.Unmarshal(jsonData, &seller); errUnmarshal != nil {
 				return
 			}
@@ -292,13 +387,6 @@ func AmbilSellerByJenis(ctx context.Context, jenis string, db *gorm.DB, rds *red
 
 	wg.Wait()
 
-	if len(sellers) < 10 {
-		var dbSellers []models.Seller
-		if err_db := db.Where("jenis = ?", jenis).Limit(10 - len(sellers)).Find(&dbSellers).Error; err_db == nil {
-			sellers = append(sellers, dbSellers...)
-		}
-	}
-
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -306,52 +394,108 @@ func AmbilSellerByJenis(ctx context.Context, jenis string, db *gorm.DB, rds *red
 	}
 }
 
-func AmbilSellerByDedication(ctx context.Context, dedication string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func AmbilSellerByDedication(FinalTake int64, ctx context.Context, dedication string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "AmbilSellerByDedication"
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var sellers []models.Seller
-	var key_seller []string
 
-	keys := fmt.Sprintf(`"seller_dedication:%s"`, dedication)
-
-	if hasil, err := rds.SRandMemberN(ctx, keys, 10).Result(); err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-		}
-	} else {
-		key_seller = append(key_seller, hasil...)
+	keySet := fmt.Sprintf("seller_dedication:%s", dedication)
+	keys, err := rds.SMembers(ctx, keySet).Result()
+	if err != nil {
+		fmt.Printf("[ERROR][%s] Gagal ambil key Redis: %v\n", services, err)
+		keys = nil
 	}
 
-	for _, ks := range key_seller {
+	if len(keys) == 0 {
+		fmt.Printf("[INFO][%s] Redis kosong, fallback ke DB (dedication=%s)\n", services, dedication)
+		if errDB := db.Model(&models.Seller{}).
+			Where("seller_dedication = ?", dedication).Order("follower_total DESC").
+			Offset(int(FinalTake)).
+			Limit(MAXTAKE).
+			Find(&sellers).Error; errDB != nil {
+			fmt.Printf("[ERROR][%s] Gagal ambil data dari DB: %v\n", services, errDB)
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+
+		if len(sellers) == 0 {
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  sellers,
+		}
+	}
+
+	if int(FinalTake) >= len(keys) {
+		fmt.Printf("[INFO][%s] Offset %d melebihi jumlah key Redis, fallback DB\n", services, FinalTake)
+		if errDB := db.Model(&models.Seller{}).Order("follower_total DESC").
+			Where("seller_dedication = ?", dedication).
+			Offset(int(FinalTake)).
+			Limit(MAXTAKE).
+			Find(&sellers).Error; errDB != nil || len(sellers) == 0 {
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  sellers,
+		}
+	}
+
+	end := int(FinalTake) + MAXTAKE
+	if end > len(keys) {
+		end = len(keys)
+	}
+
+	for _, key := range keys[FinalTake:end] {
+		if key == "_init_" || strings.TrimSpace(key) == "" {
+			continue
+		}
+
 		wg.Add(1)
-		go func(key string) {
+		go func(k string) {
 			defer wg.Done()
-			seller, err := rds.HGetAll(ctx, key).Result()
-			if err != nil || len(seller) == 0 {
+
+			data, err := rds.HGetAll(ctx, k).Result()
+			if err != nil || len(data) == 0 {
 				return
 			}
 
-			idSeller, errID := strconv.Atoi(seller["id_seller"])
+			idSeller, errID := strconv.Atoi(data["id_seller"])
 			if errID != nil {
 				return
 			}
-			followerTotal, errFollower := strconv.Atoi(seller["follower_total_seller"])
+
+			followerTotal, errFollower := strconv.Atoi(data["follower_total_seller"])
 			if errFollower != nil {
 				return
 			}
 
 			sellerData := models.Seller{
 				ID:               int32(idSeller),
-				Username:         seller["username_seller"],
-				Email:            seller["email_seller"],
-				JamOperasional:   seller["jam_operasional_seller"],
-				Jenis:            seller["jenis_seller"],
-				Punchline:        seller["punchline_seller"],
-				Deskripsi:        seller["deskripsi_seller"],
-				Nama:             seller["nama_seller"],
-				SellerDedication: seller["seller_dedication_seller"],
+				Username:         data["username_seller"],
+				Email:            data["email_seller"],
+				JamOperasional:   data["jam_operasional_seller"],
+				Jenis:            data["jenis_seller"],
+				Punchline:        data["punchline_seller"],
+				Deskripsi:        data["deskripsi_seller"],
+				Nama:             data["nama_seller"],
+				SellerDedication: data["seller_dedication_seller"],
 				FollowerTotal:    int32(followerTotal),
 			}
 
@@ -360,10 +504,25 @@ func AmbilSellerByDedication(ctx context.Context, dedication string, db *gorm.DB
 				sellers = append(sellers, sellerData)
 				mu.Unlock()
 			}
-		}(ks)
+		}(key)
 	}
 
 	wg.Wait()
+
+	if len(sellers) < MAXTAKE {
+		fmt.Printf("[INFO][%s] Redis gak punya data valid, fallback DB\n", services)
+		var dbSellers []models.Seller
+		if errDB := db.Model(&models.Seller{}).
+			Order("follower_total DESC").
+			Where(&models.Seller{SellerDedication: dedication}).
+			Offset(len(sellers)).
+			Limit(MAXTAKE - len(sellers)).
+			Find(&dbSellers).Error; errDB == nil && len(dbSellers) > 0 {
+			mu.Lock()
+			sellers = append(sellers, dbSellers...)
+			mu.Unlock()
+		}
+	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
@@ -372,7 +531,7 @@ func AmbilSellerByDedication(ctx context.Context, dedication string, db *gorm.DB
 	}
 }
 
-func AmbilSellerByNamaDanJenis(ctx context.Context, nama, jenis string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
+func AmbilSellerByNamaDanJenis(FinalTake int64, ctx context.Context, nama, jenis string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
 	services := "AmbilSellerByNamaDanJenis"
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -383,7 +542,9 @@ func AmbilSellerByNamaDanJenis(ctx context.Context, nama, jenis string, db *gorm
 
 	ResultSe, err := SE.Index("seller_all").Search(nama, &meilisearch.SearchRequest{
 		Filter: fmt.Sprintf("jenis_seller = '%s'", jenis),
-		Limit:  10,
+		Sort:   []string{"follower_total:desc"},
+		Limit:  MAXTAKE,
+		Offset: FinalTake,
 	})
 	if err != nil {
 		log.Printf("[%s] ❌ Meilisearch error: %v\n", services, err)
@@ -440,6 +601,21 @@ func AmbilSellerByNamaDanJenis(ctx context.Context, nama, jenis string, db *gorm
 
 	wg.Wait()
 
+	if len(sellers) < MAXTAKE {
+		var Hasil []models.Seller
+
+		if err := db.Model(&models.Seller{}).Where("id IN ?", MatchSearch(sellers, idSeller)).Find(&Hasil).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+		mu.Lock()
+		sellers = append(sellers, Hasil...)
+		mu.Unlock()
+	}
+
 	log.Printf("[%s] ✅ Selesai. Dapat %d seller dalam %v\n", services, len(sellers), time.Since(start))
 
 	return &response.ResponseForm{
@@ -449,7 +625,7 @@ func AmbilSellerByNamaDanJenis(ctx context.Context, nama, jenis string, db *gorm
 	}
 }
 
-func AmbilSellerByNamaDanDedication(ctx context.Context, nama, dedication string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
+func AmbilSellerByNamaDanDedication(FinalTake int64, ctx context.Context, nama, dedication string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
 	services := "AmbilSellerByNameDanDedication"
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -458,58 +634,76 @@ func AmbilSellerByNamaDanDedication(ctx context.Context, nama, dedication string
 
 	ResultSe, err := SE.Index("seller_all").Search(nama, &meilisearch.SearchRequest{
 		Filter: fmt.Sprintf("seller_dedication_seller = '%s'", dedication),
-		Limit:  10,
+		Sort:   []string{"follower_total:desc"},
+		Offset: FinalTake,
+		Limit:  MAXTAKE,
 	})
-	if err == nil {
-		hitsjson, _ := json.Marshal(ResultSe.Hits)
-
-		_ = json.Unmarshal(hitsjson, &idSeller)
-		for _, id := range idSeller {
-			wg.Add(1)
-			go func(id search_engine.Seller) {
-				defer wg.Done()
-				seller, _ := rds.HGetAll(ctx, fmt.Sprintf("seller_data:%v", id.IdSeller)).Result()
-
-				id_seller, err_id := strconv.Atoi(seller["id_seller"])
-				if err_id != nil {
-					return
-				}
-				follower_total, err_follower := strconv.Atoi(seller["follower_total_seller"])
-				if err_follower != nil {
-					return
-				}
-
-				seller_data := models.Seller{
-					ID:               int32(id_seller),
-					Username:         seller["username_seller"],
-					Email:            seller["email_seller"],
-					JamOperasional:   seller["jam_operasional_seller"],
-					Jenis:            seller["jenis_seller"],
-					Punchline:        seller["punchline_seller"],
-					Deskripsi:        seller["deskripsi_seller"],
-					Nama:             seller["nama_seller"],
-					SellerDedication: seller["seller_dedication_seller"],
-					FollowerTotal:    int32(follower_total),
-				}
-
-				if seller_data.Username != "" {
-					mu.Lock()
-					sellers = append(sellers, seller_data)
-					mu.Unlock()
-				} else {
-					return
-				}
-			}(id)
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  []models.Seller{},
 		}
-		wg.Wait()
+	}
 
-		if len(sellers) == 0 {
-			var fallbackid []int64
-			for _, id := range idSeller {
-				fallbackid = append(fallbackid, int64(id.IdSeller))
+	hitsjson, _ := json.Marshal(ResultSe.Hits)
+
+	if err := json.Unmarshal(hitsjson, &idSeller); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  []models.Seller{},
+		}
+	}
+
+	for _, id := range idSeller {
+		wg.Add(1)
+		go func(id search_engine.Seller) {
+			defer wg.Done()
+			seller, _ := rds.HGetAll(ctx, fmt.Sprintf("seller_data:%v", id.IdSeller)).Result()
+
+			id_seller, err_id := strconv.Atoi(seller["id_seller"])
+			if err_id != nil {
+				return
+			}
+			follower_total, err_follower := strconv.Atoi(seller["follower_total_seller"])
+			if err_follower != nil {
+				return
 			}
 
-			_ = db.Model(&models.Seller{}).Where("id IN ?", fallbackid).Find(&sellers)
+			seller_data := models.Seller{
+				ID:               int32(id_seller),
+				Username:         seller["username_seller"],
+				Email:            seller["email_seller"],
+				JamOperasional:   seller["jam_operasional_seller"],
+				Jenis:            seller["jenis_seller"],
+				Punchline:        seller["punchline_seller"],
+				Deskripsi:        seller["deskripsi_seller"],
+				Nama:             seller["nama_seller"],
+				SellerDedication: seller["seller_dedication_seller"],
+				FollowerTotal:    int32(follower_total),
+			}
+
+			if seller_data.Username != "" {
+				mu.Lock()
+				sellers = append(sellers, seller_data)
+				mu.Unlock()
+			} else {
+				return
+			}
+		}(id)
+	}
+	wg.Wait()
+
+	if len(sellers) < MAXTAKE {
+		var Hasil []models.Seller
+
+		if err := db.Model(&models.Seller{}).Where("id IN ?", MatchSearch(sellers, idSeller)).Find(&Hasil).Error; err != nil {
+			fmt.Println("Gagal Ambil Fallback")
+		} else {
+			mu.Lock()
+			sellers = append(sellers, Hasil...)
+			mu.Unlock()
 		}
 	}
 
@@ -520,44 +714,78 @@ func AmbilSellerByNamaDanDedication(ctx context.Context, nama, dedication string
 	}
 }
 
-func AmbilSellerByJenisDanDedication(ctx context.Context, jenis, dedication string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func AmbilSellerByJenisDanDedication(FinalTake int64, ctx context.Context, jenis, dedication string, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "AmbilSellerByJenisDanDedication"
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var sellers []models.Seller
-	var rawKeysSeller []string
-	var keysSeller []string
+	var rawKeysSeller, keysSeller []string
 
 	keyJenis := fmt.Sprintf("seller_jenis:%s", jenis)
-	if hasil, err := rds.SRandMemberN(ctx, keyJenis, 10).Result(); err != nil {
+	hasilJenis, err := rds.SMembers(ctx, keyJenis).Result()
+	if err != nil || len(hasilJenis) == 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
+			Payload:  []models.Seller{},
 		}
-	} else {
-		rawKeysSeller = append(rawKeysSeller, hasil...)
 	}
+	rawKeysSeller = append(rawKeysSeller, hasilJenis...)
 
 	keyDedication := fmt.Sprintf("seller_dedication:%s", dedication)
-	if hasilDed, err := rds.SMembers(ctx, keyDedication).Result(); err != nil {
+	hasilDed, err := rds.SMembers(ctx, keyDedication).Result()
+	if err != nil || len(hasilDed) == 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-		}
-	} else {
-		dedMap := make(map[string]struct{}, len(hasilDed))
-		for _, k := range hasilDed {
-			dedMap[k] = struct{}{}
-		}
-
-		for _, ks := range rawKeysSeller {
-			if _, ok := dedMap[ks]; ok {
-				keysSeller = append(keysSeller, ks)
-			}
+			Payload:  []models.Seller{},
 		}
 	}
 
-	for _, ks := range keysSeller {
+	dedMap := make(map[string]struct{}, len(hasilDed))
+	for _, k := range hasilDed {
+		dedMap[k] = struct{}{}
+	}
+
+	for _, ks := range rawKeysSeller {
+		if _, ok := dedMap[ks]; ok {
+			keysSeller = append(keysSeller, ks)
+		}
+	}
+
+	if len(keysSeller) == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  []models.Seller{},
+		}
+	}
+
+	if int(FinalTake) >= len(keysSeller) {
+		var hasilDB []models.Seller
+		if err := db.Model(&models.Seller{}).Offset(int(FinalTake)).Order("follower_total DESC").
+			Where(&models.Seller{Jenis: jenis, SellerDedication: dedication}).
+			Limit(int(MAXTAKE)).
+			Find(&hasilDB).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Payload:  []models.Seller{},
+			}
+		}
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  hasilDB,
+		}
+	}
+
+	endIndex := int(FinalTake) + MAXTAKE
+	if endIndex > len(keysSeller) {
+		endIndex = len(keysSeller)
+	}
+
+	for _, ks := range keysSeller[FinalTake:endIndex] {
 		wg.Add(1)
 		go func(key string) {
 			defer wg.Done()
@@ -603,34 +831,40 @@ func AmbilSellerByJenisDanDedication(ctx context.Context, jenis, dedication stri
 		Services: services,
 		Payload:  sellers,
 	}
+
 }
 
-func AmbilSellerByNamaJenisDedication(ctx context.Context, nama, jenis, dedication string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
+func AmbilSellerByNamaJenisDedication(FinalTake int64, ctx context.Context, nama, jenis, dedication string, db *gorm.DB, rds *redis.Client, SE meilisearch.ServiceManager) *response.ResponseForm {
 	services := "AmbilSellerByNamaJenisDedication"
-	const LIMIT = 10
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var sellers []models.Seller
 	var idSeller []search_engine.Seller
-	var hitsjson []byte
 
 	ResultSe, err := SE.Index("seller_all").Search(nama, &meilisearch.SearchRequest{
-		Filter: fmt.Sprintf("seller_dedication_seller = '%s' AND jenis_seller = '%s' ", dedication, jenis),
-		Limit:  LIMIT,
+		Filter: fmt.Sprintf("seller_dedication_seller = \"%s\" AND jenis_seller = \"%s\"", dedication, jenis),
+		Sort:   []string{"follower_total:desc"},
+		Offset: FinalTake,
+		Limit:  MAXTAKE,
 	})
 
 	if err != nil {
 		log.Printf("[%s] ⚠️ Gagal melakukan pencarian di Meilisearch: %v\n", services, err)
-		goto FALLBACKDB
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  []models.Seller{},
+		}
 	}
 
-	hitsjson, _ = json.Marshal(ResultSe.Hits)
+	hitsjson, _ := json.Marshal(ResultSe.Hits)
 	if err := json.Unmarshal(hitsjson, &idSeller); err != nil {
 		log.Printf("[%s] ⚠️ Gagal unmarshal hasil Meilisearch: %v\n", services, err)
-	}
-
-	if len(idSeller) == 0 {
-		log.Printf("[%s] ⚠️ Tidak ada hasil ditemukan untuk '%s' jenis '%s'\n", services, nama, jenis)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  []models.Seller{},
+		}
 	}
 
 	for _, ds := range idSeller {
@@ -677,40 +911,21 @@ func AmbilSellerByNamaJenisDedication(ctx context.Context, nama, jenis, dedicati
 
 	wg.Wait()
 
-	if len(sellers) > 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusOK,
-			Services: services,
-			Payload:  sellers,
-		}
-	}
+	if len(sellers) < MAXTAKE {
+		var Hasil []models.Seller
 
-FALLBACKDB:
-	var sellersFallback []models.Seller
-	if errDB := db.Model(&models.Seller{}).
-		Where("nama LIKE ? AND jenis = ? AND seller_dedication = ?", "%"+nama+"%", jenis, dedication).
-		Limit(LIMIT).
-		Find(&sellersFallback).Error; errDB != nil {
-		log.Printf("[%s] ⚠️ Gagal fallback DB: %v\n", services, errDB)
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
+		if err := db.Model(&models.Seller{}).Where("id IN ?", MatchSearch(sellers, idSeller)).Find(&Hasil).Error; err != nil {
+			fmt.Println("Gagal Ambil Fallback")
+		} else {
+			mu.Lock()
+			sellers = append(sellers, Hasil...)
+			mu.Unlock()
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload:  sellersFallback,
+		Payload:  sellers,
 	}
 }
-
-// func AmbilMostFollowedSeller(ctx context.Context, SE meilisearch.ServiceManager, rds *redis.Client) *response.ResponseForm {
-// 	services := "AmbilMostFollowedSeller"
-// 	var sellers models.Seller
-// 	return &response.ResponseForm{
-// 		Status:   http.StatusOK,
-// 		Services: services,
-
-// 	}
-// }

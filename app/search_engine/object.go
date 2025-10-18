@@ -19,4 +19,5 @@ type Seller struct {
 	NamaSeller       string `json:"nama_seller"`
 	JenisSeller      string `json:"jenis_seller"`
 	SellerDedication string `json:"seller_dedication_seller"`
+	FollowerTotal    int32  `json:"follower_total_seller"`
 }
