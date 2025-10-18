@@ -15,7 +15,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -394,6 +393,7 @@ func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.Respons
 	s.New("Mid-server-7wpABbBW_WURdLxcxc5bX5eb", midtrans.Sandbox)
 
 	snapResp, err := s.CreateTransaction(snapReq)
+
 	if err != nil {
 		return nil, &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -501,6 +501,15 @@ func PendingTransaksi(ctx context.Context, data PayloadPendingTransaksi, db *gor
 		Payload: response_transaction_pengguna.ResponsePendingTransaksi{
 			Message: "Berhasil",
 		},
+	}
+}
+
+func CallPendingTransaksi(data PayloadCallPendingTransaksi, rds *redis.Client) *response.ResponseForm {
+	services := "CallPendingTransaksi"
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
 	}
 }
 

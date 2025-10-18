@@ -704,3 +704,13 @@ FALLBACKDB:
 		Payload:  sellersFallback,
 	}
 }
+
+// func AmbilMostFollowedSeller(ctx context.Context, SE meilisearch.ServiceManager, rds *redis.Client) *response.ResponseForm {
+// 	services := "AmbilMostFollowedSeller"
+// 	var sellers models.Seller
+// 	return &response.ResponseForm{
+// 		Status:   http.StatusOK,
+// 		Services: services,
+
+// 	}
+// }

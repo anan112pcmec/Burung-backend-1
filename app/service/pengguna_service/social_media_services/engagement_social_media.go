@@ -87,3 +87,84 @@ func EngageSocialMediaPengguna(data PayloadEngageSocialMedia, db *gorm.DB) *resp
 		},
 	}
 }
+
+func FollowSeller(data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
+	services := "FollowSeller"
+	_, status := data.IdentitasUser.Validating(db)
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  "Gagal Kredensial User Tidak Valid",
+		}
+	}
+
+	var follower models.Follower
+	follower.IdFollowed = 0
+	follower.IdFollower = 0
+	_ = db.Model(&models.Follower{}).Where(&models.Follower{IdFollower: data.IdentitasUser.ID, IdFollowed: int64(data.IdSeller)}).Take(&follower).Error
+
+	if follower.IdFollowed == 0 && follower.IdFollower == 0 {
+		if err := db.Create(&models.Follower{
+			IdFollower: data.IdentitasUser.ID,
+			IdFollowed: int64(data.IdSeller),
+		}).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Payload:  "gagal Follow, Silahkan coba lagi lain waktu",
+			}
+		}
+	} else {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  "Gagal Kamu Sudah Follow dia",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_social_media_pengguna.ResponseFollowSeller{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func UnfollowSeller(data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
+	services := "UnfollowSeller"
+
+	_, status := data.IdentitasUser.Validating(db)
+
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_social_media_pengguna.ResponseUnfollowSeller{
+				Message: "Gagal, Data User Tidak Valid",
+			},
+		}
+	}
+
+	if err := db.Model(&models.Follower{}).Where(&models.Follower{
+		IdFollower: data.IdentitasUser.ID,
+		IdFollowed: int64(data.IdSeller),
+	}).Delete(&models.Follower{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_social_media_pengguna.ResponseUnfollowSeller{
+				Message: "Gagal Unfollow seller, Coba Lagi Lain Waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_social_media_pengguna.ResponseUnfollowSeller{
+			Message: "Berhasil",
+		},
+	}
+}

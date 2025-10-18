@@ -7,6 +7,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/payment/payment_response_models"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
+
 )
 
 type PendingTransactionModel struct {
@@ -43,6 +44,11 @@ type PayloadReactionTransaksiSnap struct {
 type PayloadPendingTransaksi struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"data_identitas_pengguna"`
 	DataPending       PendingTransactionModel            `json:"data_pending_transaksi"`
+}
+
+type PayloadCallPendingTransaksi struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"data_identitas_pengguna"`
+	PendingKey        string                             `json:"data_key_pending"`
 }
 
 type PayloadLockTransaksi struct {
