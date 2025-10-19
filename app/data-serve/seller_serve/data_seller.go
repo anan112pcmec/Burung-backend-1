@@ -355,7 +355,6 @@ func AmbilSellerByJenis(FinalTake int64, ctx context.Context, jenis string, db *
 		end = len(keys)
 	}
 
-	// Looping ambil data dari Redis
 	for _, key := range keys[FinalTake:end] {
 		if key == "_init_" || strings.TrimSpace(key) == "" {
 			continue
@@ -370,22 +369,40 @@ func AmbilSellerByJenis(FinalTake int64, ctx context.Context, jenis string, db *
 				return
 			}
 
-			var seller models.Seller
-			jsonData, errMarshal := json.Marshal(data)
-			if errMarshal != nil {
-				return
-			}
-			if errUnmarshal := json.Unmarshal(jsonData, &seller); errUnmarshal != nil {
+			idSeller, errID := strconv.Atoi(data["id_seller"])
+			if errID != nil {
 				return
 			}
 
-			mu.Lock()
-			sellers = append(sellers, seller)
-			mu.Unlock()
+			followerTotal, errFollower := strconv.Atoi(data["follower_total_seller"])
+			if errFollower != nil {
+				return
+			}
+
+			sellerData := models.Seller{
+				ID:               int32(idSeller),
+				Username:         data["username_seller"],
+				Email:            data["email_seller"],
+				JamOperasional:   data["jam_operasional_seller"],
+				Jenis:            data["jenis_seller"],
+				Punchline:        data["punchline_seller"],
+				Deskripsi:        data["deskripsi_seller"],
+				Nama:             data["nama_seller"],
+				SellerDedication: data["seller_dedication_seller"],
+				FollowerTotal:    int32(followerTotal),
+			}
+
+			if sellerData.Username != "" {
+				mu.Lock()
+				sellers = append(sellers, sellerData)
+				mu.Unlock()
+			}
 		}(key)
 	}
 
 	wg.Wait()
+
+	fmt.Println("Jalannih", keys)
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
@@ -719,37 +736,13 @@ func AmbilSellerByJenisDanDedication(FinalTake int64, ctx context.Context, jenis
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var sellers []models.Seller
-	var rawKeysSeller, keysSeller []string
+	var keysSeller []int64
 
-	keyJenis := fmt.Sprintf("seller_jenis:%s", jenis)
-	hasilJenis, err := rds.SMembers(ctx, keyJenis).Result()
-	if err != nil || len(hasilJenis) == 0 {
+	if err := db.Model(&models.Seller{}).Select("id").Where(&models.Seller{Jenis: jenis, SellerDedication: dedication}).Find(&keysSeller).Error; err != nil {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusOK,
 			Services: services,
 			Payload:  []models.Seller{},
-		}
-	}
-	rawKeysSeller = append(rawKeysSeller, hasilJenis...)
-
-	keyDedication := fmt.Sprintf("seller_dedication:%s", dedication)
-	hasilDed, err := rds.SMembers(ctx, keyDedication).Result()
-	if err != nil || len(hasilDed) == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload:  []models.Seller{},
-		}
-	}
-
-	dedMap := make(map[string]struct{}, len(hasilDed))
-	for _, k := range hasilDed {
-		dedMap[k] = struct{}{}
-	}
-
-	for _, ks := range rawKeysSeller {
-		if _, ok := dedMap[ks]; ok {
-			keysSeller = append(keysSeller, ks)
 		}
 	}
 
@@ -787,9 +780,9 @@ func AmbilSellerByJenisDanDedication(FinalTake int64, ctx context.Context, jenis
 
 	for _, ks := range keysSeller[FinalTake:endIndex] {
 		wg.Add(1)
-		go func(key string) {
+		go func(key int64) {
 			defer wg.Done()
-			seller, err := rds.HGetAll(ctx, key).Result()
+			seller, err := rds.HGetAll(ctx, fmt.Sprintf("seller_data:%v", key)).Result()
 			if err != nil || len(seller) == 0 {
 				return
 			}

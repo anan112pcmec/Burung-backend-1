@@ -19,7 +19,13 @@ func GetSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *
 
 	switch r.URL.Path {
 	case "/seller/barang-all":
-		hasil = barang_serve.AmbilRandomBarang(ctx, rds)
+		FinalTake, err := strconv.Atoi(r.URL.Query().Get("seller"))
+		if err != nil {
+			hasil = &response.ResponseForm{
+				Status: http.StatusNotFound,
+			}
+		}
+		hasil = barang_serve.AmbilRandomBarang(FinalTake, ctx, rds, db)
 	case "/seller/barang-spesified":
 		jenis := r.URL.Query().Get("jenis")
 		if jenis != "" {

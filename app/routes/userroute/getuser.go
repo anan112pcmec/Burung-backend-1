@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
@@ -12,6 +13,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/data-serve/barang_serve"
 	"github.com/anan112pcmec/Burung-backend-1/app/data-serve/seller_serve"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
+
 )
 
 func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_barang *redis.Client, redis_entity *redis.Client, SE meilisearch.ServiceManager) {
@@ -19,36 +21,47 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_b
 	ctx := r.Context()
 
 	switch r.URL.Path {
-	case "/user/barang-all":
-		hasil = barang_serve.AmbilRandomBarang(ctx, redis_barang)
 	case "/user/barang-spesified":
 		jenis := r.URL.Query().Get("jenis")
-		if jenis != "" {
-			hasil = barang_serve.AmbilBarangJenis(ctx, db, redis_barang, jenis)
-		}
-
 		seller := r.URL.Query().Get("seller")
-		if seller != "" {
-			seller_id, _ := strconv.Atoi(seller)
-			hasil = barang_serve.AmbilBarangSeller(ctx, redis_barang, int32(seller_id))
-		}
-
 		nama_barang := r.URL.Query().Get("nama_barang")
-		if nama_barang != "" {
-			hasil = barang_serve.AmbilBarangNama(ctx, redis_barang, db, nama_barang, SE)
-		}
 
-		if nama_barang != "" && jenis != "" {
+		switch {
+		// --- Kombinasi 3 parameter ---
+		// case nama_barang != "" && jenis != "" && seller != "":
+		// 	seller_id, _ := strconv.Atoi(seller)
+		// 	hasil = barang_serve.AmbilBarangnama(ctx, redis_barang, db, int32(seller_id), nama_barang, jenis, SE)
+
+		// --- Kombinasi 2 parameter ---
+		case nama_barang != "" && jenis != "":
 			hasil = barang_serve.AmbilBarangNamaDanJenis(ctx, redis_barang, db, nama_barang, jenis, SE)
-		}
 
-		if nama_barang != "" && seller != "" {
+		case nama_barang != "" && seller != "":
 			seller_id, _ := strconv.Atoi(seller)
 			hasil = barang_serve.AmbilBarangNamaDanSeller(ctx, redis_barang, db, int32(seller_id), nama_barang, SE)
-		}
 
-		if jenis != "" && seller != "" {
+		case jenis != "" && seller != "":
+			seller_id, _ := strconv.Atoi(seller)
+			hasil = barang_serve.AmbilBarangJenisDanSeller(ctx, redis_barang, db, int32(seller_id), jenis)
 
+		// --- Hanya 1 parameter ---
+		case nama_barang != "":
+			hasil = barang_serve.AmbilBarangNama(ctx, redis_barang, db, nama_barang, SE)
+
+		case jenis != "":
+			hasil = barang_serve.AmbilBarangJenis(ctx, db, redis_barang, jenis)
+
+		case seller != "":
+			seller_id, _ := strconv.Atoi(seller)
+			hasil = barang_serve.AmbilBarangSeller(ctx, redis_barang, int32(seller_id))
+
+		// --- Tidak ada parameter valid ---
+		default:
+			hasil = &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: "Barang Services",
+				Payload:  "Parameter pencarian tidak lengkap. Gunakan salah satu dari: nama_barang, jenis, seller (atau kombinasi yang valid).",
+			}
 		}
 	case "/user/data-barang-induk":
 		id_barang_induk, err := strconv.Atoi(r.URL.Query().Get("barang_induk"))
@@ -82,36 +95,33 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_b
 			}
 		}
 
-		nama := r.URL.Query().Get("nama")
-		if nama != "" {
-			hasil = seller_serve.AmbilSellerByNama(int64(finalNumber), ctx, nama, db, redis_entity, SE)
-		}
+		nama := strings.TrimSpace(r.URL.Query().Get("nama"))
+		jenis := strings.TrimSpace(r.URL.Query().Get("jenis"))
+		dedication := strings.TrimSpace(r.URL.Query().Get("dedication"))
 
-		jenis := r.URL.Query().Get("jenis")
-		if jenis != "" {
-			hasil = seller_serve.AmbilSellerByJenis(int64(finalNumber), ctx, jenis, db, redis_entity)
-		}
-
-		dedication := r.URL.Query().Get("dedication")
-		if dedication != "" {
-			hasil = seller_serve.AmbilSellerByDedication(int64(finalNumber), ctx, dedication, db, redis_entity)
-		}
-
-		if nama != "" && jenis != "" {
-			hasil = seller_serve.AmbilSellerByNamaDanJenis(int64(finalNumber), ctx, nama, jenis, db, redis_entity, SE)
-		}
-
-		if nama != "" && dedication != "" {
-			hasil = seller_serve.AmbilSellerByNamaDanDedication(int64(finalNumber), ctx, nama, dedication, db, redis_entity, SE)
-		}
-
-		if jenis != "" && dedication != "" {
-			hasil = seller_serve.AmbilSellerByJenisDanDedication(int64(finalNumber), ctx, jenis, dedication, db, redis_entity)
-		}
-
-		if nama != "" && dedication != "" && jenis != "" {
+		switch {
+		case nama != "" && jenis != "" && dedication != "":
 			hasil = seller_serve.AmbilSellerByNamaJenisDedication(int64(finalNumber), ctx, nama, jenis, dedication, db, redis_entity, SE)
+		case nama != "" && jenis != "":
+			hasil = seller_serve.AmbilSellerByNamaDanJenis(int64(finalNumber), ctx, nama, jenis, db, redis_entity, SE)
+		case nama != "" && dedication != "":
+			hasil = seller_serve.AmbilSellerByNamaDanDedication(int64(finalNumber), ctx, nama, dedication, db, redis_entity, SE)
+		case jenis != "" && dedication != "":
+			hasil = seller_serve.AmbilSellerByJenisDanDedication(int64(finalNumber), ctx, jenis, dedication, db, redis_entity)
+		case nama != "":
+			hasil = seller_serve.AmbilSellerByNama(int64(finalNumber), ctx, nama, db, redis_entity, SE)
+		case jenis != "":
+			hasil = seller_serve.AmbilSellerByJenis(int64(finalNumber), ctx, jenis, db, redis_entity)
+		case dedication != "":
+			hasil = seller_serve.AmbilSellerByDedication(int64(finalNumber), ctx, dedication, db, redis_entity)
+		default:
+			hasil = &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: "Seller Services",
+				Payload:  "Parameter pencarian tidak lengkap. Gunakan salah satu dari: nama, jenis, dedication (atau kombinasi yang valid).",
+			}
 		}
+
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

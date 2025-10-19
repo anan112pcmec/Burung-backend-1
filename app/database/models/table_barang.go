@@ -9,7 +9,7 @@ type BarangContract interface {
 type BarangInduk struct {
 	ID               int32      `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
 	SellerID         int32      `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
-	seller           Seller     `gorm:"foreignKey:SellerID;references:ID"`
+	Seller           Seller     `gorm:"foreignKey:SellerID;references:ID" json:"-"`
 	NamaBarang       string     `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
 	JenisBarang      string     `gorm:"column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis_barang_induk,omitempty"`
 	OriginalKategori string     `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori,omitempty"`
@@ -18,7 +18,7 @@ type BarangInduk struct {
 	Viewed           int32      `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed_barang_induk,omitempty"`
 	Likes            int32      `gorm:"column:likes;type:int4;not null;default:0" json:"likes_barang_induk,omitempty"`
 	TotalKomentar    int32      `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar_barang_induk,omitempty"`
-	HargaKategoris   int32      `gorm:"-" json:"harga_kategori_barang"`
+	HargaKategoris   int32      `gorm:"harga_kategori_barang" json:"harga_kategori_barang"`
 	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at,omitempty"`
 	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at,omitempty"`
 	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
