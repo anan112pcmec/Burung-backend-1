@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/meilisearch/meilisearch-go"
 	"github.com/redis/go-redis/v9"
@@ -22,6 +20,33 @@ import (
 )
 
 const MAXTAKE = 10
+
+func MatchSearch(barang []models.BarangInduk, SearchRes []search_engine.BarangInduk) []int32 {
+	var hasil []int32
+	BarangIndukMap := make(map[int32]struct{})
+
+	for _, s := range barang {
+		BarangIndukMap[s.ID] = struct{}{}
+	}
+
+	for _, data := range SearchRes {
+		if _, found := BarangIndukMap[int32(data.IDKey)]; !found {
+			hasil = append(hasil, int32(data.IDKey))
+		}
+	}
+
+	return hasil
+}
+
+func NotIn(barang []models.BarangInduk) []int32 {
+	var hasil []int32
+
+	for _, data := range barang {
+		hasil = append(hasil, data.ID)
+	}
+
+	return hasil
+}
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////
 // Searching Barang Service
@@ -111,59 +136,90 @@ func AmbilRandomBarang(FinalTake int, ctx context.Context, rds *redis.Client, db
 	}
 }
 
-func AmbilBarangJenis(ctx context.Context, db *gorm.DB, rds *redis.Client, jenis string) *response.ResponseForm {
-
+func AmbilBarangJenis(FinalTake int, ctx context.Context, db *gorm.DB, rds *redis.Client, jenis string) *response.ResponseForm {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	services := "AmbilBarangJenis"
 
 	var barang []models.BarangInduk
-	keys, _ := rds.SMembers(ctx, fmt.Sprintf("jenis_%s_barang", helper.ConvertJenisBarangReverse(jenis))).Result()
+
+	// Ambil semua key dari Redis
+	keys, err := rds.SMembers(ctx, fmt.Sprintf("jenis_%s_barang", helper.ConvertJenisBarangReverse(jenis))).Result()
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  "Gagal mengambil data dari cache",
+		}
+	}
+
 	if len(keys) == 0 {
+		// Ambil dari DB langsung jika cache kosong
 		var id_barang []int32
-		if err := db.Model(models.BarangInduk{}).
-			Where(models.BarangInduk{JenisBarang: jenis}).
-			Order("RANDOM()").
-			Limit(30).
+		if err := db.Model(&models.BarangInduk{}).
+			Where("jenis_barang = ?", jenis).
+			Order("viewed DESC, likes DESC").
+			Limit(MAXTAKE).
 			Pluck("id", &id_barang).Error; err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
-				Payload:  "Server Sedang Sibuk",
+				Payload:  barang,
 			}
 		}
 
-		for _, ids := range id_barang {
-			var hasil models.BarangInduk
-
-			if err := db.Model(models.BarangInduk{}).Select("*").
-				Where(&models.BarangInduk{ID: ids}).
-				Find(&hasil).Error; err != nil {
-
+		if len(id_barang) > 0 {
+			var hasil []models.BarangInduk
+			if err := db.Where("id IN ?", id_barang).Find(&hasil).Error; err != nil {
 				return &response.ResponseForm{
 					Status:   http.StatusInternalServerError,
 					Services: services,
-					Payload:  "Server Sedang Sibuk",
+					Payload:  barang,
 				}
 			}
-
-			barang = append(barang, hasil)
+			barang = hasil
 		}
 
 	} else {
-		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(keys), func(i, j int) { keys[i], keys[j] = keys[j], keys[i] })
-		if len(keys) > 30 {
-			keys = keys[:30]
+		// Ambil slice sesuai paging
+		if FinalTake > len(keys) {
+			var Hasil []models.BarangInduk
+
+			if err := db.Model(&models.BarangInduk{}).Order("viewed DESC, likes DESC").Offset(FinalTake).Where(&models.BarangInduk{JenisBarang: jenis}).Limit(MAXTAKE).Find(&Hasil).Error; err != nil {
+				return &response.ResponseForm{
+					Status:   http.StatusNotFound,
+					Services: services,
+					Payload:  []models.BarangInduk{},
+				}
+			}
+
+			barang = append(barang, Hasil...)
+
+			return &response.ResponseForm{
+				Status:   http.StatusOK,
+				Services: services,
+				Payload:  barang,
+			}
+		}
+		end := FinalTake + MAXTAKE
+		if len(keys) < end {
+			end = len(keys)
 		}
 
-		for _, key := range keys {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+		if FinalTake >= end {
+			return &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: services,
+				Payload:  barang,
+			}
+		}
 
-				data, _ := rds.HGetAll(ctx, key).Result()
-				if len(data) == 0 {
+		for _, key := range keys[FinalTake:end] {
+			wg.Add(1)
+			go func(k string) {
+				defer wg.Done()
+				data, err := rds.HGetAll(ctx, k).Result()
+				if err != nil || len(data) == 0 {
 					return
 				}
 
@@ -188,14 +244,25 @@ func AmbilBarangJenis(ctx context.Context, db *gorm.DB, rds *redis.Client, jenis
 					HargaKategoris:   int32(harga_kategori),
 				}
 
-				mu.Lock() // kunci sebelum append
+				mu.Lock()
 				barang = append(barang, b)
 				mu.Unlock()
-			}()
+			}(key)
 		}
-
 		wg.Wait()
 
+		if len(barang) < MAXTAKE {
+			var Hasil []models.BarangInduk
+			if err := db.Model(&models.BarangInduk{}).Where(&models.BarangInduk{
+				JenisBarang: jenis}).
+				Order("viewed DESC, likes DESC").
+				Limit(MAXTAKE - len(barang)).
+				Find(&Hasil).Error; err != nil {
+				fmt.Println("Gagal Fallback")
+			} else {
+				barang = append(barang, Hasil...)
+			}
+		}
 	}
 
 	return &response.ResponseForm{
@@ -205,7 +272,7 @@ func AmbilBarangJenis(ctx context.Context, db *gorm.DB, rds *redis.Client, jenis
 	}
 }
 
-func AmbilBarangSeller(ctx context.Context, rds *redis.Client, sellerId int32) *response.ResponseForm {
+func AmbilBarangSeller(FinalTake int, ctx context.Context, db *gorm.DB, rds *redis.Client, sellerId int32) *response.ResponseForm {
 	services := "AmbilBarangSeller"
 
 	if sellerId == 0 {
@@ -228,12 +295,32 @@ func AmbilBarangSeller(ctx context.Context, rds *redis.Client, sellerId int32) *
 
 	var barang []models.BarangInduk
 	var wg sync.WaitGroup
+	if FinalTake > len(keys) {
+		var Hasil []models.BarangInduk
 
-	for _, key := range keys {
+		if err := db.Model(&models.BarangInduk{}).Order("viewed DESC, likes DESC").Offset(FinalTake).Where(&models.BarangInduk{SellerID: sellerId}).Limit(MAXTAKE).Find(&Hasil).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: services,
+				Payload:  []models.BarangInduk{},
+			}
+		}
+		barang = append(barang, Hasil...)
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  barang,
+		}
+	}
+	end := FinalTake + MAXTAKE
+	if end > len(keys) {
+		end = len(keys)
+	}
+
+	for _, key := range keys[FinalTake:end] {
 		wg.Add(1)
-		go func() { // bawa key ke parameter biar aman
+		go func() {
 			defer wg.Done()
-
 			data, _ := rds.HGetAll(ctx, key).Result()
 			if len(data) == 0 {
 				return
@@ -265,6 +352,19 @@ func AmbilBarangSeller(ctx context.Context, rds *redis.Client, sellerId int32) *
 
 	wg.Wait()
 
+	if len(barang) < MAXTAKE {
+		var Hasil []models.BarangInduk
+		if err := db.Model(&models.BarangInduk{}).Where(&models.BarangInduk{
+			SellerID: sellerId}).
+			Order("viewed DESC, likes DESC").
+			Limit(MAXTAKE - len(barang)).
+			Find(&Hasil).Error; err != nil {
+			fmt.Println("Gagal Fallback")
+		} else {
+			barang = append(barang, Hasil...)
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -272,227 +372,247 @@ func AmbilBarangSeller(ctx context.Context, rds *redis.Client, sellerId int32) *
 	}
 }
 
-func AmbilBarangNama(ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_Barang string, SE meilisearch.ServiceManager) *response.ResponseForm {
-
+func AmbilBarangNama(FinalTake int, ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_Barang string, SE meilisearch.ServiceManager) *response.ResponseForm {
+	services := "Ambil Barang Nama"
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	services := "Ambil Barang Nama"
+	var barang []models.BarangInduk
+	var idBarangList []search_engine.BarangInduk
+
 	if Nama_Barang == "" {
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
-			Payload:  "Gagal Masukan Nama Barang Yang Hendak Di cari",
+			Payload:  []models.BarangInduk{},
 		}
 	}
 
-	searchRes, _ := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{})
+	// 1. Cari di Meilisearch
+	searchRes, err := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{
+		Limit:  MAXTAKE,
+		Sort:   []string{"viewed_barang_induk:desc", "likes_barang_induk:desc"},
+		Offset: int64(FinalTake),
+	})
+	if err != nil {
+		fmt.Println("❌ Gagal search Meilisearch:", err)
+	}
 
-	var barang []models.BarangInduk
+	if searchRes != nil && len(searchRes.Hits) > 0 {
+		hitsJSON, _ := json.Marshal(searchRes.Hits)
+		if err := json.Unmarshal(hitsJSON, &idBarangList); err != nil {
+			fmt.Println("❌ Gagal unmarshal Meilisearch hits:", err)
+		} else {
+			fmt.Println("✅ Data dari Meili ditemukan")
 
-	if len(searchRes.Hits) > 0 {
-		var id_barang []models.BarangInduk
-		hitsjson, _ := json.Marshal(searchRes.Hits)
-
-		_ = json.Unmarshal(hitsjson, &id_barang)
-
-		fmt.Println("Jalan Dari Meili")
-
-		for _, data_id := range id_barang {
-			if len(barang) == 30 {
-				break
-			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", data_id.ID)).Result()
-				if len(data) == 0 {
-					return
+			for _, dataID := range idBarangList {
+				// Pastikan IdBarang valid
+				if dataID.IdBarang == 0 {
+					continue
 				}
 
-				id_barang, _ := strconv.Atoi(data["id_barang_induk"])
-				id_seller, _ := strconv.Atoi(data["id_seller_barang_induk"])
-				viewed, _ := strconv.Atoi(data["viewed_barang_induk"])
-				likes, _ := strconv.Atoi(data["likes_barang_induk"])
-				total_komentar, _ := strconv.Atoi(data["total_komentar_barang_induk"])
-				harga_kategori, _ := strconv.Atoi(data["harga"])
-
-				b := models.BarangInduk{
-					ID:               int32(id_barang),
-					SellerID:         int32(id_seller),
-					NamaBarang:       data["nama_barang_induk"],
-					JenisBarang:      data["jenis_barang_induk"],
-					OriginalKategori: data["original_kategori"],
-					Deskripsi:        data["deskripsi_barang_induk"],
-					TanggalRilis:     data["tanggal_rilis_barang_induk"],
-					Viewed:           int32(viewed),
-					Likes:            int32(likes),
-					TotalKomentar:    int32(total_komentar),
-					HargaKategoris:   int32(harga_kategori),
-				}
-				mu.Lock()
-				barang = append(barang, b)
-				mu.Unlock()
-			}()
-		}
-
-		wg.Wait()
-	} else {
-		var idBarang []models.BarangInduk
-		if err := db.Model(&models.BarangInduk{}).
-			Where("nama_barang LIKE ?", "'%"+Nama_Barang+"%'").
-			Select("id").
-			Order("RANDOM()").
-			Limit(30).
-			Pluck("id", &idBarang).Error; err != nil {
-
-			fmt.Println("❌ Gagal Mengambil Data:", err)
-			return &response.ResponseForm{
-				Status:   http.StatusNotFound,
-				Services: services,
-				Payload:  "Barang Yang Dicari Tidak Ada!",
-			}
-		}
-
-		if len(idBarang) > 0 {
-			for _, data_id := range idBarang {
 				wg.Add(1)
-				go func(d models.BarangInduk) {
+				go func(id int64) {
 					defer wg.Done()
-					data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", d.ID)).Result()
-					if len(data) == 0 {
+					data, err := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", id)).Result()
+					if err != nil || len(data) == 0 {
 						return
 					}
 
-					id_barang, _ := strconv.Atoi(data["id_barang_induk"])
-					id_seller, _ := strconv.Atoi(data["id_seller_barang_induk"])
-					viewed, _ := strconv.Atoi(data["viewed_barang_induk"])
-					likes, _ := strconv.Atoi(data["likes_barang_induk"])
-					total_komentar, _ := strconv.Atoi(data["total_komentar_barang_induk"])
-					harga_kategori, _ := strconv.Atoi(data["harga"])
+					idBarangInt, err := strconv.Atoi(data["id_barang_induk"])
+					if err != nil || idBarangInt == 0 {
+						return
+					}
+					idSellerInt, _ := strconv.Atoi(data["id_seller_barang_induk"])
+					viewedInt, _ := strconv.Atoi(data["viewed_barang_induk"])
+					likesInt, _ := strconv.Atoi(data["likes_barang_induk"])
+					totalKomentarInt, _ := strconv.Atoi(data["total_komentar_barang_induk"])
+					hargaKategoriInt, _ := strconv.Atoi(data["harga"])
 
 					b := models.BarangInduk{
-						ID:               int32(id_barang),
-						SellerID:         int32(id_seller),
+						ID:               int32(idBarangInt),
+						SellerID:         int32(idSellerInt),
 						NamaBarang:       data["nama_barang_induk"],
 						JenisBarang:      data["jenis_barang_induk"],
 						OriginalKategori: data["original_kategori"],
 						Deskripsi:        data["deskripsi_barang_induk"],
 						TanggalRilis:     data["tanggal_rilis_barang_induk"],
-						Viewed:           int32(viewed),
-						Likes:            int32(likes),
-						TotalKomentar:    int32(total_komentar),
-						HargaKategoris:   int32(harga_kategori),
+						Viewed:           int32(viewedInt),
+						Likes:            int32(likesInt),
+						TotalKomentar:    int32(totalKomentarInt),
+						HargaKategoris:   int32(hargaKategoriInt),
 					}
 
 					mu.Lock()
 					barang = append(barang, b)
 					mu.Unlock()
-				}(data_id)
+				}(dataID.IdBarang)
 			}
 
 			wg.Wait()
+		}
+	}
 
+	// 2. Fallback ke DB jika Meili kosong atau kurang
+	if len(barang) < MAXTAKE {
+		var dbResult []models.BarangInduk
+		idList := MatchSearch(barang, idBarangList)
+		if len(idList) > 0 {
+			if err := db.Model(&models.BarangInduk{}).
+				Where("id IN ?", idList).
+				Find(&dbResult).Error; err != nil {
+				fmt.Println("❌ Gagal Mengambil Data DB:", err)
+			} else {
+				barang = append(barang, dbResult...)
+			}
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload:  &barang,
+		Payload:  barang,
 	}
 }
 
-func AmbilBarangNamaDanJenis(ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_Barang, Jenis_Barang string, SE meilisearch.ServiceManager) *response.ResponseForm {
+func AmbilBarangNamaDanJenis(FinalTake int, ctx context.Context, rds *redis.Client, db *gorm.DB, Nama_Barang, Jenis_Barang string, SE meilisearch.ServiceManager) *response.ResponseForm {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	services := "AmbilBarangNamaDanJenis"
 	var barang []models.BarangInduk
 	var id_barang []search_engine.BarangInduk
 
-	searchRes, _ := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{
+	// Cari di Meilisearch
+	searchRes, err := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{
 		Filter: fmt.Sprintf("jenis_barang_induk = '%s'", Jenis_Barang),
+		Sort:   []string{"viewed_barang_induk:desc", "likes_barang_induk:desc"},
+		Offset: int64(FinalTake),
+		Limit:  MAXTAKE,
 	})
-
-	if len(searchRes.Hits) > 0 {
-		hitsjson, _ := json.Marshal(searchRes.Hits)
-		_ = json.Unmarshal(hitsjson, &id_barang)
-
-		fmt.Println("Jalan Dari Meili")
-		fmt.Println(id_barang)
-	} else {
+	if err != nil {
+		fmt.Println("❌ Gagal search Meilisearch:", err)
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
-			Payload:  "Tidak Ditemukan Barang Dengan Nama Dan Jenis Tersebut",
+			Payload:  []models.BarangInduk{},
 		}
 	}
 
-	var hasil int
-
-	if len(id_barang) > 30 {
-		hasil = 30
-	} else {
-		hasil = len(id_barang)
+	if len(searchRes.Hits) == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  []models.BarangInduk{},
+		}
 	}
 
-	for _, data_id := range id_barang[:hasil] {
+	hitsJSON, err := json.Marshal(searchRes.Hits)
+	if err != nil {
+		fmt.Println("❌ Gagal marshal Meili hits:", err)
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  []models.BarangInduk{},
+		}
+	}
+
+	if err := json.Unmarshal(hitsJSON, &id_barang); err != nil {
+		fmt.Println("❌ Gagal unmarshal Meili hits:", err)
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  []models.BarangInduk{},
+		}
+	}
+
+	fmt.Println("✅ Data dari Meili ditemukan")
+
+	// Ambil detail dari Redis
+	for _, data_id := range id_barang {
+		if data_id.IdBarang == 0 {
+			continue
+		}
 
 		wg.Add(1)
-		go func(data_id search_engine.BarangInduk) {
+		go func(id int64) {
 			defer wg.Done()
-
-			data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", data_id.IdBarang)).Result()
-			if len(data) == 0 {
+			data, err := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", id)).Result()
+			if err != nil || len(data) == 0 {
 				return
 			}
 
-			id_barang, _ := strconv.Atoi(data["id_barang_induk"])
-			id_seller, _ := strconv.Atoi(data["id_seller_barang_induk"])
-			viewed, _ := strconv.Atoi(data["viewed_barang_induk"])
-			likes, _ := strconv.Atoi(data["likes_barang_induk"])
-			total_komentar, _ := strconv.Atoi(data["total_komentar_barang_induk"])
-			harga_kategori, _ := strconv.Atoi(data["harga"])
+			id_barang_int, err := strconv.Atoi(data["id_barang_induk"])
+			if err != nil || id_barang_int == 0 {
+				return
+			}
+			id_seller_int, _ := strconv.Atoi(data["id_seller_barang_induk"])
+			viewed_int, _ := strconv.Atoi(data["viewed_barang_induk"])
+			likes_int, _ := strconv.Atoi(data["likes_barang_induk"])
+			total_komentar_int, _ := strconv.Atoi(data["total_komentar_barang_induk"])
+			harga_kategori_int, _ := strconv.Atoi(data["harga"])
 
 			b := models.BarangInduk{
-				ID:               int32(id_barang),
-				SellerID:         int32(id_seller),
+				ID:               int32(id_barang_int),
+				SellerID:         int32(id_seller_int),
 				NamaBarang:       data["nama_barang_induk"],
 				JenisBarang:      data["jenis_barang_induk"],
 				OriginalKategori: data["original_kategori"],
 				Deskripsi:        data["deskripsi_barang_induk"],
 				TanggalRilis:     data["tanggal_rilis_barang_induk"],
-				Viewed:           int32(viewed),
-				Likes:            int32(likes),
-				TotalKomentar:    int32(total_komentar),
-				HargaKategoris:   int32(harga_kategori),
+				Viewed:           int32(viewed_int),
+				Likes:            int32(likes_int),
+				TotalKomentar:    int32(total_komentar_int),
+				HargaKategoris:   int32(harga_kategori_int),
 			}
+
 			mu.Lock()
 			barang = append(barang, b)
 			mu.Unlock()
-		}(data_id)
+		}(data_id.IdBarang)
 	}
 
 	wg.Wait()
 
+	if len(barang) < MAXTAKE {
+		var dbResult []models.BarangInduk
+		idList := MatchSearch(barang, id_barang)
+		if len(idList) > 0 {
+			if err := db.Model(&models.BarangInduk{}).
+				Where("id IN ?", idList).
+				Find(&dbResult).Error; err != nil {
+				fmt.Println("❌ Gagal Mengambil Data DB:", err)
+			} else {
+				barang = append(barang, dbResult...)
+			}
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload:  &barang,
+		Payload:  barang,
 	}
 }
 
-func AmbilBarangNamaDanSeller(ctx context.Context, rds *redis.Client, db *gorm.DB, id_seller int32, Nama_Barang string, SE meilisearch.ServiceManager) *response.ResponseForm {
-
+func AmbilBarangNamaDanSeller(FinalTake int, ctx context.Context, rds *redis.Client, db *gorm.DB, id_seller int32, Nama_Barang string, SE meilisearch.ServiceManager) *response.ResponseForm {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	services := "AmbilBarangNamaDanSeller"
 	var barang []models.BarangInduk
-	var id_barang []models.BarangInduk
+	var id_barang []search_engine.BarangInduk
 
-	searchRes, _ := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{
+	searchRes, err := SE.Index("barang_induk_all").Search(Nama_Barang, &meilisearch.SearchRequest{
 		Filter: fmt.Sprintf("id_seller_barang_induk = '%v'", id_seller),
+		Limit:  MAXTAKE,
+		Offset: int64(FinalTake),
 	})
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  []models.BarangInduk{},
+		}
+	}
 
 	if len(searchRes.Hits) > 0 {
 		hitsjson, _ := json.Marshal(searchRes.Hits)
@@ -504,19 +624,16 @@ func AmbilBarangNamaDanSeller(ctx context.Context, rds *redis.Client, db *gorm.D
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload:  "Seller Ini Tidak Menjual Barang Demikian",
+			Payload:  []models.BarangInduk{},
 		}
 	}
 
 	for _, barang_key := range id_barang {
-		if len(barang) == 30 {
-			break
-		}
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 
-			data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", barang_key.ID)).Result()
+			data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%v", barang_key.IdBarang)).Result()
 			if len(data) == 0 {
 				return
 			}
@@ -548,6 +665,20 @@ func AmbilBarangNamaDanSeller(ctx context.Context, rds *redis.Client, db *gorm.D
 	}
 	wg.Wait()
 
+	if len(barang) < MAXTAKE {
+		var dbResult []models.BarangInduk
+		idList := MatchSearch(barang, id_barang)
+		if len(idList) > 0 {
+			if err := db.Model(&models.BarangInduk{}).
+				Where("id IN ?", idList).
+				Find(&dbResult).Error; err != nil {
+				fmt.Println("❌ Gagal Mengambil Data DB:", err)
+			} else {
+				barang = append(barang, dbResult...)
+			}
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -555,68 +686,111 @@ func AmbilBarangNamaDanSeller(ctx context.Context, rds *redis.Client, db *gorm.D
 	}
 }
 
-func AmbilBarangJenisDanSeller(ctx context.Context, rds *redis.Client, db *gorm.DB, id_seller int32, jenis string) *response.ResponseForm {
-
+func AmbilBarangJenisDanSeller(FinalTake int, ctx context.Context, rds *redis.Client, db *gorm.DB, id_seller int32, jenis string) *response.ResponseForm {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	services := "AmbilBarangJenisDanSeller"
 	var barang []models.BarangInduk
 
-	id_barang_rds, _ := rds.SRandMemberN(ctx, fmt.Sprintf("barang_seller:%v", id_seller), 1000).Result()
-
-	if len(id_barang_rds) > 0 {
-		for _, keys := range id_barang_rds {
-			if len(barang) == 30 {
-				break
-			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				data, _ := rds.HGetAll(ctx, fmt.Sprintf("barang:%s", keys)).Result()
-				if len(data) == 0 {
-					return
-				}
-
-				if data["jenis_barang_induk"] != jenis {
-					return
-				}
-
-				id_barang, _ := strconv.Atoi(data["id_barang_induk"])
-				id_seller, _ := strconv.Atoi(data["id_seller_barang_induk"])
-				viewed, _ := strconv.Atoi(data["viewed_barang_induk"])
-				likes, _ := strconv.Atoi(data["likes_barang_induk"])
-				total_komentar, _ := strconv.Atoi(data["total_komentar_barang_induk"])
-				harga_kategori, _ := strconv.Atoi(data["harga"])
-
-				b := models.BarangInduk{
-					ID:               int32(id_barang),
-					SellerID:         int32(id_seller),
-					NamaBarang:       data["nama_barang_induk"],
-					JenisBarang:      data["jenis_barang_induk"],
-					OriginalKategori: data["original_kategori"],
-					Deskripsi:        data["deskripsi_barang_induk"],
-					TanggalRilis:     data["tanggal_rilis_barang_induk"],
-					Viewed:           int32(viewed),
-					Likes:            int32(likes),
-					TotalKomentar:    int32(total_komentar),
-					HargaKategoris:   int32(harga_kategori),
-				}
-				mu.Lock()
-				barang = append(barang, b)
-				mu.Unlock()
-			}()
-		}
-		wg.Wait()
+	// Ambil semua ID barang seller dari Redis
+	id_barang_rds, err := rds.SMembers(ctx, fmt.Sprintf("barang_seller:%v", id_seller)).Result()
+	if err != nil {
+		fmt.Println("❌ Gagal ambil barang dari Redis:", err)
+		id_barang_rds = []string{}
 	}
-	// else {
-	// 	if err := db.Model(models.BarangInduk{}).Where(models.BarangInduk)
-	// }
+
+	// Jika FinalTake melebihi jumlah barang di Redis, fallback langsung ke DB
+	if FinalTake >= len(id_barang_rds) {
+		if err := db.Model(&models.BarangInduk{}).
+			Where(&models.BarangInduk{SellerID: id_seller, JenisBarang: jenis}).
+			Offset(FinalTake).
+			Order("viewed DESC, likes DESC").
+			Limit(MAXTAKE).
+			Find(&barang).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusNotFound,
+				Services: services,
+				Payload:  []models.BarangInduk{},
+			}
+		}
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload:  barang,
+		}
+	}
+
+	// Ambil range slice
+	end := FinalTake + MAXTAKE
+	if end > len(id_barang_rds) {
+		end = len(id_barang_rds)
+	}
+
+	// Ambil data dari Redis dengan goroutine
+	for _, key := range id_barang_rds[FinalTake:end] {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+
+			data, err := rds.HGetAll(ctx, fmt.Sprintf("barang:%s", key)).Result()
+			if err != nil || len(data) == 0 {
+				return
+			}
+
+			if data["jenis_barang_induk"] != jenis {
+				return
+			}
+
+			id_barang_int, err := strconv.Atoi(data["id_barang_induk"])
+			if err != nil || id_barang_int == 0 {
+				return
+			}
+			id_seller_int, _ := strconv.Atoi(data["id_seller_barang_induk"])
+			viewed_int, _ := strconv.Atoi(data["viewed_barang_induk"])
+			likes_int, _ := strconv.Atoi(data["likes_barang_induk"])
+			total_komentar_int, _ := strconv.Atoi(data["total_komentar_barang_induk"])
+			harga_kategori_int, _ := strconv.Atoi(data["harga"])
+
+			b := models.BarangInduk{
+				ID:               int32(id_barang_int),
+				SellerID:         int32(id_seller_int),
+				NamaBarang:       data["nama_barang_induk"],
+				JenisBarang:      data["jenis_barang_induk"],
+				OriginalKategori: data["original_kategori"],
+				Deskripsi:        data["deskripsi_barang_induk"],
+				TanggalRilis:     data["tanggal_rilis_barang_induk"],
+				Viewed:           int32(viewed_int),
+				Likes:            int32(likes_int),
+				TotalKomentar:    int32(total_komentar_int),
+				HargaKategoris:   int32(harga_kategori_int),
+			}
+
+			mu.Lock()
+			barang = append(barang, b)
+			mu.Unlock()
+		}(key)
+	}
+
+	wg.Wait()
+
+	// Fallback ke DB jika jumlah barang kurang dari MAXTAKE
+	if len(barang) < MAXTAKE {
+		var Hasil []models.BarangInduk
+		limitDB := MAXTAKE - len(barang)
+
+		err := db.Model(&models.BarangInduk{}).
+			Where("jenis_barang = ? AND id_seller = ? AND id NOT IN ?", jenis, id_seller, NotIn(barang)).
+			Limit(limitDB).
+			Find(&Hasil).Error
+		if err == nil && len(Hasil) > 0 {
+			barang = append(barang, Hasil...)
+		}
+	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload:  &barang,
+		Payload:  barang,
 	}
 }
 

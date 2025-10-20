@@ -13,7 +13,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/data-serve/barang_serve"
 	"github.com/anan112pcmec/Burung-backend-1/app/data-serve/seller_serve"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-
 )
 
 func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_barang *redis.Client, redis_entity *redis.Client, SE meilisearch.ServiceManager) {
@@ -22,6 +21,13 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_b
 
 	switch r.URL.Path {
 	case "/user/barang-spesified":
+		FinalTake, err := strconv.Atoi(r.URL.Query().Get("finalTake"))
+		if err != nil {
+			hasil = &response.ResponseForm{
+				Status: http.StatusUnauthorized,
+			}
+			return
+		}
 		jenis := r.URL.Query().Get("jenis")
 		seller := r.URL.Query().Get("seller")
 		nama_barang := r.URL.Query().Get("nama_barang")
@@ -34,26 +40,26 @@ func GetUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, redis_b
 
 		// --- Kombinasi 2 parameter ---
 		case nama_barang != "" && jenis != "":
-			hasil = barang_serve.AmbilBarangNamaDanJenis(ctx, redis_barang, db, nama_barang, jenis, SE)
+			hasil = barang_serve.AmbilBarangNamaDanJenis(FinalTake, ctx, redis_barang, db, nama_barang, jenis, SE)
 
 		case nama_barang != "" && seller != "":
 			seller_id, _ := strconv.Atoi(seller)
-			hasil = barang_serve.AmbilBarangNamaDanSeller(ctx, redis_barang, db, int32(seller_id), nama_barang, SE)
+			hasil = barang_serve.AmbilBarangNamaDanSeller(FinalTake, ctx, redis_barang, db, int32(seller_id), nama_barang, SE)
 
 		case jenis != "" && seller != "":
 			seller_id, _ := strconv.Atoi(seller)
-			hasil = barang_serve.AmbilBarangJenisDanSeller(ctx, redis_barang, db, int32(seller_id), jenis)
+			hasil = barang_serve.AmbilBarangJenisDanSeller(FinalTake, ctx, redis_barang, db, int32(seller_id), jenis)
 
 		// --- Hanya 1 parameter ---
 		case nama_barang != "":
-			hasil = barang_serve.AmbilBarangNama(ctx, redis_barang, db, nama_barang, SE)
+			hasil = barang_serve.AmbilBarangNama(FinalTake, ctx, redis_barang, db, nama_barang, SE)
 
 		case jenis != "":
-			hasil = barang_serve.AmbilBarangJenis(ctx, db, redis_barang, jenis)
+			hasil = barang_serve.AmbilBarangJenis(FinalTake, ctx, db, redis_barang, jenis)
 
 		case seller != "":
 			seller_id, _ := strconv.Atoi(seller)
-			hasil = barang_serve.AmbilBarangSeller(ctx, redis_barang, int32(seller_id))
+			hasil = barang_serve.AmbilBarangSeller(FinalTake, ctx, db, redis_barang, int32(seller_id))
 
 		// --- Tidak ada parameter valid ---
 		default:

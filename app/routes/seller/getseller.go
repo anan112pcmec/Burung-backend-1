@@ -19,42 +19,53 @@ func GetSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *
 
 	switch r.URL.Path {
 	case "/seller/barang-all":
-		FinalTake, err := strconv.Atoi(r.URL.Query().Get("seller"))
+		FinalTake, err := strconv.Atoi(r.URL.Query().Get("finalTake"))
 		if err != nil {
 			hasil = &response.ResponseForm{
-				Status: http.StatusNotFound,
+				Status: http.StatusUnauthorized,
 			}
+			return
 		}
+
 		hasil = barang_serve.AmbilRandomBarang(FinalTake, ctx, rds, db)
 	case "/seller/barang-spesified":
+		FinalTake, err := strconv.Atoi(r.URL.Query().Get("finalTake"))
+		if err != nil {
+			hasil = &response.ResponseForm{
+				Status: http.StatusUnauthorized,
+			}
+			return
+		}
+
 		jenis := r.URL.Query().Get("jenis")
-		if jenis != "" {
-			hasil = barang_serve.AmbilBarangJenis(ctx, db, rds, jenis)
-		}
-
 		seller := r.URL.Query().Get("seller")
-		if seller != "" {
-			seller_id, _ := strconv.Atoi(seller)
-			hasil = barang_serve.AmbilBarangSeller(ctx, rds, int32(seller_id))
-		}
-
 		nama_barang := r.URL.Query().Get("nama_barang")
-		if nama_barang != "" {
-			hasil = barang_serve.AmbilBarangNama(ctx, rds, db, nama_barang, SE)
-		}
 
-		if nama_barang != "" && jenis != "" {
-			hasil = barang_serve.AmbilBarangNamaDanJenis(ctx, rds, db, nama_barang, jenis, SE)
-		}
+		switch {
+		case nama_barang != "" && jenis != "":
+			hasil = barang_serve.AmbilBarangNamaDanJenis(FinalTake, ctx, rds, db, nama_barang, jenis, SE)
 
-		if nama_barang != "" && seller != "" {
+		case nama_barang != "" && seller != "":
 			seller_id, _ := strconv.Atoi(seller)
-			hasil = barang_serve.AmbilBarangNamaDanSeller(ctx, rds, db, int32(seller_id), nama_barang, SE)
+			hasil = barang_serve.AmbilBarangNamaDanSeller(FinalTake, ctx, rds, db, int32(seller_id), nama_barang, SE)
+
+		case jenis != "":
+			hasil = barang_serve.AmbilBarangJenis(FinalTake, ctx, db, rds, jenis)
+
+		case seller != "":
+			seller_id, _ := strconv.Atoi(seller)
+			hasil = barang_serve.AmbilBarangSeller(FinalTake, ctx, db, rds, int32(seller_id))
+
+		case nama_barang != "":
+			hasil = barang_serve.AmbilBarangNama(FinalTake, ctx, rds, db, nama_barang, SE)
+
+		default:
+			hasil = &response.ResponseForm{
+				Status:  http.StatusBadRequest,
+				Payload: "Parameter tidak valid",
+			}
 		}
 
-		if jenis != "" && seller != "" {
-
-		}
 	case "/seller/data-barang-induk":
 		id_barang_induk, err := strconv.Atoi(r.URL.Query().Get("barang_induk"))
 		hasil = barang_serve.AmbilDataBarangInduk(ctx, int32(id_barang_induk), db, rds)
