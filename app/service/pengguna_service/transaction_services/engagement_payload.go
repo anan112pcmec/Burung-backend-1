@@ -4,10 +4,8 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	"github.com/anan112pcmec/Burung-backend-1/app/payment/payment_response_models"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
-
 )
 
 type PendingTransactionModel struct {
@@ -51,8 +49,8 @@ type PayloadCallPendingTransaksi struct {
 	PendingKey        string                             `json:"data_key_pending"`
 }
 
-type PayloadLockTransaksi struct {
-	DataHold      []response_transaction_pengguna.CheckoutData      `json:"checkout_data_hold"`
-	PaymentResult payment_response_models.BcaVirtualAccountResponse `json:"payment_result"`
-	IdAlamatUser  int64                                             `json:"alamat_data_hold"`
+type PayloadLockTransaksiVa struct {
+	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
+	PaymentResult any                                          `json:"payment_result"`
+	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
 }

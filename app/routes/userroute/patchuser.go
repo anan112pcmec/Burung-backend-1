@@ -85,7 +85,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 		}
 		hasil = pengguna_transaction_services.SnapTransaksi(data, db)
 	case "/user/transaksi/payment-gateaway-snap-berhasil":
-		var data pengguna_transaction_services.PayloadLockTransaksi
+		var data pengguna_transaction_services.PayloadLockTransaksiVa
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return

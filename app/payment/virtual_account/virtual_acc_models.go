@@ -1,4 +1,4 @@
-package payment_response_models
+package payment_va
 
 type VaNumbers struct {
 	Bank     string `json:"bank"`
@@ -25,7 +25,11 @@ type BcaVirtualAccountResponse struct {
 	VirtualAccountResponse
 }
 
-type BniOrBriVirtualAccountResponse struct {
+type BniVirtualAccountResponse struct {
+	VirtualAccountResponse
+}
+
+type BriVirtualAccountResponse struct {
 	VirtualAccountResponse
 }
 
