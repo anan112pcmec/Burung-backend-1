@@ -13,6 +13,8 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
+	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment"
+	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment/gerai"
 	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment/virtual_account"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
@@ -743,7 +745,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		bank, err_p := payment_va.ParseVirtualAccount(data.PaymentResult)
+		bank, err_p := payment_gateaway.ParseVirtualAccount(data.PaymentResult)
 		if err_p != nil {
 			return err_p
 		}
@@ -839,6 +841,57 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 	if err := db.Transaction(func(tx *gorm.DB) error {
 
 		pembayaran, ok := data.PaymentResult.Pembayaran()
+		if !ok {
+			return fmt.Errorf("gagal memproses pembayaran wallet")
+		}
+
+		if err := tx.Create(&pembayaran).Error; err != nil {
+			return err
+		}
+
+		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
+
+		return status
+	}); err != nil {
+		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponseLockTransaksi{
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponseLockTransaksi{
+			Message: "Transaksi berhasil dikunci.",
+		},
+	}
+}
+
+func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.ResponseForm {
+	services := "LockTransaksiGerai"
+
+	for _, keranjang := range data.DataHold {
+		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
+			return &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: services,
+				Payload: response_transaction_pengguna.ResponseLockTransaksi{
+					Message: "Data keranjang tidak valid.",
+				},
+			}
+		}
+	}
+
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		var resp payment_gerai.Response
+		resp = &data.PaymentResult
+
+		pembayaran, ok := resp.Pembayaran()
 		if !ok {
 			return fmt.Errorf("gagal memproses pembayaran wallet")
 		}

@@ -1,8 +1,10 @@
-package payment_va
+package payment_gateaway
 
 import (
 	"fmt"
 	"strings"
+
+	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment/virtual_account"
 )
 
 func ParseVirtualAccount(data any) (string, error) {
@@ -29,19 +31,19 @@ func ParseVirtualAccount(data any) (string, error) {
 
 		return "", fmt.Errorf("map tidak cocok dengan format VA yang dikenal: %v", v)
 
-	case BcaVirtualAccountResponse:
+	case payment_va.BcaVirtualAccountResponse:
 		fmt.Println("Detected: BCA Virtual Account (via struct)")
 		return "bca", nil
 
-	case BniVirtualAccountResponse:
+	case payment_va.BniVirtualAccountResponse:
 		fmt.Println("Detected: BNI Virtual Account (via struct)")
 		return "bni", nil
 
-	case BriVirtualAccountResponse:
+	case payment_va.BriVirtualAccountResponse:
 		fmt.Println("Detected: BRI Virtual Account (via struct)")
 		return "bri", nil
 
-	case PermataVirtualAccount:
+	case payment_va.PermataVirtualAccount:
 		fmt.Println("Detected: Permata Virtual Account (via struct)")
 		return "permata", nil
 
