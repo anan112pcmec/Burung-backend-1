@@ -4,6 +4,7 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment/wallet"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
@@ -52,5 +53,11 @@ type PayloadCallPendingTransaksi struct {
 type PayloadLockTransaksiVa struct {
 	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
 	PaymentResult any                                          `json:"payment_result"`
+	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
+}
+
+type PayloadLockTransaksiWallet struct {
+	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
+	PaymentResult payment_wallet.WalletResponse                `json:"payment_result"`
 	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
 }

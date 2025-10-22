@@ -348,24 +348,24 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 	fmt.Printf("[TRACE] PaymentMethod: %s\n", PaymentMethod)
 
 	switch PaymentMethod {
-	case "VA":
+	case "va":
 		PM = []snap.SnapPaymentType{
 			snap.PaymentTypeBCAVA,
 			snap.PaymentTypeBNIVA,
 			snap.PaymentTypeBRIVA,
 			snap.PaymentTypePermataVA,
 		}
-	case "E-Wallet":
+	case "wallet":
 		PM = []snap.SnapPaymentType{
 			snap.PaymentTypeGopay,
 			snap.PaymentTypeShopeepay,
 		}
-	case "Gerai":
+	case "gerai":
 		PM = []snap.SnapPaymentType{
 			snap.PaymentTypeIndomaret,
 			snap.PaymentTypeAlfamart,
 		}
-	case "Debit":
+	case "debit":
 		PM = []snap.SnapPaymentType{
 			snap.PaymentTypeBCAKlikpay,
 			snap.PaymentTypeBRIEpay,
@@ -648,8 +648,87 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 	}
 }
 
-func LockTransaksi(data PayloadLockTransaksiVa, db *gorm.DB) *response.ResponseForm {
-	services := "LockTransaksi"
+func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transaction_pengguna.CheckoutData, IdAlamatUser int64, tx *gorm.DB) error {
+	fmt.Println("=== [TRACE] Mulai SimpanTransaksi ===")
+	fmt.Printf("Pembayaran Info: %+v\n", pembayaran)
+	fmt.Printf("Jumlah DataHold: %d\n", len(*DataHold))
+	fmt.Printf("IdAlamatUser: %d\n", IdAlamatUser)
+
+	for i, keranjang := range *DataHold {
+		fmt.Printf("\n[TRACE] Memproses keranjang ke-%d\n", i+1)
+		fmt.Printf("Data Keranjang: %+v\n", keranjang)
+
+		var pembayaranObj models.Pembayaran
+		fmt.Println("[TRACE] Mengecek kredensial pembayaran di database...")
+
+		if err := tx.Where(&models.Pembayaran{
+			KodeTransaksi:      pembayaran.KodeTransaksi,
+			KodeOrderTransaksi: pembayaran.KodeOrderTransaksi,
+			Provider:           pembayaran.Provider,
+			Amount:             pembayaran.Amount,
+			PaymentType:        pembayaran.PaymentType,
+			PaidAt:             pembayaran.PaidAt,
+		}).First(&pembayaranObj).Error; err != nil {
+			fmt.Printf("[ERROR] Gagal menemukan pembayaran: %v\n", err)
+			return fmt.Errorf("gagal mencari pembayaran di database: %w", err)
+		}
+
+		fmt.Printf("[TRACE] Pembayaran ditemukan: ID=%d, KodeOrder=%s\n", pembayaranObj.ID, pembayaranObj.KodeOrderTransaksi)
+
+		if pembayaranObj.ID == 0 {
+			fmt.Println("[ERROR] Kredensial pembayaran tidak valid (ID=0)")
+			return fmt.Errorf("kredensial pembayaran tidak valid")
+		}
+
+		transaksi := models.Transaksi{
+			IdPengguna:    keranjang.IDUser,
+			IdSeller:      keranjang.IDSeller,
+			IdBarangInduk: keranjang.IdBarangInduk,
+			IdAlamat:      IdAlamatUser,
+			IdPembayaran:  pembayaranObj.ID,
+			KodeOrder:     pembayaranObj.KodeOrderTransaksi,
+			Status:        "Dibayar",
+			Metode:        pembayaranObj.PaymentType,
+			Kuantitas:     int16(keranjang.Dipesan),
+			Total:         keranjang.HargaKategori * keranjang.Dipesan,
+		}
+
+		fmt.Printf("[TRACE] Membuat transaksi baru: %+v\n", transaksi)
+
+		if err := tx.Create(&transaksi).Error; err != nil {
+			fmt.Printf("[ERROR] Gagal membuat transaksi: %v\n", err)
+			return fmt.Errorf("gagal membuat transaksi: %w", err)
+		}
+		fmt.Printf("[TRACE] Transaksi berhasil dibuat dengan ID=%d\n", transaksi.ID)
+
+		fmt.Println("[TRACE] Mengupdate varian barang terkait menjadi status 'Diproses'...")
+
+		if err := tx.Model(&models.VarianBarang{}).
+			Where(&models.VarianBarang{
+				IdBarangInduk: keranjang.IdBarangInduk,
+				IdKategori:    keranjang.IdKategoriBarang,
+				IdTransaksi:   0,
+				Status:        "Dipesan",
+				HoldBy:        keranjang.IDUser,
+				HolderEntity:  "Pengguna",
+			}).
+			Updates(&models.VarianBarang{
+				Status:      "Diproses",
+				IdTransaksi: transaksi.ID,
+			}).Error; err != nil {
+			fmt.Printf("[ERROR] Gagal update varian barang: %v\n", err)
+			return fmt.Errorf("gagal update varian barang: %w", err)
+		}
+
+		fmt.Println("[TRACE] Varian barang berhasil diperbarui menjadi 'Diproses'")
+	}
+
+	fmt.Println("\n=== [TRACE] Selesai SimpanTransaksi tanpa error ===")
+	return nil
+}
+
+func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.ResponseForm {
+	services := "LockTransaksiVa"
 
 	for _, keranjang := range data.DataHold {
 		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
@@ -719,58 +798,58 @@ func LockTransaksi(data PayloadLockTransaksiVa, db *gorm.DB) *response.ResponseF
 			return err
 		}
 
-		for _, keranjang := range data.DataHold {
-			var pembayaranObj models.Pembayaran
-			if err := tx.Where(&models.Pembayaran{
-				KodeTransaksi:      pembayaran.KodeTransaksi,
-				KodeOrderTransaksi: pembayaran.KodeOrderTransaksi,
-				Provider:           pembayaran.Provider,
-				Amount:             pembayaran.Amount,
-				PaymentType:        pembayaran.PaymentType,
-				PaidAt:             pembayaran.PaidAt,
-			}).First(&pembayaranObj).Error; err != nil {
-				return err
-			}
+		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
 
-			if pembayaranObj.ID == 0 {
-				return fmt.Errorf("kredensial pembayaran tidak valid")
-			}
+		return status
+	}); err != nil {
+		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponseLockTransaksi{
+				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
+			},
+		}
+	}
 
-			transaksi := models.Transaksi{
-				IdPengguna:    keranjang.IDUser,
-				IdSeller:      keranjang.IDSeller,
-				IdBarangInduk: keranjang.IdBarangInduk,
-				IdAlamat:      data.IdAlamatUser,
-				IdPembayaran:  pembayaranObj.ID,
-				KodeOrder:     pembayaranObj.KodeOrderTransaksi,
-				Status:        "Dibayar",
-				Metode:        pembayaranObj.PaymentType,
-				Kuantitas:     int16(keranjang.Dipesan),
-				Total:         keranjang.HargaKategori * keranjang.Dipesan,
-			}
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponseLockTransaksi{
+			Message: "Transaksi berhasil dikunci.",
+		},
+	}
+}
 
-			if err := tx.Create(&transaksi).Error; err != nil {
-				return err
-			}
+func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response.ResponseForm {
+	services := "LockTransaksiWallet"
 
-			if err := tx.Model(&models.VarianBarang{}).
-				Where(&models.VarianBarang{
-					IdBarangInduk: keranjang.IdBarangInduk,
-					IdKategori:    keranjang.IdKategoriBarang,
-					IdTransaksi:   0,
-					Status:        "Dipesan",
-					HoldBy:        keranjang.IDUser,
-					HolderEntity:  "Pengguna",
-				}).
-				Updates(&models.VarianBarang{
-					Status:      "Diproses",
-					IdTransaksi: transaksi.ID,
-				}).Error; err != nil {
-				return err
+	for _, keranjang := range data.DataHold {
+		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
+			return &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: services,
+				Payload: response_transaction_pengguna.ResponseLockTransaksi{
+					Message: "Data keranjang tidak valid.",
+				},
 			}
 		}
+	}
 
-		return nil
+	if err := db.Transaction(func(tx *gorm.DB) error {
+
+		pembayaran, ok := data.PaymentResult.Pembayaran()
+		if !ok {
+			return fmt.Errorf("gagal memproses pembayaran wallet")
+		}
+
+		if err := tx.Create(&pembayaran).Error; err != nil {
+			return err
+		}
+
+		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
+
+		return status
 	}); err != nil {
 		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
 		return &response.ResponseForm{

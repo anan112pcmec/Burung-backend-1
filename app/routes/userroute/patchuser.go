@@ -77,20 +77,27 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_credential_services.UpdateSecretPinPengguna(data, db)
-	case "/user/transaksi/payment-gateaway-snap/va":
+	case "/user/transaksi/payment-gateaway-snap":
 		var data pengguna_transaction_services.PayloadSnapTransaksiRequest
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_transaction_services.SnapTransaksi(data, db)
-	case "/user/transaksi/payment-gateaway-snap-berhasil":
+	case "/user/transaksi/payment-gateaway-snap-berhasil/va":
 		var data pengguna_transaction_services.PayloadLockTransaksiVa
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_transaction_services.LockTransaksi(data, db)
+		hasil = pengguna_transaction_services.LockTransaksiVa(data, db)
+	case "/user/transaksi/payment-gateaway-snap-berhasil/wallet":
+		var data pengguna_transaction_services.PayloadLockTransaksiWallet
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_transaction_services.LockTransaksiWallet(data, db)
 	case "/user/transaksi/payment-gateaway-snap-pending":
 		var data pengguna_transaction_services.PayloadPendingTransaksi
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
