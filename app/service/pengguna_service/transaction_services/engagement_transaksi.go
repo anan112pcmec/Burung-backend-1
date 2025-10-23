@@ -367,10 +367,10 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 			snap.PaymentTypeIndomaret,
 			snap.PaymentTypeAlfamart,
 		}
-	case "debit":
+	case "credit":
 		PM = []snap.SnapPaymentType{
-			snap.PaymentTypeBCAKlikpay,
-			snap.PaymentTypeBRIEpay,
+			snap.PaymentTypeAkulaku,
+			snap.PaymentTypeCreditCard,
 		}
 	default:
 		fmt.Println("[TRACE] PaymentMethod tidak dikenali, daftar kosong")

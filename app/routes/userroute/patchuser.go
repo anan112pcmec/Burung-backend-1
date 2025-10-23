@@ -105,6 +105,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_transaction_services.LockTransaksiGerai(data, db)
+
 	case "/user/transaksi/payment-gateaway-snap-pending":
 		var data pengguna_transaction_services.PayloadPendingTransaksi
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

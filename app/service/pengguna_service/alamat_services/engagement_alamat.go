@@ -1,6 +1,7 @@
 package pengguna_alamat_services
 
 import (
+	"errors"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -10,30 +11,50 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/alamat_services/response_alamat_service_pengguna"
 )
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Masukan Alamat Pengguna
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "MasukanAlamatPengguna"
+
+	if _, status := data.IdentitasPengguna.Validating(db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+				Messages: "Gagal Identitas Kamu Tidak Selaras Dengan Target.",
+			},
+		}
+	}
 
 	if data.DataAlamat.IDPengguna == 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-				Messages: "Pengguna tidak ditemukan.",
+				Messages: "Pengguna Tidak Ditemukan.",
 			},
 		}
 	}
 
 	var count int64
-	db.Model(&models.AlamatPengguna{}).
+	if err := db.Model(&models.AlamatPengguna{}).
 		Where(models.AlamatPengguna{IDPengguna: data.DataAlamat.IDPengguna}).
-		Count(&count)
+		Count(&count).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  "Coba Lagi Nanti Server Sedang Sibuk",
+		}
+	}
 
 	if count >= 5 {
 		return &response.ResponseForm{
 			Status:   http.StatusForbidden,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-				Messages: "Batas maksimum penyimpanan alamat tercapai (maksimal 5 alamat).",
+				Messages: "Batas Maksimum Penyimpanan Alamat Tercapai (Maksimal 5 Alamat).",
 			},
 		}
 	}
@@ -44,7 +65,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		PanggilanAlamat: data.DataAlamat.PanggilanAlamat,
 	}).First(&existing).Error
 
-	if errcheck == gorm.ErrRecordNotFound {
+	if errors.Is(errcheck, gorm.ErrRecordNotFound) {
 		if err := db.Create(&models.AlamatPengguna{
 			IDPengguna:      data.DataAlamat.IDPengguna,
 			PanggilanAlamat: data.DataAlamat.PanggilanAlamat,
@@ -61,7 +82,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 				Status:   http.StatusInternalServerError,
 				Services: services,
 				Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-					Messages: "Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.",
+					Messages: "Terjadi Kesalahan Pada Server. Silakan Coba Beberapa Saat Lagi.",
 				},
 			}
 		}
@@ -70,7 +91,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 			Status:   http.StatusConflict,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-				Messages: "Alamat dengan panggilan tersebut sudah ada. Silakan gunakan panggilan lain.",
+				Messages: "Alamat Dengan Panggilan Tersebut Sudah Ada. Silakan Gunakan Panggilan Lain.",
 			},
 		}
 	}
@@ -79,33 +100,37 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-			Messages: "Alamat berhasil ditambahkan.",
+			Messages: "Alamat Berhasil Ditambahkan.",
 		},
 	}
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Hapus Alamat Pengguna
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "HapusAlamatPengguna"
 
-	if data.IdPengguna == 0 {
+	if _, status := data.IdentitasPengguna.Validating(db); !status {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusOK,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-				Messages: "Pengguna tidak ditemukan.",
+				Messages: "Gagal Menghapus Alamat, Identitas Mu Tidak Sesuai.",
 			},
 		}
 	}
 
-	if err_hapus := db.Where(models.AlamatPengguna{
-		IDPengguna:      data.IdPengguna,
+	if err_hapus := db.Unscoped().Where(models.AlamatPengguna{
+		IDPengguna:      data.IdentitasPengguna.ID,
 		PanggilanAlamat: data.PanggilanAlamat,
 	}).Delete(&models.AlamatPengguna{}).Error; err_hapus != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-				Messages: "Terjadi kesalahan pada server saat menghapus alamat. Silakan coba beberapa saat lagi.",
+				Messages: "Terjadi Kesalahan Pada Server Saat Menghapus Alamat. Silakan Coba Beberapa Saat Lagi.",
 			},
 		}
 	}
@@ -114,7 +139,7 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-			Messages: "Alamat berhasil dihapus.",
+			Messages: "Alamat Berhasil Dihapus.",
 		},
 	}
 }

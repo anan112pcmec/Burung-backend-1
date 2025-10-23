@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"math/rand"
 	mrand "math/rand"
 	"net/http"
@@ -291,4 +292,14 @@ func UpdateSocialMediaDispatch(data models.EntitySocialMedia) []string {
 	}
 
 	return hasil
+}
+
+func GenerateOTP() string {
+	otp := ""
+	for i := 0; i < 8; i++ {
+		// ambil angka random 0–9
+		n, _ := crand.Int(crand.Reader, big.NewInt(10))
+		otp += fmt.Sprintf("%d", n.Int64())
+	}
+	return otp
 }

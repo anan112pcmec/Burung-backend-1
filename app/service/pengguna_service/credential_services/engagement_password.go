@@ -12,8 +12,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/authservices"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services/response_credential_pengguna"
 )
@@ -81,7 +81,7 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 		go func() {
 			if data.FaktorKedua == "OTP" {
 
-				otp := authservices.GenerateOTP()
+				otp := helper.GenerateOTP()
 				key := fmt.Sprintf("user_ubah_password_by_otp:%s", otp)
 
 				to := []string{user.Email}

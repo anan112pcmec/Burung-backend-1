@@ -1,15 +1,29 @@
 package payment_wallet
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 )
 
+// //////////////////////////////////////////////////////////////////////////////////////////
+// Kontrak Interface Utama
+// //////////////////////////////////////////////////////////////////////////////////////////
+
 type Response interface {
 	Pembayaran() (models.Pembayaran, bool)
+	Pending(rds *redis.Client, id_user int64) bool
 }
+
+// //////////////////////////////////////////////////////////////////////////////////////////
+// Implementasi Pembayaran
+// //////////////////////////////////////////////////////////////////////////////////////////
 
 func Bayar(r Response) (models.Pembayaran, bool) {
 	return r.Pembayaran()
@@ -55,4 +69,35 @@ func (b *WalletResponse) Pembayaran() (models.Pembayaran, bool) {
 	fmt.Println("[TRACE] Selesai proses Pembayaran WalletResponse")
 
 	return m, s
+}
+
+// //////////////////////////////////////////////////////////////////////////////////////////
+// Implementasi Pending
+// //////////////////////////////////////////////////////////////////////////////////////////
+
+func CachePending(r Response, rds *redis.Client, id_user int64) bool {
+	return r.Pending(rds, id_user)
+}
+
+const CBPENDING = 4
+
+func (b *WalletResponse) Pending(rds *redis.Client, id_user int64) bool {
+	key := fmt.Sprintf("tp:%v:%v", id_user, b.TransactionId)
+	status := true
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*CBPENDING)
+	defer cancel()
+
+	// marshal struct ke JSON
+	data, err := json.Marshal(b)
+	if err != nil {
+		return false
+	}
+
+	// simpan ke redis
+	if err := rds.Set(ctx, key, data, time.Second*CBPENDING).Err(); err != nil {
+		status = false
+	}
+
+	return status
 }

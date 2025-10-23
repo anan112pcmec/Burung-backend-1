@@ -13,10 +13,16 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
 )
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Login Entity Function Procudure
+// :Bertujuan Untuk menangani aksi Login Dari Pengguna atau seller atau kurir,
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 	service := "UserLogin"
@@ -218,6 +224,12 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// PreRegistration Function Procedure
+// :Bertujuan untuk melakukan Aksi pre registrasi untuk user seller dan kurir
+// :Manfaatnya tidak akan banyak akun spam, semua akun yang terintegrasi valid dengan gmail nya dan identitas lain
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreUserRegistration"
 	ctx := context.Background()
@@ -241,7 +253,7 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rd
 		}
 	}
 
-	Otp := GenerateOTP()
+	Otp := helper.GenerateOTP()
 
 	go func() {
 		to := []string{email}
@@ -286,6 +298,173 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rd
 		},
 	}
 }
+
+func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, norek string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
+	services := "PreSellerRegistration"
+
+	jenis_final := string(jenis)
+	seller_dedic := string(SellerDedication)
+
+	var seller models.Seller
+	err := db.Unscoped().
+		Where(models.Seller{Email: email}).
+		Or(models.Seller{Username: username}).
+		Select("email").
+		First(&seller).Error
+
+	if err == nil {
+		return &response.ResponseForm{
+			Status:   http.StatusConflict,
+			Services: services,
+			Payload: response_auth.PreRegistrationSellerResp{
+				Message: "Gagal Coba Ganti Username atau Gmail",
+			},
+		}
+	} else if err != gorm.ErrRecordNotFound {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_auth.PreRegistrationSellerResp{
+				Message: "Terjadi kesalahan pada server",
+			},
+		}
+	}
+
+	Otp := helper.GenerateOTP()
+
+	go func() {
+		to := []string{email}
+		subject := "Kode OTP App Burung"
+		message := fmt.Sprintf("Kode OTP Anda: %s\nMasa berlaku 3 menit.", Otp)
+
+		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
+			fmt.Println("Gagal Kirim Email Untuk Otp:", Otp)
+		}
+
+		log.Println("[TRACE] Email sent successfully")
+	}()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		key := fmt.Sprintf("registration_seller_pending:%s", Otp)
+		fields := map[string]interface{}{
+			"nama":              nama,
+			"username":          username,
+			"email":             email,
+			"jenis":             jenis_final,
+			"norek":             norek,
+			"seller_dedication": seller_dedic,
+			"password_hash":     password,
+		}
+
+		pipe := rds.TxPipeline()
+		hset := pipe.HSet(ctx, key, fields)
+		exp := pipe.Expire(ctx, key, 3*time.Minute)
+
+		res, err := pipe.Exec(ctx)
+		if err != nil {
+			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
+
+		}
+
+		_ = hset
+		_ = exp
+		_ = res
+	}()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_auth.PreRegistrationSellerResp{
+			Status:  "Berhasil",
+			Message: "Silahkan Masukan Kode OTP yang sudah dikirimkan ke Gmail Anda",
+		},
+	}
+}
+
+func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, rds *redis.Client) *response.ResponseForm {
+	services := "PreKurirRegistration"
+
+	var kurir models.Kurir
+	err := db.Unscoped().
+		Where(models.Kurir{Email: email}).
+		Select("id").
+		First(&kurir).Error
+
+	if err == nil {
+		return &response.ResponseForm{
+			Status:   http.StatusConflict,
+			Services: services,
+			Payload: response_auth.PreRegistrationKurirResp{
+				Message: "kurir dengan gmail Itu sudah terdaftar di sistem kami",
+			},
+		}
+	} else if err != gorm.ErrRecordNotFound {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_auth.PreRegistrationKurirResp{
+				Message: "Terjadi kesalahan pada server",
+			},
+		}
+	}
+
+	Otp := helper.GenerateOTP()
+
+	go func() {
+		to := []string{email}
+		subject := "Kode OTP App Burung"
+		message := fmt.Sprintf("Kode OTP Anda: %s\nMasa berlaku 3 menit.", Otp)
+
+		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
+			fmt.Println("Gagal Kirim Email Untuk Otp:", Otp)
+		}
+
+		log.Println("[TRACE] Email sent successfully")
+	}()
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		key := fmt.Sprintf("registration_kurir_pending:%s", Otp)
+		fields := map[string]interface{}{
+			"nama":          nama,
+			"email":         email,
+			"username":      username,
+			"password_hash": password,
+		}
+
+		pipe := rds.TxPipeline()
+		hset := pipe.HSet(ctx, key, fields)
+		exp := pipe.Expire(ctx, key, 3*time.Minute)
+
+		res, err := pipe.Exec(ctx)
+		if err != nil {
+			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
+
+		}
+
+		_ = hset
+		_ = exp
+		_ = res
+	}()
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_auth.PreRegistrationKurirResp{
+			Status:  "Berhasil",
+			Message: "Silahkan Masukan Kode OTP yang sudah dikirimkan ke Gmail Anda",
+		},
+	}
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ValidateRegistration
+// :Bertujuan Untuk menangani aksi Validasi Preregister tadi,
+// :Bermanfaat dalam memvalidasi sebuah pengguna (bukan orang iseng/bot/dll) supaya bisa dipertanggung jawabkan
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUserRegistration"
@@ -357,90 +536,6 @@ func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *re
 		Payload: response_auth.ValidateUserResp{
 			Status:  "Berhasil",
 			Message: "Berhasil, Sekarang Kamu sudah memiliki akun di sistem Burung dan menjadi Bagian Dari Kami",
-		},
-	}
-}
-
-func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, norek string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
-	services := "PreSellerRegistration"
-
-	jenis_final := string(jenis)
-	seller_dedic := string(SellerDedication)
-
-	var seller models.Seller
-	err := db.Unscoped().
-		Where(models.Seller{Email: email}).
-		Or(models.Seller{Username: username}).
-		Select("email").
-		First(&seller).Error
-
-	if err == nil {
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_auth.PreRegistrationSellerResp{
-				Message: "Gagal Coba Ganti Username atau Gmail",
-			},
-		}
-	} else if err != gorm.ErrRecordNotFound {
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Payload: response_auth.PreRegistrationSellerResp{
-				Message: "Terjadi kesalahan pada server",
-			},
-		}
-	}
-
-	Otp := GenerateOTP()
-
-	go func() {
-		to := []string{email}
-		subject := "Kode OTP App Burung"
-		message := fmt.Sprintf("Kode OTP Anda: %s\nMasa berlaku 3 menit.", Otp)
-
-		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-			fmt.Println("Gagal Kirim Email Untuk Otp:", Otp)
-		}
-
-		log.Println("[TRACE] Email sent successfully")
-	}()
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		key := fmt.Sprintf("registration_seller_pending:%s", Otp)
-		fields := map[string]interface{}{
-			"nama":              nama,
-			"username":          username,
-			"email":             email,
-			"jenis":             jenis_final,
-			"norek":             norek,
-			"seller_dedication": seller_dedic,
-			"password_hash":     password,
-		}
-
-		pipe := rds.TxPipeline()
-		hset := pipe.HSet(ctx, key, fields)
-		exp := pipe.Expire(ctx, key, 3*time.Minute)
-
-		res, err := pipe.Exec(ctx)
-		if err != nil {
-			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
-
-		}
-
-		_ = hset
-		_ = exp
-		_ = res
-	}()
-
-	return &response.ResponseForm{
-		Status:   http.StatusOK,
-		Services: services,
-		Payload: response_auth.PreRegistrationSellerResp{
-			Status:  "Berhasil",
-			Message: "Silahkan Masukan Kode OTP yang sudah dikirimkan ke Gmail Anda",
 		},
 	}
 }
@@ -517,83 +612,6 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 		Payload: response_auth.ValidateSellerResp{
 			Status:  "Berhasil",
 			Message: "Berhasil, Akun mu sudah terdaftar dan Kamu Siap Berjualan Bersama Kami",
-		},
-	}
-}
-
-func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, rds *redis.Client) *response.ResponseForm {
-	services := "PreKurirRegistration"
-
-	var kurir models.Kurir
-	err := db.Unscoped().
-		Where(models.Kurir{Email: email}).
-		Select("id").
-		First(&kurir).Error
-
-	if err == nil {
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_auth.PreRegistrationKurirResp{
-				Message: "kurir dengan gmail Itu sudah terdaftar di sistem kami",
-			},
-		}
-	} else if err != gorm.ErrRecordNotFound {
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Payload: response_auth.PreRegistrationKurirResp{
-				Message: "Terjadi kesalahan pada server",
-			},
-		}
-	}
-
-	Otp := GenerateOTP()
-
-	go func() {
-		to := []string{email}
-		subject := "Kode OTP App Burung"
-		message := fmt.Sprintf("Kode OTP Anda: %s\nMasa berlaku 3 menit.", Otp)
-
-		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-			fmt.Println("Gagal Kirim Email Untuk Otp:", Otp)
-		}
-
-		log.Println("[TRACE] Email sent successfully")
-	}()
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		key := fmt.Sprintf("registration_kurir_pending:%s", Otp)
-		fields := map[string]interface{}{
-			"nama":          nama,
-			"email":         email,
-			"username":      username,
-			"password_hash": password,
-		}
-
-		pipe := rds.TxPipeline()
-		hset := pipe.HSet(ctx, key, fields)
-		exp := pipe.Expire(ctx, key, 3*time.Minute)
-
-		res, err := pipe.Exec(ctx)
-		if err != nil {
-			log.Printf("[ERROR] Redis pipeline failed: %v\n", err)
-
-		}
-
-		_ = hset
-		_ = exp
-		_ = res
-	}()
-
-	return &response.ResponseForm{
-		Status:   http.StatusOK,
-		Services: services,
-		Payload: response_auth.PreRegistrationKurirResp{
-			Status:  "Berhasil",
-			Message: "Silahkan Masukan Kode OTP yang sudah dikirimkan ke Gmail Anda",
 		},
 	}
 }

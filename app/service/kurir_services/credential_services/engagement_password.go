@@ -12,8 +12,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/authservices"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
 	response_credential_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/credential_services/response_credential_services"
 )
@@ -69,7 +69,7 @@ func PreUbahPasswordKurir(data PayloadPreUbahPassword, db *gorm.DB, rds *redis.C
 	}
 
 	go func() {
-		otp := authservices.GenerateOTP()
+		otp := helper.GenerateOTP()
 		key := fmt.Sprintf("kurir_ubah_password_by_otp:%s", otp)
 
 		to := []string{data.DataIdentitas.EmailKurir}

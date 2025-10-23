@@ -22,7 +22,7 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 
 	switch r.URL.Path {
 	case "/user/komentar-barang/tambah":
-		var data pengguna_service.PayloadKomentarBarang
+		var data pengguna_service.PayloadTambahKomentarBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
