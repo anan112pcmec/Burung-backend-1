@@ -11,30 +11,28 @@ import (
 	response_profiling_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/profiling_services/response_profiling"
 )
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Ubah Personal Profiling Pengguna
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProfilingPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "UbahPersonalProfilingPengguna"
 	var hasil_update_gmail particular_profiling_pengguna.ResponseUbahEmail
 	var hasil_update_username particular_profiling_pengguna.ResponseUbahUsername
 	var hasil_update_nama particular_profiling_pengguna.ResponseUbahNama
 
-	if data.IDPengguna == 0 {
+	if _, status := data.IdentitasPengguna.Validating(db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 		}
 	}
 
-	if data.Email != "" {
-		hasil_update_gmail = *particular_profiling_pengguna.UbahEmailSeller(ctx, data.IDPengguna, data.Email, db)
-	}
+	hasil_update_gmail = *particular_profiling_pengguna.UbahEmailPengguna(ctx, data.IdentitasPengguna.ID, data.EmailUpdate, db)
 
-	if data.Username != "" {
-		hasil_update_username = *particular_profiling_pengguna.UbahUsernamePengguna(db, data.IDPengguna, data.Username)
-	}
+	hasil_update_username = *particular_profiling_pengguna.UbahUsernamePengguna(db, data.IdentitasPengguna.ID, data.UsernameUpdate)
 
-	if data.Nama != "" {
-		hasil_update_nama = *particular_profiling_pengguna.UbahNamaPengguna(data.IDPengguna, data.Nama, db)
-	}
+	hasil_update_nama = *particular_profiling_pengguna.UbahNamaPengguna(data.IdentitasPengguna.ID, data.NamaUpdate, db)
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,

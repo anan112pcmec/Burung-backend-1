@@ -27,7 +27,7 @@ func (i IdentityPengguna) Validating(db *gorm.DB) (model models.Pengguna, status
 		return user, false
 	}
 
-	if err_validate := db.Model(models.Pengguna{}).Where(models.Pengguna{
+	if err_validate := db.Unscoped().Model(models.Pengguna{}).Where(models.Pengguna{
 		ID:       i.ID,
 		Username: i.Username,
 		Email:    i.Email,

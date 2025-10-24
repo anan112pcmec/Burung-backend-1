@@ -18,6 +18,16 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services/response_credential_pengguna"
 )
 
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Engagement Credential Level Uncritical
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur PreUbahPasswordPengguna
+// :Berfungsi untuk mengirimankan otp atau prsyarat sebelum perubahan di password terjadi supaya tidak ada hal
+// yang tidak diinginkan dan penyalahgunaan pihak lain pada sebuah akun
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordPengguna"
 
@@ -32,27 +42,13 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 		}
 	}
 
-	if data.IDPengguna == 0 {
-		log.Println("[WARN] ID pengguna tidak ditemukan pada permintaan.")
+	user, status := data.IdentitasPengguna.Validating(db)
+	if !status {
 		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_credential_pengguna.ResponsePreUbahPassword{
-				Message: "ID pengguna tidak ditemukan.",
-			},
-		}
-	}
-
-	var user models.Pengguna
-	if password_check := db.Select("password_hash", "email", "pin_hash").
-		Where(models.Pengguna{ID: data.IDPengguna, Username: data.Username}).
-		Limit(1).Take(&user).Error; password_check != nil {
-		log.Printf("[WARN] Pengguna tidak ditemukan: %v", password_check)
-		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
-			Services: services,
-			Payload: response_credential_pengguna.ResponsePreUbahPassword{
-				Message: "Pengguna tidak ditemukan atau kredensial salah.",
+				Message: "Gagal identitas mu tidak valid.",
 			},
 		}
 	}
@@ -97,8 +93,8 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				fields := map[string]interface{}{
-					"id_user":       data.IDPengguna,
-					"username":      data.Username,
+					"id_user":       user.ID,
+					"username":      user.Username,
 					"password_baru": string(hashedPassword),
 				}
 
@@ -114,7 +110,7 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 				_ = hset
 				_ = exp
 			} else {
-				key := fmt.Sprintf("user_ubah_password_by_pin:%v", data.IDPengguna)
+				key := fmt.Sprintf("user_ubah_password_by_pin:%v", user.ID)
 
 				to := []string{user.Email}
 				subject := "Kode Mengubah Password Burung"
@@ -129,8 +125,8 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				fields := map[string]interface{}{
-					"id_user":       data.IDPengguna,
-					"username":      data.Username,
+					"id_user":       user.ID,
+					"username":      user.Username,
 					"password_baru": string(hashedPassword),
 				}
 
@@ -157,6 +153,11 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 		},
 	}
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Validasi Ubah Password via otp
+// :Berfungsi untuk memvalidasi otp yang telah dikirim oleh preubah password dan menetapkan perubahan password
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordPenggunaViaOtp"
@@ -210,6 +211,11 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 	}
 
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Validasi Ubah Password via otp
+// :Berfungsi untuk memvalidasi perubahan password via pin dan menetapkan perubahan password
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordPenggunaViaPin"
@@ -268,6 +274,139 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 		Services: services,
 		Payload: response_credential_pengguna.ResponseValidatePassword{
 			Message: "Password berhasil diubah.",
+		},
+	}
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Membuat Secret pin
+// :Berfungsi untuk membuat secret pin
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func MembuatSecretPinPengguna(data PayloadMembuatPinPengguna, db *gorm.DB) *response.ResponseForm {
+	services := "MembuatSecretPinPengguna"
+
+	user, status := data.IdentitasPengguna.Validating(db)
+
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseMembuatPin{
+				Message: "Data kredensial tidak valid.",
+			},
+		}
+	}
+
+	if check_pass := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(data.Password)); check_pass != nil {
+		log.Println("[WARN] Password yang dimasukkan salah.")
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseMembuatPin{
+				Message: "Password yang dimasukkan salah.",
+			},
+		}
+	}
+
+	hashed_pin, err := bcrypt.GenerateFromPassword([]byte(data.Pin), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("[ERROR] Gagal mengenkripsi PIN: %v", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseMembuatPin{
+				Message: "Terjadi kesalahan pada server saat membuat PIN.",
+			},
+		}
+	}
+
+	// Simpan hash PIN sebagai string untuk konsistensi penyimpanan (sama seperti password hash)
+	if errUpdatePin := db.Model(models.Pengguna{}).
+		Where(models.Pengguna{ID: user.ID}).
+		Update("pin_hash", string(hashed_pin)).Error; errUpdatePin != nil {
+		log.Printf("[ERROR] Gagal menyimpan PIN ke database: %v", errUpdatePin)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseMembuatPin{
+				Message: "Terjadi kesalahan pada server saat menyimpan PIN.",
+			},
+		}
+	}
+
+	log.Println("[INFO] PIN berhasil dibuat.")
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_credential_pengguna.ResponseMembuatPin{
+			Message: "PIN berhasil dibuat.",
+		},
+	}
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur mengupdate Secret pin
+// :Berfungsi untuk mengupdate secret pin
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func UpdateSecretPinPengguna(data PayloadUpdatePinPengguna, db *gorm.DB) *response.ResponseForm {
+	services := "UpdateSecretPinPengguna"
+
+	user, status := data.IdentitasPengguna.Validating(db)
+
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseUpdatePin{
+				Message: "Data kredensial tidak valid.",
+			},
+		}
+	}
+
+	if check_pin := bcrypt.CompareHashAndPassword([]byte(user.PinHash), []byte(data.PinLama)); check_pin != nil {
+		log.Println("[WARN] PIN lama yang dimasukkan salah.")
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseUpdatePin{
+				Message: "PIN lama yang dimasukkan salah.",
+			},
+		}
+	}
+
+	hashed_pin, err := bcrypt.GenerateFromPassword([]byte(data.PinBaru), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("[ERROR] Gagal mengenkripsi PIN baru: %v", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseUpdatePin{
+				Message: "Terjadi kesalahan pada server saat membuat PIN baru.",
+			},
+		}
+	}
+
+	if errUpdatePin := db.Model(models.Pengguna{}).
+		Where(models.Pengguna{ID: user.ID}).
+		Update("pin_hash", string(hashed_pin)).Error; errUpdatePin != nil {
+		log.Printf("[ERROR] Gagal menyimpan PIN baru ke database: %v", errUpdatePin)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_pengguna.ResponseUpdatePin{
+				Message: "Terjadi kesalahan pada server saat menyimpan PIN baru.",
+			},
+		}
+	}
+
+	log.Println("[INFO] PIN berhasil diubah.")
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_credential_pengguna.ResponseUpdatePin{
+			Message: "PIN berhasil diubah.",
 		},
 	}
 }
