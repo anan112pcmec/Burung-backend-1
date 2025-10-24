@@ -17,7 +17,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/search_engine"
-
 )
 
 const MAXTAKE = 10

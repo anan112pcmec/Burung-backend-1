@@ -21,14 +21,11 @@ type Response interface {
 	Pending(rds *redis.Client, id_user int64) bool
 }
 
-// //////////////////////////////////////////////////////////////////////////////////////////
-// Implementasi Pembayaran
-// //////////////////////////////////////////////////////////////////////////////////////////
-
 func Bayar(r Response) (models.Pembayaran, bool) {
 	return r.Pembayaran()
 }
 
+// BCA
 func (b *BcaVirtualAccountResponse) Pembayaran() (p models.Pembayaran, s bool) {
 	s = true
 

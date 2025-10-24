@@ -21,7 +21,12 @@ import (
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////
-// CHECKOUT
+// Fungsi Critical
+// ////////////////////////////////////////////////////////////////////////////////////
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Checkout Barang User
+// Befungsi Untuk membuat checkout Barang Sebelum Akhirnya melakukan transaksi
 // ////////////////////////////////////////////////////////////////////////////////////
 
 func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
@@ -72,22 +77,22 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 
 			var barang models.BarangInduk
 			if err := tx.Select("nama_barang", "id_seller", "jenis_barang").
-				Where("id = ?", keranjang.IdBarangInduk).
+				Where(&models.BarangInduk{ID: keranjang.IdBarangInduk}).
 				First(&barang).Error; err != nil {
 				return err
 			}
 
 			var kategori models.KategoriBarang
-			if err := tx.Select("nama", "harga", "stok").
-				Where("id = ?", keranjang.IdKategori).
+			if err := tx.Unscoped().Model(&models.KategoriBarang{}).Select("nama", "harga", "stok").
+				Where(&models.KategoriBarang{ID: keranjang.IdKategori}).
 				First(&kategori).Error; err != nil {
 				return err
 			}
 
 			var nama_seller string
-			if err_nama_seller := tx.Model(models.Seller{}).
+			if err_nama_seller := tx.Model(&models.Seller{}).
 				Select("nama").
-				Where(models.Seller{ID: barang.SellerID}).
+				Where(&models.Seller{ID: barang.SellerID}).
 				First(&nama_seller).Error; err_nama_seller != nil {
 				return err_nama_seller
 			}
@@ -108,7 +113,11 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 			if jumlahStok >= int64(keranjang.Count) {
 				var varianIDs []int64
 				if err := tx.Model(&models.VarianBarang{}).
-					Where("id_barang_induk = ? AND id_kategori = ? AND status = ?", keranjang.IdBarangInduk, keranjang.IdKategori, "Ready").
+					Where(&models.VarianBarang{
+						IdBarangInduk: kategori.IdBarangInduk,
+						IdKategori:    keranjang.IdKategori,
+						Status:        "Ready",
+					}).
 					Limit(int(keranjang.Count)).
 					Pluck("id", &varianIDs).Error; err != nil {
 
@@ -140,10 +149,10 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 				} else {
 
 					var stok_saat_ini int64 = 0
-					_ = db.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
+					_ = tx.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
 						ID: keranjang.IdKategori,
 					}).Take(&stok_saat_ini)
-					_ = db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{ID: keranjang.IdKategori}).Updates(map[string]interface{}{
+					_ = tx.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{ID: keranjang.IdKategori}).Updates(map[string]interface{}{
 						"stok": int32(stok_saat_ini) - int32(keranjang.Count),
 					})
 				}
@@ -184,6 +193,11 @@ func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *respons
 		},
 	}
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Batal Checkout User
+// Befungsi Untuk MembatalkanCheckout yang telah dilakukan
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB) *response.ResponseForm {
 	services := "BatalCheckoutKeranjang"
@@ -226,11 +240,11 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 					return err
 				} else {
 					var stok_saat_ini int64 = 0
-					_ = db.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
+					_ = tx.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
 						ID: keranjang.IdKategoriBarang,
 					}).Take(&stok_saat_ini)
 
-					_ = db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+					_ = tx.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 						ID: keranjang.IdKategoriBarang,
 					}).Updates(&models.KategoriBarang{
 						Stok: keranjang.Dipesan + int32(stok_saat_ini),
@@ -888,7 +902,9 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		var resp payment_gerai.Response
+		var (
+			resp payment_gerai.Response
+		)
 		resp = &data.PaymentResult
 
 		pembayaran, ok := resp.Pembayaran()
