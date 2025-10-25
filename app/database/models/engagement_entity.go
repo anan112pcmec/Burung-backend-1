@@ -77,22 +77,6 @@ func (EntitySocialMedia) TableName() string {
 	return "entity_social_media"
 }
 
-type AksiPengguna string
-
-const (
-	Registrasi       AksiPengguna = "Registrasi"
-	Login            AksiPengguna = "Login"
-	Logout           AksiPengguna = "Logout"
-	Pembelian        AksiPengguna = "Pembelian"
-	Tambah_keranjang AksiPengguna = "Tambah Keranjang"
-	Hapus_keranjang  AksiPengguna = "Hapus Keranjang"
-	Rating           AksiPengguna = "Rating"
-	Update_profil    AksiPengguna = "Update Profil"
-	Wishlist         AksiPengguna = "Wishlist"
-	Pencarian        AksiPengguna = "Pencarian"
-	Promo            AksiPengguna = "Promo"
-)
-
 type AktivitasPengguna struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_pengguna"`
 	IdPengguna     int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_aktivitas_pengguna"`

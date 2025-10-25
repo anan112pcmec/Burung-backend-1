@@ -11,15 +11,6 @@ const (
 	Sampai       StatusPengiriman = "Sampai"
 )
 
-const (
-	Ekonomi string = "ekonomi"
-	Reguler string = "reguler"
-	Fast    string = "fast"
-	Express string = "express"
-	Instant string = "instant"
-	Samedat string = "sameday"
-)
-
 func (p *Pengiriman) BiayaKirimnya(untuk string) int16 {
 	if untuk == "Sistem" {
 		hasil := float64(p.BiayaKirim) / 0.2

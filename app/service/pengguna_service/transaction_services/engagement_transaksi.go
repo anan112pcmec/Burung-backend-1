@@ -1,14 +1,12 @@
 package pengguna_transaction_services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
-	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
@@ -29,7 +27,7 @@ import (
 // Befungsi Untuk membuat checkout Barang Sebelum Akhirnya melakukan transaksi
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func CheckoutBarangUser(data PayloadCheckoutBarangCentang, db *gorm.DB) *response.ResponseForm {
+func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
 
 	if _, status := data.IdentitasPengguna.Validating(db); !status {
@@ -284,47 +282,13 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////
-// TRANSAKSI
+// Fungsi Prosedur Formatting Transaksi
+// Befungsi Untuk membantu snap trnsaksi dalam memformatkan sebuah transaksi
 // ////////////////////////////////////////////////////////////////////////////////////
 
 func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod, jenis_layanan string) (*response.ResponseForm, *snap.Request) {
 	services := "ValidateTransaksi"
 	fmt.Println("[TRACE] Start FormattingTransaksi")
-
-	if user.ID == 0 && user.Username == "" {
-		fmt.Println("[TRACE] User invalid: ID and Username kosong")
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-		}, nil
-	}
-
-	var valid int64 = 0
-	fmt.Println("[TRACE] Cek user di database")
-	if checkuser := db.Model(models.Pengguna{}).Where(models.Pengguna{ID: user.ID, Username: user.Username, Email: user.Email}).Count(&valid).Limit(1).Error; checkuser != nil {
-		fmt.Printf("[TRACE] Error saat cek user: %v\n", checkuser)
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-		}, nil
-	}
-	fmt.Printf("[TRACE] Jumlah user valid: %d\n", valid)
-
-	if valid == 0 {
-		fmt.Println("[TRACE] User tidak ditemukan di database")
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-		}, nil
-	}
-
-	if alamat.NamaAlamat == "" && alamat.PanggilanAlamat == "" && alamat.NomorTelephone == "" {
-		fmt.Println("[TRACE] Alamat pengguna tidak lengkap")
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-		}, nil
-	}
 
 	fmt.Println("[TRACE] Generate PaymentCode")
 	var PaymentCode string
@@ -418,6 +382,11 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 	}, SnapReqeust
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Validating Transaksi
+// Befungsi Untuk membantu snap transaksi untuk membuat sebuah transaksi
+// ////////////////////////////////////////////////////////////////////////////////////
+
 func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.ResponseForm) {
 	services := "ProsesTransaksiDenganSDK"
 	fmt.Println("[TRACE] Start ValidateTransaksi")
@@ -458,9 +427,25 @@ func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.Respons
 		Services: services,
 	}
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Snap Transaksi
+// Fungsi yang melayani api pada pengguna dan memanfaaykan Validate Transaksi Dan Formatting transaksi(2 fungsi
+// pendukungnya)
+// ////////////////////////////////////////////////////////////////////////////////////
+
 func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.ResponseForm {
 	services := "SnapTransaksiUser"
 	fmt.Println("[TRACE] Start SnapTransaksi")
+
+	model, status := data.IdentitasPengguna.Validating(db)
+	if !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  "Gagal Validasi User Tidak Valid",
+		}
+	}
 
 	for _, dc := range data.DataCheckout.DataResponse {
 		var errcheck bool = false
@@ -486,16 +471,6 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 		}
 	}
 
-	// Validasi user
-	if data.UserInformation.ID == 0 && data.UserInformation.Username == "" && data.UserInformation.Nama == "" && data.UserInformation.Email == "" {
-		fmt.Println("[TRACE] Data user tidak lengkap atau tidak valid")
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-		}
-	}
-
-	// Validasi alamat
 	if data.AlamatInformation.NamaAlamat == "" && data.AlamatInformation.KodeNegara == "" && data.AlamatInformation.IDPengguna != data.AlamatInformation.ID && data.AlamatInformation.NomorTelephone == "" {
 		fmt.Println("[TRACE] Data alamat tidak valid atau tidak sesuai dengan pengguna")
 		return &response.ResponseForm{
@@ -506,7 +481,7 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 
 	fmt.Println("[TRACE] Memulai FormattingTransaksi()")
 	SnapErr, SnapReq := FormattingTransaksi(
-		data.UserInformation,
+		model,
 		data.AlamatInformation,
 		data.DataCheckout,
 		db,
@@ -557,63 +532,73 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 	}
 }
 
-func PendingTransaksi(ctx context.Context, data PayloadPendingTransaksi, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
-	services := "PendingTransaksi"
+// func PendingTransaksi(ctx context.Context, data PayloadPendingTransaksi, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+// 	services := "PendingTransaksi"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
-				Message: "Gagal Kredensial User Tidak Valid",
-			},
-		}
-	}
+// 	if _, status := data.IdentitasPengguna.Validating(db); !status {
+// 		return &response.ResponseForm{
+// 			Status:   http.StatusNotFound,
+// 			Services: services,
+// 			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
+// 				Message: "Gagal Kredensial User Tidak Valid",
+// 			},
+// 		}
+// 	}
 
-	key := fmt.Sprintf("transaction_pengguna_pending_id:%v:transaction_code:%s",
-		data.IdentitasPengguna.ID, data.DataPending.OrderId)
+// 	key := fmt.Sprintf("transaction_pengguna_pending_id:%v:transaction_code:%s",
+// 		data.IdentitasPengguna.ID, data.DataPending.OrderId)
 
-	fields := map[string]interface{}{
-		"finish_redirect_url": data.DataPending.FinishRedirectUrl,
-		"fraud_status":        data.DataPending.FraudStatus,
-		"gross_amount":        data.DataPending.GrossAmout,
-		"order_id":            data.DataPending.OrderId,
-		"payment_type":        data.DataPending.PaymentType,
-		"status_code":         data.DataPending.StatusCode,
-		"status_message":      data.DataPending.StatusMessage,
-		"transaction_id":      data.DataPending.TransactionId,
-		"transaction_status":  data.DataPending.TransactionStatus,
-		"transaction_time":    data.DataPending.TransactionTime,
-	}
+// 	fields := map[string]interface{}{
+// 		"finish_redirect_url": data.DataPending.FinishRedirectUrl,
+// 		"fraud_status":        data.DataPending.FraudStatus,
+// 		"gross_amount":        data.DataPending.GrossAmout,
+// 		"order_id":            data.DataPending.OrderId,
+// 		"payment_type":        data.DataPending.PaymentType,
+// 		"status_code":         data.DataPending.StatusCode,
+// 		"status_message":      data.DataPending.StatusMessage,
+// 		"transaction_id":      data.DataPending.TransactionId,
+// 		"transaction_status":  data.DataPending.TransactionStatus,
+// 		"transaction_time":    data.DataPending.TransactionTime,
+// 	}
 
-	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
-		fmt.Println("⚠️ Gagal menyimpan ke Redis:", err)
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
-				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
-			},
-		}
-	}
+// 	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
+// 		fmt.Println("⚠️ Gagal menyimpan ke Redis:", err)
+// 		return &response.ResponseForm{
+// 			Status:   http.StatusInternalServerError,
+// 			Services: services,
+// 			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
+// 				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+// 			},
+// 		}
+// 	}
 
-	return &response.ResponseForm{
-		Status:   http.StatusOK,
-		Services: services,
-		Payload: response_transaction_pengguna.ResponsePendingTransaksi{
-			Message: "Berhasil",
-		},
-	}
-}
+// 	return &response.ResponseForm{
+// 		Status:   http.StatusOK,
+// 		Services: services,
+// 		Payload: response_transaction_pengguna.ResponsePendingTransaksi{
+// 			Message: "Berhasil",
+// 		},
+// 	}
+// }
 
-func CallPendingTransaksi(data PayloadCallPendingTransaksi, rds *redis.Client) *response.ResponseForm {
-	services := "CallPendingTransaksi"
+// func CallPendingTransaksi(data PayloadCallPendingTransaksi, rds *redis.Client) *response.ResponseForm {
+// 	services := "CallPendingTransaksi"
 
-	return &response.ResponseForm{
-		Status:   http.StatusOK,
-		Services: services,
-	}
-}
+//		return &response.ResponseForm{
+//			Status:   http.StatusOK,
+//			Services: services,
+//		}
+//	}
+//
+// ***** INFO ******
+// Skema Pending Akan Tersedia di saat mendatang untuk saat ini semua transaksi yang tak sengaja di bayar tak masuk pending melainkan akan langsung di batalkan
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Batal Transaksi
+// Befungsi Untuk Membatalkan Transaksi Yang Telah Dibuat SnapTransaksi lewat Validating Transaksi
+// Semua yang telah melibatkan payment gateaway yang kemudian tidak melanjutkan pembayaran akan di batalkan
+// oleh fungsi ini
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
 	services := "BatalTransaksi"
@@ -663,6 +648,11 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 		},
 	}
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Simpan Transaksi
+// Befungsi Untuk Menyimpan Data Transaksi yang nantinya fungsi ini akan di paggil di fungsi LockTransaksi
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transaction_pengguna.CheckoutData, IdAlamatUser int64, tx *gorm.DB) error {
 	fmt.Println("=== [TRACE] Mulai SimpanTransaksi ===")
@@ -742,6 +732,13 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 	fmt.Println("\n=== [TRACE] Selesai SimpanTransaksi tanpa error ===")
 	return nil
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Lock Transaksi VA
+// Befungsi saat sebuah transaksi sudah di bayar, setelah transaksi di bayar maka fungsi
+// lock transaksi akan menjalankan rentetan yang perlu di jalankan ke db utama sesuai dengan
+// jenis pembayaran yang dilakukan oleh pengguna disini adalah VA (virtual account)
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.ResponseForm {
 	services := "LockTransaksiVa"
@@ -837,6 +834,13 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	}
 }
 
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Lock Transaksi Wallet
+// Befungsi saat sebuah transaksi sudah di bayar, setelah transaksi di bayar maka fungsi
+// lock transaksi akan menjalankan rentetan yang perlu di jalankan ke db utama sesuai dengan
+// jenis pembayaran yang dilakukan oleh pengguna disini adalah Wallet
+// ////////////////////////////////////////////////////////////////////////////////////
+
 func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response.ResponseForm {
 	services := "LockTransaksiWallet"
 
@@ -885,6 +889,13 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 		},
 	}
 }
+
+// ////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Lock Transaksi Gerai
+// Befungsi saat sebuah transaksi sudah di bayar, setelah transaksi di bayar maka fungsi
+// lock transaksi akan menjalankan rentetan yang perlu di jalankan ke db utama sesuai dengan
+// jenis pembayaran yang dilakukan oleh pengguna disini adalah Gerai
+// ////////////////////////////////////////////////////////////////////////////////////
 
 func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.ResponseForm {
 	services := "LockTransaksiGerai"

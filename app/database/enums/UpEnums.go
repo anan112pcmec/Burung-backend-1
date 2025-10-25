@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-
 )
 
 func UpEnumsEntity(db *gorm.DB) error {
@@ -20,7 +19,7 @@ func UpEnumsEntity(db *gorm.DB) error {
 		"aksi_pengguna":              {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist", "Pencarian"},
 		"aksi_seler":                 {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist"},
 		"jenis_seller":               {"Brands", "Distributors", "Personal"},
-		"seller_dedication":          {"Pakaian & Fashion", "Kosmetik & Kecantikan", "Elektronik & Gadget", "Buku & Media", "Makanan & Minuman", "Ibu & Bayi", "Mainan", "Olahraga & Outdoor", "Otomotif & Spaarepart", "Rumah Tangga", "Alat Tulis", "Perhiasan & Aksesoris", "Produk Digital", "Bangunan & Perkakas", "Musik & Instrumen", "Film & Broadcasting", "Semua Barang"},
+		"seller_dedication":          {"Pakaian & Fashion", "Kosmetik & Kecantikan", "Elektronik & Gadget", "Buku & Media", "Makanan & Minuman", "Ibu & Bayi", "Mainan", "Olahraga & Outdoor", "Otomotif & Sparepart", "Rumah Tangga", "Alat Tulis", "Perhiasan & Aksesoris", "Produk Digital", "Bangunan & Perkakas", "Musik & Instrumen", "Film & Broadcasting", "Semua Barang"},
 		"jenis_layanan_kurir":        {"Reguler", "Express", "Ekonomi", "Sameday", "NextDay", "Cargo"},
 		"status_keranjang":           {"Ready", "UnReady"},
 		"nama_bank":                  {"BCA", "BRI", "BNI", "MANDIRI", "BTN", "CIMB", "PERMATA"},
