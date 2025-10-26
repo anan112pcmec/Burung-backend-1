@@ -106,13 +106,13 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 		}
 		hasil = pengguna_transaction_services.LockTransaksiGerai(data, db)
 
-	case "/user/transaksi/payment-gateaway-snap-pending":
-		var data pengguna_transaction_services.PayloadPendingTransaksi
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = pengguna_transaction_services.PendingTransaksi(ctx, data, db, rds_engagement)
+	// case "/user/transaksi/payment-gateaway-snap-pending":
+	// 	var data pengguna_transaction_services.PayloadPendingTransaksi
+	// 	if err := helper.DecodeJSONBody(r, &data); err != nil {
+	// 		http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+	// 		return
+	// 	}
+	// 	hasil = pengguna_transaction_services.PendingTransaksi(ctx, data, db, rds_engagement)
 	case "/user/social-media/engage-social-media":
 		var data pengguna_social_media_service.PayloadEngageTautkanSocialMedia
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

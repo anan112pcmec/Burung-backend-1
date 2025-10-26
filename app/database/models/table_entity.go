@@ -22,32 +22,6 @@ func (Pengguna) TableName() string {
 	return "pengguna"
 }
 
-type JenisSeller string
-
-type SellerType string
-
-const (
-	Pakaian_Fashion           SellerType = "Pakaian & Fashion"
-	Kosmetik_Kecantikan       SellerType = "Kosmetik & Kecantikan"
-	Elektronik_Gadget         SellerType = "Elektronik & Gadget"
-	Buku_Media                SellerType = "Buku & Media"
-	Makanan_Minuman           SellerType = "Makanan & Minuman"
-	Kesehatan_Obat            SellerType = "Kesehatan & Obat"
-	Ibu_Bayi                  SellerType = "Ibu & Bayi"
-	Mainan_Hobi               SellerType = "Mainan & Hobi"
-	Olahraga_Outdoor          SellerType = "Olahraga & Outdoor"
-	Otomotis_SparePart        SellerType = "Otomotif & Sparepart"
-	Rumah_Tangga_Perabotan    SellerType = "Rumah Tangga & Perabotan"
-	AlatTulis_Kantor          SellerType = "Alat Tulis & Kantor"
-	Perhiasan_Aksesoris       SellerType = "Perhiasan & Aksesoris"
-	Produk_Digital            SellerType = "Produk Digital"
-	BahanBangunan_Perkakas    SellerType = "Bahan Bangunan & Perkakas"
-	ProdukPertanian_Perikanan SellerType = "Produk Pertanian & Perikanan"
-	Musik_Instrumen           SellerType = "Musik & Instrumen"
-	Film_Koleksi              SellerType = "Film & Koleksi"
-	Semua_Barang              SellerType = "Semua Barang"
-)
-
 type Seller struct {
 	ID               int32      `gorm:"primaryKey;autoIncrement" json:"id_seller"`
 	Username         string     `gorm:"column:username;type:varchar(100);notnull;default:''" json:"username_seller"`

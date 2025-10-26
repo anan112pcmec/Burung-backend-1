@@ -50,7 +50,7 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 		}
 		hasil = pengguna_alamat_services.MasukanAlamatPengguna(data, db)
 	case "/user/transaksi/checkout-barang":
-		var data pengguna_transaction_services.PayloadCheckoutBarangCentang
+		var data pengguna_transaction_services.PayloadCheckoutBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return

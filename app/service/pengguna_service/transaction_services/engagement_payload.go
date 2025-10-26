@@ -26,7 +26,7 @@ type PendingTransactionModel struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadCheckoutBarang struct {
-	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"data_identitas"`
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
 	DataCheckout      []models.Keranjang                 `json:"data_checkout"`
 	JenisLayananKurir string                             `json:"jenis_layanan_kurir_checkout_barang"`
 }
