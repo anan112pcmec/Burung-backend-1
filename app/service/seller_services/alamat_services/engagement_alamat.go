@@ -11,6 +11,12 @@ import (
 	response_alamat_services_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services/response_alamat_service_seller"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Alamat Gudang Seller
+// Berfungsi Untuk Menulis Ke table alamat_gudang tentang alamat gudang seller tersebut, tidak ada batasan maksimal
+// gudang yang boleh dilampirkan alamat nya
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func TambahAlamatGudang(data PayloadTambahAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "TambahAlamatGudang"
 
@@ -50,6 +56,11 @@ func TambahAlamatGudang(data PayloadTambahAlamatGudang, db *gorm.DB) *response.R
 	}
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Edit Alamat Gudang
+// Berfungsi Untuk Seller manakala mereka ingin mengedit gudang mereka entah perubahan titik, nama dll
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func EditAlamatGudang(data PayloadEditAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "EditAlamatGudang"
 
@@ -66,7 +77,7 @@ func EditAlamatGudang(data PayloadEditAlamatGudang, db *gorm.DB) *response.Respo
 		}
 	}
 
-	if err_edit_alamat := db.Model(models.AlamatGudang{}).Where(models.AlamatGudang{
+	if err_edit_alamat := db.Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
 		ID: data.Data.ID,
 	}).Updates(&data.Data).Error; err_edit_alamat != nil {
 		log.Printf("[ERROR] Gagal mengedit alamat gudang ID %d untuk seller ID %d: %v", data.Data.ID, data.IdentitasSeller.IdSeller, err_edit_alamat)
@@ -89,6 +100,11 @@ func EditAlamatGudang(data PayloadEditAlamatGudang, db *gorm.DB) *response.Respo
 	}
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Hapus Alamat Gudang Seller
+// Berfungsi Untuk Menghapus Suatu Alamat Gudang Seller
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func HapusAlamatGudang(data PayloadHapusAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "HapusAlamatGudang"
 
@@ -105,7 +121,7 @@ func HapusAlamatGudang(data PayloadHapusAlamatGudang, db *gorm.DB) *response.Res
 		}
 	}
 
-	if err_hapus := db.Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
+	if err_hapus := db.Unscoped().Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
 		ID:       data.IdGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Delete(&models.AlamatGudang{}).Error; err_hapus != nil {

@@ -18,11 +18,11 @@ func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/seller/hapus_barang":
-		var data seller_service.PayloadHapusBarang
+		var data seller_service.PayloadHapusBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 		}
-		hasil = seller_service.HapusBarang(db, data)
+		hasil = seller_service.HapusBarangInduk(db, data)
 	case "/seller/hapus_kategori_barang":
 		var data seller_service.PayloadHapusKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

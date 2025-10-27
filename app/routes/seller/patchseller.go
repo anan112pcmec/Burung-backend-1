@@ -25,12 +25,12 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 
 	switch r.URL.Path {
 	case "/seller/edit_barang":
-		var data seller_service.PayloadEditBarang
+		var data seller_service.PayloadEditBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditBarang(db, data)
+		hasil = seller_service.EditBarangInduk(db, data)
 	case "/seller/edit_kategori_barang":
 		var data seller_service.PayloadEditKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

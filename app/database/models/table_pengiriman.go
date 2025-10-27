@@ -2,15 +2,6 @@ package models
 
 import "time"
 
-type StatusPengiriman string
-
-const (
-	Packaging    StatusPengiriman = "Packaging"
-	Picked_Up    StatusPengiriman = "Picked Up"
-	Diperjalanan StatusPengiriman = "Diperjalanan"
-	Sampai       StatusPengiriman = "Sampai"
-)
-
 func (p *Pengiriman) BiayaKirimnya(untuk string) int16 {
 	if untuk == "Sistem" {
 		hasil := float64(p.BiayaKirim) / 0.2

@@ -4,7 +4,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-
 )
 
 type IdentitySeller struct {
@@ -29,7 +28,7 @@ func (i IdentitySeller) Validating(db *gorm.DB) (model models.Seller, status boo
 
 	seller.ID = 0
 
-	_ = db.Model(models.Seller{}).Where(models.Seller{
+	_ = db.Model(&models.Seller{}).Where(&models.Seller{
 		ID:       i.IdSeller,
 		Username: i.Username,
 		Email:    i.EmailSeller,

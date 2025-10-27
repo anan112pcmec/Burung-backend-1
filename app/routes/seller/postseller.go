@@ -18,12 +18,12 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/seller/masukan_barang":
-		var data seller_service.PayloadMasukanBarang
+		var data seller_service.PayloadMasukanBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.MasukanBarang(db, data)
+		hasil = seller_service.MasukanBarangInduk(db, data)
 	case "/seller/tambah_kategori_barang":
 		var data seller_service.PayloadTambahKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
