@@ -63,7 +63,7 @@ func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.
 				http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasil := authservices.PreSellerRegistration(db, data.Username, data.Nama, data.Email, data.Jenis, data.Norek, data.SellerDedication, data.Password, rds)
+			hasil := authservices.PreSellerRegistration(db, data.Username, data.Nama, data.Email, data.Jenis, data.SellerDedication, data.Password, rds)
 			json.NewEncoder(w).Encode(hasil)
 			return
 		}

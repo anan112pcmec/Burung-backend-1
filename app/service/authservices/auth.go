@@ -299,7 +299,7 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rd
 	}
 }
 
-func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, norek string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
+func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreSellerRegistration"
 
 	jenis_final := string(jenis)
@@ -353,7 +353,6 @@ func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis stri
 			"username":          username,
 			"email":             email,
 			"jenis":             jenis_final,
-			"norek":             norek,
 			"seller_dedication": seller_dedic,
 			"password_hash":     password,
 		}
@@ -586,7 +585,6 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 		Username:         userData["username"],
 		Email:            userData["email"],
 		Jenis:            userData["jenis"],
-		Norek:            userData["norek"],
 		SellerDedication: userData["seller_dedication"],
 		Password:         string(hashedPassword),
 	}

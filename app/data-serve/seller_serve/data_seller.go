@@ -114,7 +114,6 @@ func AmbilRandomSeller(FinalTake int64, ctx context.Context, db *gorm.DB, rds *r
 				Nama:             data["nama_seller"],
 				JamOperasional:   data["jam_operasional_seller"],
 				Password:         "",
-				Norek:            "",
 				SellerDedication: data["seller_dedication_seller"],
 				Deskripsi:        data["deskripsi_seller"],
 				FollowerTotal:    int32(follower),

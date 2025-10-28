@@ -28,7 +28,6 @@ type Seller struct {
 	Nama             string     `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama_seller"`
 	Email            string     `gorm:"column:email;type:varchar(150);not null;default:''" json:"email_seller"`
 	Jenis            string     `gorm:"column:jenis;type:jenis_seller;not null;default:'Personal'" json:"jenis_seller"`
-	Norek            string     `gorm:"column:norek;type:varchar(250);not null;default:''" json:"norek_seller"`
 	SellerDedication string     `gorm:"column:seller_dedication;type:seller_dedication;not null;default:'Semua Barang'" json:"seller_dedication"`
 	JamOperasional   string     `gorm:"column:jam_operasional;type:text;not null;default:''" json:"jam_operasional_seller"`
 	Punchline        string     `gorm:"column:punchline;type:text;not null;default:''" json:"punchline_seller"`
