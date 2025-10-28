@@ -56,7 +56,7 @@ func UpBarangEnums(db *gorm.DB) error {
 	}
 
 	enumMap := map[string][]string{
-		"status_varian": {"Ready", "Dipesan", "Diproses", "Terjual", "Down"},
+		"status_varian": {"Ready", "Dipesan", "Diproses", "Terjual", "Down", "Pending"},
 	}
 
 	for enumName, values := range enumMap {

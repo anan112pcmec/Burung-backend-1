@@ -11,6 +11,10 @@ import (
 	response_social_media_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services/response_social_media_services"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Engage Media Social Seller
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func EngageSocialMediaSeller(data PayloadEngageSocialMedia, db *gorm.DB) *response.ResponseForm {
 	services := "EngagementSocialMediaSeller"
 

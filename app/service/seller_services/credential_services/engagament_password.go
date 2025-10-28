@@ -18,47 +18,26 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services/response_credential_seller"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Pre Ubah Password Seller
+// Berfungsi untuk mengirim kode otp ke gmail nantinya sebelum password benar benar diubah
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordSeller"
 
-	if data.IDSeller == 0 {
-		log.Println("[WARN] ID seller tidak ditemukan pada permintaan.")
+	seller, status := data.IdentitasSeller.Validating(db)
+	if !status {
 		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
-				Message: "ID seller tidak ditemukan.",
+				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
 		}
 	}
 
-	if data.Username == "" {
-		log.Println("[WARN] Username tidak ditemukan pada permintaan.")
-		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
-			Services: services,
-			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
-				Message: "Username tidak ditemukan.",
-			},
-		}
-	}
-
-	var pass string
-	if err := db.Model(&models.Seller{}).
-		Select("password_hash").
-		Where(&models.Seller{ID: data.IDSeller, Username: data.Username}).
-		Pluck("password_hash", &pass).Error; err != nil {
-		log.Printf("[WARN] Seller tidak ditemukan atau kredensial salah: %v", err)
-		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
-			Services: services,
-			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
-				Message: "Seller tidak ditemukan atau kredensial salah.",
-			},
-		}
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(pass), []byte(data.PasswordLama)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(seller.Password), []byte(data.PasswordLama)); err != nil {
 		log.Println("[WARN] Password lama yang dimasukkan salah.")
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
@@ -88,9 +67,13 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		var email string
 
 		if err := db.Model(&models.Seller{}).
-			Where(&models.Seller{ID: data.IDSeller, Username: data.Username}).
-			Pluck("email", &email).Error; err != nil {
-			log.Printf("[ERROR] Gagal mengambil email seller ID %d: %v", data.IDSeller, err)
+			Where(&models.Seller{
+				ID: data.IdentitasSeller.IdSeller,
+			}).
+			Select("email").
+			Take(&email).Error; err != nil {
+
+			log.Printf("[ERROR] Gagal mengambil email seller ID %d: %v", data.IdentitasSeller.IdSeller, err)
 			return
 		}
 
@@ -107,8 +90,8 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		fields := map[string]interface{}{
-			"id_seller":     data.IDSeller,
-			"username":      data.Username,
+			"id_seller":     data.IdentitasSeller,
+			"username":      data.IdentitasSeller.Username,
 			"password_baru": string(hashedPassword),
 		}
 
@@ -132,6 +115,11 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		},
 	}
 }
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Validate Ubah Password Seller
+// Berfungsi untuk memvalidasi dengan kode otp yang telah dikirimkan untuk mengubah password mereka
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordSeller"

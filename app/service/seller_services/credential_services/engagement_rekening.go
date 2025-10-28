@@ -12,42 +12,20 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services/response_credential_seller"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Tambahkan Rekening Seller
+// Berfungsi untuk menambahkan rekening seller ke database
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *response.ResponseForm {
 	services := "TambahRekeningSeller"
 
-	if data.Data.IDSeller == 0 {
-		log.Println("[WARN] ID seller tidak ditemukan pada permintaan tambah rekening.")
-		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
-			Services: services,
-			Payload: response_credential_seller.ResponseTambahRekeningSeller{
-				Message: "ID seller tidak ditemukan.",
-			},
-		}
-	}
-
-	var id_seller int64
-	if check_seller := db.Model(&models.Seller{}).
-		Select("id").
-		Where(models.Seller{ID: data.Data.IDSeller}).
-		First(&id_seller).Error; check_seller != nil {
-		log.Printf("[ERROR] Gagal validasi seller ID %d: %v", data.Data.IDSeller, check_seller)
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Payload: response_credential_seller.ResponseTambahRekeningSeller{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
-			},
-		}
-	}
-
-	if id_seller == 0 {
-		log.Printf("[WARN] Seller ID %d tidak ditemukan saat tambah rekening.", data.Data.IDSeller)
+	if _, status := data.IdentitasSeller.Validating(db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_credential_seller.ResponseTambahRekeningSeller{
-				Message: "Seller tidak ditemukan.",
+				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
 		}
 	}
@@ -103,27 +81,30 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 	}
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Hapus Rekening Seller
+// Berfungsi untuk Menghapus Data Rekening Seller Yang sudah ada di db
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.ResponseForm {
 	services := "HapusRekeningSeller"
 
-	if data.IDSeller == 0 {
-		log.Println("[WARN] ID seller tidak ditemukan pada permintaan hapus rekening.")
+	if _, status := data.IdentitasSeller.Validating(db); !status {
 		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_credential_seller.ResponseHapusRekeningSeller{
-				Message: "ID seller tidak ditemukan.",
+				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
 		}
 	}
-
 	err := db.Transaction(func(tx *gorm.DB) error {
 		var id_rekening int64
 
 		if check_rekening := tx.Model(&models.RekeningSeller{}).
 			Select("id").
 			Where(models.RekeningSeller{
-				IDSeller:        data.IDSeller,
+				IDSeller:        data.IdentitasSeller.IdSeller,
 				NamaBank:        data.NamaBank,
 				PemilikRekening: data.PemilikRekening,
 				NomorRekening:   data.NomorRekening,
@@ -142,7 +123,7 @@ func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.Re
 	})
 
 	if err != nil {
-		log.Printf("[ERROR] Gagal menghapus rekening untuk seller ID %d: %v", data.IDSeller, err)
+		log.Printf("[ERROR] Gagal menghapus rekening untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -152,7 +133,7 @@ func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.Re
 		}
 	}
 
-	log.Printf("[INFO] Rekening berhasil dihapus untuk seller ID %d", data.IDSeller)
+	log.Printf("[INFO] Rekening berhasil dihapus untuk seller ID %d", data.IdentitasSeller.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,

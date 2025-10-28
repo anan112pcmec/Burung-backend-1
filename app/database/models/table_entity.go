@@ -36,9 +36,9 @@ type Seller struct {
 	Deskripsi        string     `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi_seller"`
 	FollowerTotal    int32      `gorm:"column:follower_total;type:int4;not null;default:0" json:"follower_total_seller"`
 	StatusSeller     string     `gorm:"column:status;type:status;not null;default:'Offline'" json:"status_seller"`
-	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt        time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt        *time.Time `gorm:"index"`
 }
 
 func (s *Seller) Validating() error {
@@ -76,9 +76,9 @@ type Kurir struct {
 	Rating           float32    `gorm:"column:rating;type:float;default:0" json:"rating_kurir"`
 	JumlahRating     int32      `gorm:"column:jumlah_rating;type:int4;default:0" json:"jumlah_rating_kurir"`
 	TipeKendaraan    string     `gorm:"column:tipe_kendaraan;type:varchar(50);default:''" json:"tipe_kendaraan_kurir"`
-	CreatedAt        time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt        time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt        *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedAt        time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt        time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt        *time.Time `gorm:"index"`
 }
 
 func (Kurir) TableName() string {

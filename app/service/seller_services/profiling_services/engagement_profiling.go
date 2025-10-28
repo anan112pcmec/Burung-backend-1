@@ -12,16 +12,19 @@ import (
 	seller_response_profiling "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services/response_profiling"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Update Personal Seller
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdateProfilePersonalSeller) *response.ResponseForm {
 	services := "UpdatePersonalSeller"
 	var hasil_update_nama *seller_particular_profiling.ResponseUbahNama
 	var hasil_update_username *seller_particular_profiling.ResponseUbahUsername
 	var hasil_update_gmail *seller_particular_profiling.ResponseUbahEmail
 
-	if data.ID_Seller == 0 {
-		log.Println("[WARN] ID seller tidak ditemukan pada permintaan update profil personal.")
+	if _, status := data.IdentitasSeller.Validating(db); !status {
 		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
+			Status:   http.StatusNotFound,
 			Services: services,
 		}
 	}
@@ -29,19 +32,19 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 	if data.Username == "" {
 		log.Println("[INFO] Username kosong, tidak diupdate.")
 	} else {
-		hasil_update_username = seller_particular_profiling.UbahUsernameSeller(data.ID_Seller, data.Username, db)
+		hasil_update_username = seller_particular_profiling.UbahUsernameSeller(data.IdentitasSeller.IdSeller, data.Username, db)
 	}
 
 	if data.Nama == "" {
 		log.Println("[INFO] Nama kosong, tidak diupdate.")
 	} else {
-		hasil_update_nama = seller_particular_profiling.UbahNamaSeller(data.ID_Seller, data.Nama, db)
+		hasil_update_nama = seller_particular_profiling.UbahNamaSeller(data.IdentitasSeller.IdSeller, data.Nama, db)
 	}
 
 	if data.Email == "" {
 		log.Println("[INFO] Email kosong, tidak diupdate.")
 	} else {
-		hasil_update_gmail = seller_particular_profiling.UbahEmailSeller(ctx, data.ID_Seller, data.Email, db)
+		hasil_update_gmail = seller_particular_profiling.UbahEmailSeller(ctx, data.IdentitasSeller.IdSeller, data.Email, db)
 	}
 
 	return &response.ResponseForm{
@@ -55,34 +58,37 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 	}
 }
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Update Info General Public
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func UpdateInfoGeneralPublic(db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *response.ResponseForm {
 	services := "UpdatePersonalSeller"
 	var hasil_update_punchline seller_particular_profiling.ResponseUbahPunchline
 	var hasil_update_deskripsi seller_particular_profiling.ResponseUbahDeskripsi
 	var hasil_update_jam_operasional seller_particular_profiling.ResponseUbahJamOperasional
 
-	if data.ID_Seller == 0 {
-		log.Println("[WARN] ID seller tidak ditemukan pada permintaan update info umum.")
+	if _, status := data.IdentitasSeller.Validating(db); !status {
 		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
+			Status:   http.StatusNotFound,
 			Services: services,
 		}
 	}
 
 	if data.Deskripsi != "" {
-		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(data.ID_Seller, data.Username, data.Deskripsi, db)
+		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(data.IdentitasSeller.IdSeller, data.IdentitasSeller.Username, data.Deskripsi, db)
 	} else {
 		log.Println("[INFO] Deskripsi kosong, tidak diupdate.")
 	}
 
 	if data.Punchline != "" {
-		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(data.ID_Seller, data.Username, data.Punchline, db)
+		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(data.IdentitasSeller.IdSeller, data.IdentitasSeller.Username, data.Punchline, db)
 	} else {
 		log.Println("[INFO] Punchline kosong, tidak diupdate.")
 	}
 
 	if data.JamOperasional != "" {
-		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(data.ID_Seller, data.Username, data.JamOperasional, db)
+		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(data.IdentitasSeller.IdSeller, data.IdentitasSeller.Username, data.JamOperasional, db)
 	} else {
 		log.Println("[INFO] Jam operasional kosong, tidak diupdate.")
 	}

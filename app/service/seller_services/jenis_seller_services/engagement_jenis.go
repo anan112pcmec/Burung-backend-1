@@ -11,6 +11,12 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services/response_jenis_seller"
 )
 
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Ajukan Ubah Jenis Seller
+// Berfungsi Untuk Mengajukan Perubahan jenis seller misal dari personal ke brands yang nantinya akan menunggu review
+// admin
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func AjukanUbahJenisSeller(data PayloadAjukanUbahJenisSeller, db *gorm.DB) *response.ResponseForm {
 	services := "AjukanUbahJenisSeller"
 
@@ -28,7 +34,7 @@ func AjukanUbahJenisSeller(data PayloadAjukanUbahJenisSeller, db *gorm.DB) *resp
 	}
 
 	var seller models.Seller
-	if err := db.Model(&models.Seller{}).Where(models.Seller{
+	if err := db.Model(&models.Seller{}).Where(&models.Seller{
 		ID:       data.DataDiajukan.IdSeller,
 		Username: data.IdentitasSeller.Username,
 		Email:    data.IdentitasSeller.EmailSeller,

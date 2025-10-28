@@ -103,6 +103,12 @@ type PayloadDownKategoriBarang struct {
 // ALAMAT BARANG
 // ////////////////////////////////////////////////////////////////////////////////
 
+type PayloadEditRekeningBarangInduk struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdBarangInduk   int32                          `json:"id_barang_induk"`
+	DataRekening    models.RekeningSeller          `json:"data_rekening_seller"`
+}
+
 type PayloadEditAlamatBarangInduk struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
 	IdBarangInduk   int32                          `json:"id_barang_induk"`

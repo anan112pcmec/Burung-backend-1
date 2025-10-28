@@ -2,6 +2,7 @@ package models
 
 import (
 	"time"
+
 )
 
 type StatusTransaksi string
@@ -37,9 +38,9 @@ type Transaksi struct {
 	Catatan         string         `gorm:"column:catatan;type:text" json:"catatan_transaksi"`
 	Kuantitas       int16          `gorm:"column:kuantitas_barang;type:int2;not null" json:"kuantitas_barang_transaksi"` // Isinya JumlahBarang
 	Total           int32          `gorm:"column:total;type:int4; not null;default:0" json:"total_transaksi"`            // Isinyaduit
-	CreatedAt       time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt       time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt       *time.Time     `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedAt       time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt       *time.Time     `gorm:"index"`
 }
 
 func (Transaksi) TableName() string {
@@ -54,9 +55,9 @@ type Pembayaran struct {
 	Amount             int32      `gorm:"column:amount;type:int4;not null,default:0" json:"amount_pembayaran"`
 	PaymentType        string     `gorm:"column:payment_type;type:varchar(120);not null" json:"payment_type_pembayaran"`
 	PaidAt             string     `gorm:"column:paid_at;type:text;not null;default:''" json:"paid_at_pembayaran"`
-	CreatedAt          time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt          time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt          *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedAt          time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt          time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt          *time.Time `gorm:"index"`
 }
 
 func (Pembayaran) TableName() string {
