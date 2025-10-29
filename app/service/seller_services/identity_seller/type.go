@@ -38,5 +38,9 @@ func (i IdentitySeller) Validating(db *gorm.DB) (model models.Seller, status boo
 		return seller, false
 	}
 
+	if seller.StatusSeller != "Online" {
+		return seller, false
+	}
+
 	return seller, true
 }

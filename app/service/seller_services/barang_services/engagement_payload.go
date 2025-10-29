@@ -100,23 +100,31 @@ type PayloadDownKategoriBarang struct {
 }
 
 // ////////////////////////////////////////////////////////////////////////////////
-// ALAMAT BARANG
+// Payload Struct Edit Rekening Barang Induk
 // ////////////////////////////////////////////////////////////////////////////////
 
 type PayloadEditRekeningBarangInduk struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
-	IdBarangInduk   int32                          `json:"id_barang_induk"`
-	DataRekening    models.RekeningSeller          `json:"data_rekening_seller"`
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdBarangInduk    int32                          `json:"id_barang_induk"`
+	IdRekeningSeller int64                          `json:"id_rekening_seller"`
 }
 
+// ////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Edit Alamat Barang Induk
+// ////////////////////////////////////////////////////////////////////////////////
+
 type PayloadEditAlamatBarangInduk struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	IdBarangInduk   int32                          `json:"id_barang_induk"`
 	IdAlamatGudang  int64                          `json:"id_alamat_gudang"`
 }
 
+// ////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Edit Alamat Barang Kategori
+// ////////////////////////////////////////////////////////////////////////////////
+
 type PayloadEditAlamatBarangKategori struct {
-	IdentitasSeller  identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
 	IdBarangInduk    int32                          `json:"id_barang_induk"`
 	IdKategoriBarang int64                          `json:"id_kategori_barang"`
 	IdAlamatGudang   int64                          `json:"id_alamat_gudang"`

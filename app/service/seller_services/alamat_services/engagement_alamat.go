@@ -1,6 +1,7 @@
 package seller_alamat_services
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -121,7 +122,31 @@ func HapusAlamatGudang(data PayloadHapusAlamatGudang, db *gorm.DB) *response.Res
 		}
 	}
 
-	if err_hapus := db.Unscoped().Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
+	var count int64 = 0
+
+	if err_check := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+		IDAlamat: data.IdGudang,
+	}).Count(&count).Error; err_check != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseHapusAlamatGudang{
+				Message: "Gagal Server Sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if count != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseHapusAlamatGudang{
+				Message: fmt.Sprintf("Gagal Ganti dahulu alamat kategori mu sejumlah %v", count),
+			},
+		}
+	}
+
+	if err_hapus := db.Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
 		ID:       data.IdGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Delete(&models.AlamatGudang{}).Error; err_hapus != nil {

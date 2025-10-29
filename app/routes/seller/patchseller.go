@@ -16,6 +16,7 @@ import (
 	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 	seller_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services"
+
 )
 
 func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
@@ -122,6 +123,41 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_social_media_services.EngageSocialMediaSeller(data, db)
+	case "/seller/barang/down-barang-induk":
+		var data seller_service.PayloadDownBarangInduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.DownStokBarangInduk(db, data)
+	case "/seller/barang/down-kategori-barang":
+		var data seller_service.PayloadDownKategoriBarang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.DownKategoriBarang(db, data)
+	case "/seller/barang/edit-rekening-barang":
+		var data seller_service.PayloadEditRekeningBarangInduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditRekeningBarangInduk(data, db)
+	case "/seller/barang/edit-alamat-barang":
+		var data seller_service.PayloadEditAlamatBarangInduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditAlamatGudangBarangInduk(data, db)
+	case "/seller/barang/edit-alamat-kategori":
+		var data seller_service.PayloadEditAlamatBarangKategori
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.EditAlamatGudangBarangKategori(data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

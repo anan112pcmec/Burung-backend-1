@@ -30,7 +30,7 @@ func EngageSocialMediaSeller(data PayloadEngageSocialMedia, db *gorm.DB) *respon
 	}
 
 	var id_sosmed_table int64 = 0
-	_ = db.Model(models.EntitySocialMedia{}).Select("id").Where(models.EntitySocialMedia{
+	_ = db.Model(&models.EntitySocialMedia{}).Select("id").Where(&models.EntitySocialMedia{
 		EntityId:   int64(data.IdentitasSeller.IdSeller),
 		EntityType: "Seller",
 	}).Take(&id_sosmed_table)

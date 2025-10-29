@@ -10,6 +10,6 @@ import (
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadAjukanUbahJenisSeller struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	DataDiajukan    models.Jenis_Seller            `json:"data_diajukan_ubah_jenis_seller"`
 }

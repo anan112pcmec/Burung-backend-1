@@ -28,6 +28,6 @@ type PayloadEditAlamatGudang struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadHapusAlamatGudang struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	IdGudang        int64                          `json:"id_hapus_alamat_gudang"`
 }

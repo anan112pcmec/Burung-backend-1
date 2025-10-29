@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////////
@@ -108,21 +110,21 @@ func (AktivitasSeller) TableName() string {
 }
 
 type AlamatPengguna struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_alamat_user"`
-	IDPengguna      int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_alamat_user"`
-	Pengguna        Pengguna   `gorm:"foreignKey:IDPengguna;references:ID" json:"-"`
-	PanggilanAlamat string     `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_user"`
-	NomorTelephone  string     `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_user"`
-	NamaAlamat      string     `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_user"`
-	Kota            string     `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_user"`
-	KodePos         string     `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_user"`
-	KodeNegara      string     `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_user"`
-	Deskripsi       string     `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_user"`
-	Longitude       float64    `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_user"`
-	Latitude        float64    `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_user"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt       *time.Time `gorm:"index"`
+	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id_alamat_user"`
+	IDPengguna      int64          `gorm:"column:id_pengguna;not null" json:"id_pengguna_alamat_user"`
+	Pengguna        Pengguna       `gorm:"foreignKey:IDPengguna;references:ID" json:"-"`
+	PanggilanAlamat string         `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_user"`
+	NomorTelephone  string         `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_user"`
+	NamaAlamat      string         `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_user"`
+	Kota            string         `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_user"`
+	KodePos         string         `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_user"`
+	KodeNegara      string         `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_user"`
+	Deskripsi       string         `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_user"`
+	Longitude       float64        `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_user"`
+	Latitude        float64        `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_user"`
+	CreatedAt       time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
 func (AlamatPengguna) TableName() string {
@@ -280,21 +282,21 @@ func (InformasiKurir) TableName() string {
 }
 
 type AlamatGudang struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_alamat_gudang"`
-	IDSeller        int32      `gorm:"column:id_seller;not null" json:"id_seller_alamat_gudang"`
-	Seller          Seller     `gorm:"foreignKey:IDSeller;references:ID" json:"-"`
-	PanggilanAlamat string     `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_gudang"`
-	NomorTelephone  string     `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_gudang"`
-	NamaAlamat      string     `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_gudang"`
-	Kota            string     `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_gudang"`
-	KodePos         string     `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_gudang"`
-	KodeNegara      string     `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_gudang"`
-	Deskripsi       string     `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_gudang"`
-	Longitude       float64    `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_gudang"`
-	Latitude        float64    `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_gudang"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt       *time.Time `gorm:"index"`
+	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id_alamat_gudang"`
+	IDSeller        int32          `gorm:"column:id_seller;not null" json:"id_seller_alamat_gudang"`
+	Seller          Seller         `gorm:"foreignKey:IDSeller;references:ID" json:"-"`
+	PanggilanAlamat string         `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_gudang"`
+	NomorTelephone  string         `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_gudang"`
+	NamaAlamat      string         `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_gudang"`
+	Kota            string         `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_gudang"`
+	KodePos         string         `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_gudang"`
+	KodeNegara      string         `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_gudang"`
+	Deskripsi       string         `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_gudang"`
+	Longitude       float64        `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_gudang"`
+	Latitude        float64        `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_gudang"`
+	CreatedAt       time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
 func (AlamatGudang) TableName() string {

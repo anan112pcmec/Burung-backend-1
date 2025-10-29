@@ -43,6 +43,19 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 			return fmt.Errorf("rekening sudah ada")
 		}
 
+		var hitung int64 = 0
+
+		if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+			IDSeller: data.IdentitasSeller.IdSeller,
+		}).Count(&hitung).Error; err != nil {
+			return err
+		}
+		if hitung == 0 {
+			data.Data.IsDefault = true
+		} else {
+			data.Data.IsDefault = false
+		}
+
 		if err_masukan := tx.Create(&data.Data).Error; err_masukan != nil {
 			return err_masukan
 		}

@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 func (p *Pengiriman) BiayaKirimnya(untuk string) int16 {
 	if untuk == "Sistem" {
@@ -32,7 +36,7 @@ type Pengiriman struct {
 	BeratTotalKG        int16          `gorm:"column:berat_total_kg;type:int2;not null;default:0" json:"berat_total_kg_pengiriman"`
 	CreatedAt           time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt           time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt           *time.Time     `gorm:"index"`
+	DeletedAt           gorm.DeletedAt `gorm:"index"`
 }
 
 func (Pengiriman) TableName() string {
@@ -40,15 +44,15 @@ func (Pengiriman) TableName() string {
 }
 
 type JejakPengiriman struct {
-	ID           int64      `gorm:"primaryKey;autoIncrement" json:"id_jejak_pengiriman"`
-	IdPengiriman int64      `gorm:"column:id_pengiriman;not null" json:"id_pengiriman_jejak_pengiriman"`
-	Pengiriman   Pengiriman `gorm:"foreignKey:IdPengiriman;references:ID"`
-	Lokasi       string     `gorm:"column:lokasi;type:text;" json:"lokasi_jejak_pengiriman"`
-	Keterangan   string     `gorm:"column:keterangan;type:text;not null;" json:"keterangan_jejak_pengiriman"`
-	DicatatPada  time.Time  `gorm:"column:dicatat_pada;autoCreateTime" json:"dicatat_pada_jejak_pengiriman"`
-	CreatedAt    time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt    *time.Time `gorm:"index"`
+	ID           int64          `gorm:"primaryKey;autoIncrement" json:"id_jejak_pengiriman"`
+	IdPengiriman int64          `gorm:"column:id_pengiriman;not null" json:"id_pengiriman_jejak_pengiriman"`
+	Pengiriman   Pengiriman     `gorm:"foreignKey:IdPengiriman;references:ID"`
+	Lokasi       string         `gorm:"column:lokasi;type:text;" json:"lokasi_jejak_pengiriman"`
+	Keterangan   string         `gorm:"column:keterangan;type:text;not null;" json:"keterangan_jejak_pengiriman"`
+	DicatatPada  time.Time      `gorm:"column:dicatat_pada;autoCreateTime" json:"dicatat_pada_jejak_pengiriman"`
+	CreatedAt    time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
 func (JejakPengiriman) TableName() string {
