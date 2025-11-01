@@ -35,7 +35,7 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 		if err_check_rekening := tx.Model(&models.RekeningSeller{}).
 			Select("id").
 			Where(models.RekeningSeller{
-				IDSeller:      data.Data.IDSeller,
+				IDSeller:      data.IdentitasSeller.IdSeller,
 				NamaBank:      data.Data.NamaBank,
 				NomorRekening: data.Data.NomorRekening,
 			}).
@@ -55,6 +55,8 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 		} else {
 			data.Data.IsDefault = false
 		}
+
+		data.Data.IDSeller = data.IdentitasSeller.IdSeller
 
 		if err_masukan := tx.Create(&data.Data).Error; err_masukan != nil {
 			return err_masukan

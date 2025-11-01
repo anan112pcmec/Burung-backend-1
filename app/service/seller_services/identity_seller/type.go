@@ -26,8 +26,6 @@ func (i IdentitySeller) Validating(db *gorm.DB) (model models.Seller, status boo
 		return seller, false
 	}
 
-	seller.ID = 0
-
 	_ = db.Model(&models.Seller{}).Where(&models.Seller{
 		ID:       i.IdSeller,
 		Username: i.Username,

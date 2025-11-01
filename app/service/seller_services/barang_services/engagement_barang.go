@@ -61,7 +61,6 @@ func MasukanBarangInduk(db *gorm.DB, data PayloadMasukanBarangInduk) *response.R
 		}
 	}
 
-	// 💥 Copy data agar goroutine tidak berbagi referensi
 	localData := data
 
 	go func(d PayloadMasukanBarangInduk) {
@@ -71,6 +70,8 @@ func MasukanBarangInduk(db *gorm.DB, data PayloadMasukanBarangInduk) *response.R
 				return fmt.Errorf("OriginalKategori kosong, rollback transaksi")
 			}
 
+			d.BarangInduk.SellerID = d.IdentitasSeller.IdSeller
+
 			if err := tx.Create(&d.BarangInduk).Error; err != nil {
 				return err
 			}
@@ -79,6 +80,32 @@ func MasukanBarangInduk(db *gorm.DB, data PayloadMasukanBarangInduk) *response.R
 
 			for _, kategori := range d.KategoriBarang {
 				kategori.IdBarangInduk = int32(idInduk)
+
+				// Validasi Rekening
+				var jumlah_rek int64 = 0
+				if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+					ID:       kategori.IDRekening,
+					IDSeller: d.IdentitasSeller.IdSeller,
+				}).Count(&jumlah_rek).Error; err != nil {
+					continue
+				}
+
+				if jumlah_rek != 1 {
+					continue
+				}
+
+				// Validasi Alamat Gudang
+				var jumlah_alamat int64 = 0
+				if err := tx.Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+					ID:       kategori.IDAlamat,
+					IDSeller: d.IdentitasSeller.IdSeller,
+				}).Count(&jumlah_alamat).Error; err != nil {
+					continue
+				}
+
+				if jumlah_alamat != 1 {
+					continue
+				}
 
 				if err := tx.Create(&kategori).Error; err != nil {
 					return err
@@ -381,6 +408,30 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 					continue
 				} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 					log.Printf("[ERROR] Gagal cek kategori '%s': %v", d.KategoriBarang[i].Nama, err)
+					continue
+				}
+
+				var jumlah_rek int64 = 0
+				if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+					ID:       d.KategoriBarang[i].IDRekening,
+					IDSeller: d.IdentitasSeller.IdSeller,
+				}).Count(&jumlah_rek).Error; err != nil {
+					continue
+				}
+
+				if jumlah_rek != 1 {
+					continue
+				}
+
+				var jumlah_alamat int64 = 0
+				if err := tx.Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+					ID:       d.KategoriBarang[i].IDAlamat,
+					IDSeller: d.IdentitasSeller.IdSeller,
+				}).Count(&jumlah_alamat).Error; err != nil {
+					continue
+				}
+
+				if jumlah_alamat != 1 {
 					continue
 				}
 

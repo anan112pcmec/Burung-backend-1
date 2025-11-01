@@ -589,7 +589,7 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 		Password:         string(hashedPassword),
 	}
 
-	if err := db.Unscoped().Create(&seller).Error; err != nil {
+	if err := db.Create(&seller).Error; err != nil {
 		fmt.Println("[ValidateUserRegistration] ERROR saving to DB:", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

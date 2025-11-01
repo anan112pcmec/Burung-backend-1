@@ -28,16 +28,6 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		}
 	}
 
-	if data.DataAlamat.IDPengguna == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
-				Messages: "Pengguna Tidak Ditemukan.",
-			},
-		}
-	}
-
 	var count int64
 	if err := db.Model(&models.AlamatPengguna{}).
 		Where(models.AlamatPengguna{IDPengguna: data.DataAlamat.IDPengguna}).
@@ -61,13 +51,13 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 
 	var existing models.AlamatPengguna
 	errcheck := db.Where(models.AlamatPengguna{
-		IDPengguna:      data.DataAlamat.IDPengguna,
+		IDPengguna:      data.IdentitasPengguna.ID,
 		PanggilanAlamat: data.DataAlamat.PanggilanAlamat,
 	}).First(&existing).Error
 
 	if errors.Is(errcheck, gorm.ErrRecordNotFound) {
 		if err := db.Create(&models.AlamatPengguna{
-			IDPengguna:      data.DataAlamat.IDPengguna,
+			IDPengguna:      data.IdentitasPengguna.ID,
 			PanggilanAlamat: data.DataAlamat.PanggilanAlamat,
 			NamaAlamat:      data.DataAlamat.NamaAlamat,
 			Deskripsi:       data.DataAlamat.Deskripsi,
@@ -122,7 +112,7 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 		}
 	}
 
-	if err_hapus := db.Unscoped().Where(models.AlamatPengguna{
+	if err_hapus := db.Where(models.AlamatPengguna{
 		IDPengguna:      data.IdentitasPengguna.ID,
 		PanggilanAlamat: data.PanggilanAlamat,
 	}).Delete(&models.AlamatPengguna{}).Error; err_hapus != nil {

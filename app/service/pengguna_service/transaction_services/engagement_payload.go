@@ -85,3 +85,6 @@ type PayloadLockTransaksiGerai struct {
 	PaymentResult payment_gerai.GeraiResponse                  `json:"payment_result"`
 	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
 }
+
+type PayloadMemberikanUlasan struct {
+}

@@ -35,6 +35,7 @@ func TambahAlamatGudang(data PayloadTambahAlamatGudang, db *gorm.DB) *response.R
 	}
 
 	data.Data.ID = 0
+	data.Data.IDSeller = data.IdentitasSeller.IdSeller
 
 	if err_tambah_alamat := db.Create(&data.Data).Error; err_tambah_alamat != nil {
 		log.Printf("[ERROR] Gagal menambah alamat gudang untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err_tambah_alamat)
