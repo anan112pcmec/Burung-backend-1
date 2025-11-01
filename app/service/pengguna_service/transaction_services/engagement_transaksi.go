@@ -3,6 +3,7 @@ package pengguna_transaction_services
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/midtrans/midtrans-go"
@@ -29,8 +30,11 @@ import (
 
 func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
+	log.Printf("[%s] Memulai proses checkout untuk user ID: %v", services, data.IdentitasPengguna.ID)
 
+	// Validasi pengguna
 	if _, status := data.IdentitasPengguna.Validating(db); !status {
+		log.Printf("[%s] Kredensial pengguna tidak valid untuk user ID: %v", services, data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
@@ -40,19 +44,20 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 		}
 	}
 
+	// Pastikan semua barang dari seller yang sama
 	var firstSellerID int64 = 0
 	for i, keranjang := range data.DataCheckout {
 		if i == 0 {
 			firstSellerID = int64(keranjang.IdSeller)
-		} else {
-			if keranjang.IdSeller != int32(firstSellerID) {
-				return &response.ResponseForm{
-					Status:   http.StatusBadRequest,
-					Services: services,
-					Payload: response_transaction_pengguna.ResponseDataCheckout{
-						Message: "Semua barang harus dari seller yang sama.",
-					},
-				}
+			log.Printf("[%s] Seller pertama terdeteksi: %v", services, firstSellerID)
+		} else if keranjang.IdSeller != int32(firstSellerID) {
+			log.Printf("[%s] Ditemukan perbedaan seller ID pada item %v: %v != %v", services, i, keranjang.IdSeller, firstSellerID)
+			return &response.ResponseForm{
+				Status:   http.StatusBadRequest,
+				Services: services,
+				Payload: response_transaction_pengguna.ResponseDataCheckout{
+					Message: "Semua barang harus dari seller yang sama.",
+				},
 			}
 		}
 	}
@@ -60,39 +65,53 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 	var responseData []response_transaction_pengguna.CheckoutData
 	var processCheckout []models.Keranjang
 
+	// Proses transaksi checkout
 	err := db.Transaction(func(tx *gorm.DB) error {
-		for _, keranjang := range data.DataCheckout {
+		log.Printf("[%s] Mulai transaksi checkout (%d item)...", services, len(data.DataCheckout))
+
+		for idx, keranjang := range data.DataCheckout {
+			log.Printf("[%s] [Item-%d] Proses checkout BarangIndukID=%v KategoriID=%v Count=%v",
+				services, idx, keranjang.IdBarangInduk, keranjang.IdKategori, keranjang.Count)
+
+			// Hitung stok
 			var jumlahStok int64
 			if err := tx.Model(&models.VarianBarang{}).
 				Where(&models.VarianBarang{
 					IdBarangInduk: keranjang.IdBarangInduk,
 					IdKategori:    keranjang.IdKategori,
 					Status:        "Ready",
-				}).
-				Count(&jumlahStok).Error; err != nil {
+				}).Count(&jumlahStok).Error; err != nil {
+				log.Printf("[%s] [Item-%d] Gagal menghitung stok: %v", services, idx, err)
 				return err
 			}
+			log.Printf("[%s] [Item-%d] Jumlah stok ready: %v", services, idx, jumlahStok)
 
+			// Ambil detail barang induk
 			var barang models.BarangInduk
 			if err := tx.Select("nama_barang", "id_seller", "jenis_barang").
 				Where(&models.BarangInduk{ID: keranjang.IdBarangInduk}).
 				First(&barang).Error; err != nil {
+				log.Printf("[%s] [Item-%d] Gagal ambil BarangInduk: %v", services, idx, err)
 				return err
 			}
 
+			// Ambil kategori
 			var kategori models.KategoriBarang
-			if err := tx.Unscoped().Model(&models.KategoriBarang{}).Select("nama", "harga", "stok").
+			if err := tx.Model(&models.KategoriBarang{}).Select("nama", "harga", "stok").
 				Where(&models.KategoriBarang{ID: keranjang.IdKategori}).
 				First(&kategori).Error; err != nil {
+				log.Printf("[%s] [Item-%d] Gagal ambil KategoriBarang: %v", services, idx, err)
 				return err
 			}
 
+			// Ambil nama seller
 			var nama_seller string
-			if err_nama_seller := tx.Model(&models.Seller{}).
+			if errNamaSeller := tx.Model(&models.Seller{}).
 				Select("nama").
 				Where(&models.Seller{ID: barang.SellerID}).
-				First(&nama_seller).Error; err_nama_seller != nil {
-				return err_nama_seller
+				First(&nama_seller).Error; errNamaSeller != nil {
+				log.Printf("[%s] [Item-%d] Gagal ambil Nama Seller: %v", services, idx, errNamaSeller)
+				return errNamaSeller
 			}
 
 			resp := response_transaction_pengguna.CheckoutData{
@@ -108,6 +127,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 				Dipesan:          int32(keranjang.Count),
 			}
 
+			// Cek stok cukup
 			if jumlahStok >= int64(keranjang.Count) {
 				var varianIDs []int64
 				if err := tx.Model(&models.VarianBarang{}).
@@ -118,7 +138,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 					}).
 					Limit(int(keranjang.Count)).
 					Pluck("id", &varianIDs).Error; err != nil {
-
+					log.Printf("[%s] [Item-%d] Gagal ambil varian ID: %v", services, idx, err)
 					resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
 					resp.Status = false
 					responseData = append(responseData, resp)
@@ -130,46 +150,57 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 					resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
 					resp.Status = false
 					responseData = append(responseData, resp)
+					log.Printf("[%s] [Item-%d] Stok kurang %v barang", services, idx, shortfall)
 					continue
 				}
 
+				// Update status varian
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
-					Updates(map[string]interface{}{
-						"status":        "Dipesan",
-						"hold_by":       data.IdentitasPengguna.ID,
-						"holder_entity": "Pengguna",
+					Updates(&models.VarianBarang{
+						Status:       "Dipesan",
+						HoldBy:       data.IdentitasPengguna.ID,
+						HolderEntity: "Pengguna",
 					}).Error; err != nil {
+					log.Printf("[%s] [Item-%d] Gagal update varian jadi Dipesan: %v", services, idx, err)
 					resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
 					resp.Status = false
 					responseData = append(responseData, resp)
 					return err
 				} else {
-
-					var stok_saat_ini int64 = 0
-					_ = tx.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
-						ID: keranjang.IdKategori,
-					}).Take(&stok_saat_ini)
-					_ = tx.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{ID: keranjang.IdKategori}).Updates(map[string]interface{}{
-						"stok": int32(stok_saat_ini) - int32(keranjang.Count),
-					})
+					log.Printf("[%s] [Item-%d] Varian ID terupdate: %+v", services, idx, varianIDs)
+					var stokSaatIni int64 = 0
+					_ = tx.Model(&models.KategoriBarang{}).Select("stok").
+						Where(&models.KategoriBarang{ID: keranjang.IdKategori}).
+						Take(&stokSaatIni)
+					_ = tx.Model(&models.KategoriBarang{}).
+						Where(&models.KategoriBarang{ID: keranjang.IdKategori}).
+						Updates(map[string]interface{}{
+							"stok": int32(stokSaatIni) - int32(keranjang.Count),
+						})
+					log.Printf("[%s] [Item-%d] Stok kategori dikurangi jadi %v", services, idx, int32(stokSaatIni)-int32(keranjang.Count))
 				}
 
 				resp.Message = "Barang siap untuk transaksi."
 				resp.Status = true
+				log.Printf("[%s] [Item-%d] Barang siap transaksi (stok mencukupi)", services, idx)
 			} else {
 				shortfall := int64(keranjang.Count) - jumlahStok
 				resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
 				resp.Status = false
+				log.Printf("[%s] [Item-%d] Stok tidak mencukupi, kurang %v", services, idx, shortfall)
 			}
 
 			processCheckout = append(processCheckout, keranjang)
 			responseData = append(responseData, resp)
 		}
+
+		log.Printf("[%s] Transaksi selesai, total item diproses: %d", services, len(processCheckout))
 		return nil
 	})
 
 	if err != nil {
+		log.Printf("[%s] Gagal menjalankan transaksi checkout: %v", services, err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -178,6 +209,8 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 			},
 		}
 	}
+
+	log.Printf("[%s] Checkout selesai untuk user ID: %v dengan %d item", services, data.IdentitasPengguna.ID, len(responseData))
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,

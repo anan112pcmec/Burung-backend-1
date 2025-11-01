@@ -6,6 +6,24 @@ import (
 	"gorm.io/gorm"
 )
 
+type EntitySocialMedia struct {
+	ID         int64      `gorm:"primaryKey;autoIncrement" json:"id_social_media"`
+	EntityId   int64      `gorm:"column:entity_id;type:int8;not null" json:"entity_id_social_media"`
+	Whatsapp   string     `gorm:"column:whatsapp;type:varchar(20)" json:"whatsapp_social_media"`
+	Facebook   string     `gorm:"column:facebook;type:text" json:"facebook_social_media"`
+	TikTok     string     `gorm:"column:tiktok;type:text" json:"tiktok_social_media"`
+	Instagram  string     `gorm:"column:instagram;type:text" json:"instagram_social_media"`
+	Metadata   []byte     `gorm:"column:metadata;type:bytea" json:"metadata_social_media"`
+	EntityType string     `gorm:"column:entity_type;type:varchar(20);not null" json:"entity_type_social_media"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (EntitySocialMedia) TableName() string {
+	return "entity_social_media"
+}
+
 // ///////////////////////////////////////////////////////////////////////////////////////////
 // ENGAGEMENT PENGGUNA
 // ///////////////////////////////////////////////////////////////////////////////////////////
@@ -13,7 +31,7 @@ import (
 type Komentar struct {
 	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_komentar"`
 	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
-	baranginduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	Baranginduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
 	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity"`
 	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
 	Komentar      string      `gorm:"column:komentar;type:text;not null" json:"isi_komentar"`
@@ -61,24 +79,18 @@ func (BarangDisukai) TableName() string {
 	return "barang_disukai"
 }
 
-type EntitySocialMedia struct {
-	ID         int64      `gorm:"primaryKey;autoIncrement" json:"id_social_media"`
-	EntityId   int64      `gorm:"column:entity_id;type:int8;not null" json:"entity_id_social_media"`
-	Whatsapp   string     `gorm:"column:whatsapp;type:varchar(20)" json:"whatsapp_social_media"`
-	Facebook   string     `gorm:"column:facebook;type:text" json:"facebook_social_media"`
-	TikTok     string     `gorm:"column:tiktok;type:text" json:"tiktok_social_media"`
-	Instagram  string     `gorm:"column:instagram;type:text" json:"instagram_social_media"`
-	Metadata   []byte     `gorm:"column:metadata;type:bytea" json:"metadata_social_media"`
-	EntityType string     `gorm:"column:entity_type;type:varchar(20);not null" json:"entity_type_social_media"`
-	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+type BarangWishlist struct {
+	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_barang_wishlist"`
+	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_barang_wishlist"`
+	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_barang_wishlist"`
+	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
+	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
 }
 
-func (EntitySocialMedia) TableName() string {
-	return "entity_social_media"
-}
-
+// Decline Di versi Selanjutnya
 type AktivitasPengguna struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_pengguna"`
 	IdPengguna     int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_aktivitas_pengguna"`
@@ -92,21 +104,6 @@ type AktivitasPengguna struct {
 
 func (AktivitasPengguna) TableName() string {
 	return "aktivitas_pengguna"
-}
-
-type AktivitasSeller struct {
-	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_seller"`
-	IdSeler        int32      `gorm:"column:id_seller;not null" json:"id_seller_aktivitas_seller"`
-	Seller         Seller     `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
-	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_seller"`
-	Aksi           string     `gorm:"column:aksi;type:aksi_seller" json:"aksi_aktivitas_seller"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-func (AktivitasSeller) TableName() string {
-	return "aktivitas_seller"
 }
 
 type AlamatPengguna struct {
@@ -230,6 +227,22 @@ type RekeningSeller struct {
 
 func (RekeningSeller) TableName() string {
 	return "rekening_seller"
+}
+
+// Decline Di versi Selanjutnya
+type AktivitasSeller struct {
+	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_seller"`
+	IdSeler        int32      `gorm:"column:id_seller;not null" json:"id_seller_aktivitas_seller"`
+	Seller         Seller     `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
+	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_seller"`
+	Aksi           string     `gorm:"column:aksi;type:aksi_seller" json:"aksi_aktivitas_seller"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (AktivitasSeller) TableName() string {
+	return "aktivitas_seller"
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////
