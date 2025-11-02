@@ -19,7 +19,7 @@ import (
 type Response interface {
 	Pembayaran() (models.Pembayaran, bool)
 	Pending(rds *redis.Client, id_user int64) bool
-	StandardResponse() (models.PaidFailed, bool)
+	StandardResponse() (models.PembayaranFailed, bool)
 }
 
 // //////////////////////////////////////////////////////////////////////////////////////////
@@ -86,9 +86,9 @@ func (b *GeraiResponse) Pending(rds *redis.Client, id_user int64) bool {
 
 // Implementasi StandardResponse
 
-func (b *GeraiResponse) StandardResponse() (models.PaidFailed, bool) {
+func (b *GeraiResponse) StandardResponse() (models.PembayaranFailed, bool) {
 	var status bool = true
-	pf := models.PaidFailed{
+	pf := models.PembayaranFailed{
 		FinishRedirectUrl: b.FinishRedirect,
 		FraudStatus:       b.FraudStatus,
 		GrossAmount:       b.GrossAmount,

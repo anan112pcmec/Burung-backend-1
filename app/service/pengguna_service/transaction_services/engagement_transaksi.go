@@ -845,6 +845,11 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 			return err
 		}
 
+		//
+		// Sanitasi Id Pengguna
+		//
+		pembayaran.IdPengguna = data.DataHold[0].IDUser
+
 		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
 
 		return status
@@ -976,8 +981,8 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 
 		// Ambil ID PaidFailed
 		var pf int64 = 0
-		if err := tx.Model(&models.PaidFailed{}).
-			Select("id").Where(&models.PaidFailed{
+		if err := tx.Model(&models.PembayaranFailed{}).
+			Select("id").Where(&models.PembayaranFailed{
 			IdPengguna:    data.DataHold[0].IDUser,
 			OrderId:       standard_response.OrderId,
 			TransactionId: standard_response.TransactionId,
@@ -992,15 +997,15 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		// Simpan TransaksiFailed per item
 		for i, d := range data.DataHold {
 			tf := models.TransaksiFailed{
-				IdPaidFailed:     pf,
-				IdPengguna:       d.IDUser,
-				IdSeller:         d.IDSeller,
-				IdBarangInduk:    d.IdBarangInduk,
-				IdKategoriBarang: d.IdKategoriBarang,
-				IdAlamat:         data.IdAlamatUser,
-				Catatan:          d.Message,
-				Kuantitas:        int16(d.Dipesan),
-				Total:            int64(d.Dipesan) * int64(d.HargaKategori),
+				IdPembayaranFailed: pf,
+				IdPengguna:         d.IDUser,
+				IdSeller:           d.IDSeller,
+				IdBarangInduk:      d.IdBarangInduk,
+				IdKategoriBarang:   d.IdKategoriBarang,
+				IdAlamat:           data.IdAlamatUser,
+				Catatan:            d.Message,
+				Kuantitas:          int16(d.Dipesan),
+				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
 			}
 
 			if err := tx.Create(&tf).Error; err != nil {
@@ -1059,6 +1064,11 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 			return fmt.Errorf("gagal memproses pembayaran wallet")
 		}
 
+		//
+		// Sanitasi Id Pengguna
+		//
+		pembayaran.IdPengguna = data.DataHold[0].IDUser
+
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
@@ -1102,8 +1112,8 @@ func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.D
 
 		// Ambil ID PaidFailed
 		var pf int64 = 0
-		if err := tx.Model(&models.PaidFailed{}).
-			Select("id").Where(&models.PaidFailed{
+		if err := tx.Model(&models.PembayaranFailed{}).
+			Select("id").Where(&models.PembayaranFailed{
 			IdPengguna:    data.DataHold[0].IDUser,
 			OrderId:       standard_response.OrderId,
 			TransactionId: standard_response.TransactionId,
@@ -1118,15 +1128,15 @@ func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.D
 		// Simpan TransaksiFailed per item
 		for i, d := range data.DataHold {
 			tf := models.TransaksiFailed{
-				IdPaidFailed:     pf,
-				IdPengguna:       d.IDUser,
-				IdSeller:         d.IDSeller,
-				IdBarangInduk:    d.IdBarangInduk,
-				IdKategoriBarang: d.IdKategoriBarang,
-				IdAlamat:         data.IdAlamatUser,
-				Catatan:          d.Message,
-				Kuantitas:        int16(d.Dipesan),
-				Total:            int64(d.Dipesan) * int64(d.HargaKategori),
+				IdPembayaranFailed: pf,
+				IdPengguna:         d.IDUser,
+				IdSeller:           d.IDSeller,
+				IdBarangInduk:      d.IdBarangInduk,
+				IdKategoriBarang:   d.IdKategoriBarang,
+				IdAlamat:           data.IdAlamatUser,
+				Catatan:            d.Message,
+				Kuantitas:          int16(d.Dipesan),
+				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
 			}
 
 			if err := tx.Create(&tf).Error; err != nil {
@@ -1189,6 +1199,11 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 			return fmt.Errorf("gagal memproses pembayaran wallet")
 		}
 
+		//
+		// Sanitasi Id Pengguna
+		//
+		pembayaran.IdPengguna = data.DataHold[0].IDUser
+
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
@@ -1233,8 +1248,8 @@ func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB)
 
 		// Ambil ID PaidFailed
 		var pf int64 = 0
-		if err := tx.Model(&models.PaidFailed{}).
-			Select("id").Where(&models.PaidFailed{
+		if err := tx.Model(&models.PembayaranFailed{}).
+			Select("id").Where(&models.PembayaranFailed{
 			IdPengguna:    data.DataHold[0].IDUser,
 			OrderId:       standard_response.OrderId,
 			TransactionId: standard_response.TransactionId,
@@ -1249,15 +1264,15 @@ func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB)
 		// Simpan TransaksiFailed per item
 		for i, d := range data.DataHold {
 			tf := models.TransaksiFailed{
-				IdPaidFailed:     pf,
-				IdPengguna:       d.IDUser,
-				IdSeller:         d.IDSeller,
-				IdBarangInduk:    d.IdBarangInduk,
-				IdKategoriBarang: d.IdKategoriBarang,
-				IdAlamat:         data.IdAlamatUser,
-				Catatan:          d.Message,
-				Kuantitas:        int16(d.Dipesan),
-				Total:            int64(d.Dipesan) * int64(d.HargaKategori),
+				IdPembayaranFailed: pf,
+				IdPengguna:         d.IDUser,
+				IdSeller:           d.IDSeller,
+				IdBarangInduk:      d.IdBarangInduk,
+				IdKategoriBarang:   d.IdKategoriBarang,
+				IdAlamat:           data.IdAlamatUser,
+				Catatan:            d.Message,
+				Kuantitas:          int16(d.Dipesan),
+				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
 			}
 
 			if err := tx.Create(&tf).Error; err != nil {

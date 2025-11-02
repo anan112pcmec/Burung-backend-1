@@ -19,7 +19,7 @@ import (
 type Response interface {
 	Pembayaran() (models.Pembayaran, bool)
 	Pending(rds *redis.Client, id_user int64) bool
-	StandardResponse() (models.PaidFailed, bool)
+	StandardResponse() (models.PembayaranFailed, bool)
 }
 
 func Bayar(r Response) (models.Pembayaran, bool) {
@@ -239,13 +239,13 @@ func (b *PermataVirtualAccount) Pending(rds *redis.Client, id_user int64) bool {
 // Implementasi StandardResponse
 // //////////////////////////////////////////////////////////////////////////////////////////
 
-func StandardResponseOut(r Response) (models.PaidFailed, bool) {
+func StandardResponseOut(r Response) (models.PembayaranFailed, bool) {
 	return r.StandardResponse()
 }
 
-func (b *BcaVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool) {
+func (b *BcaVirtualAccountResponse) StandardResponse() (models.PembayaranFailed, bool) {
 	var status bool = true
-	pf := models.PaidFailed{
+	pf := models.PembayaranFailed{
 		FinishRedirectUrl: b.FinishRedirectUrl,
 		FraudStatus:       b.FraudStatus,
 		GrossAmount:       b.GrossAmount,
@@ -272,9 +272,9 @@ func (b *BcaVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool)
 	return pf, status
 }
 
-func (b *BniVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool) {
+func (b *BniVirtualAccountResponse) StandardResponse() (models.PembayaranFailed, bool) {
 	var status bool = true
-	pf := models.PaidFailed{
+	pf := models.PembayaranFailed{
 		FinishRedirectUrl: b.FinishRedirectUrl,
 		FraudStatus:       b.FraudStatus,
 		GrossAmount:       b.GrossAmount,
@@ -297,9 +297,9 @@ func (b *BniVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool)
 	return pf, status
 }
 
-func (b *BriVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool) {
+func (b *BriVirtualAccountResponse) StandardResponse() (models.PembayaranFailed, bool) {
 	var status bool = true
-	pf := models.PaidFailed{
+	pf := models.PembayaranFailed{
 		FinishRedirectUrl: b.FinishRedirectUrl,
 		FraudStatus:       b.FraudStatus,
 		GrossAmount:       b.GrossAmount,
@@ -322,9 +322,9 @@ func (b *BriVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool)
 	return pf, status
 }
 
-func (b *PermataVirtualAccount) StandardResponse() (models.PaidFailed, bool) {
+func (b *PermataVirtualAccount) StandardResponse() (models.PembayaranFailed, bool) {
 	var status bool = true
-	pf := models.PaidFailed{
+	pf := models.PembayaranFailed{
 		FinishRedirectUrl: b.FinishRedirectUrl,
 		FraudStatus:       b.FraudStatus,
 		GrossAmount:       b.GrossAmount,

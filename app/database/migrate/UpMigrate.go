@@ -132,9 +132,9 @@ func UpTransaksi(db *gorm.DB) {
 		log.Println("Berhasil membuat Table Transaksi ✅")
 	}
 
-	if db.Migrator().HasTable(&models.PaidFailed{}) {
+	if db.Migrator().HasTable(&models.PembayaranFailed{}) {
 		log.Println("Table Paid Failed sudah ada, skipping migration ⚠️")
-	} else if err := db.AutoMigrate(&models.PaidFailed{}); err != nil {
+	} else if err := db.AutoMigrate(&models.PembayaranFailed{}); err != nil {
 		log.Fatalf("Gagal Migrasi Table Paid Failed: %v", err)
 	} else {
 		log.Println("Berhasil membuat Table Paid Failed ✅")
