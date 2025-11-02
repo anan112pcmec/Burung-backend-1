@@ -11,7 +11,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_order_processing_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services/response_order_processing"
-
 )
 
 func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.ResponseForm {
@@ -84,21 +83,6 @@ func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.Res
 			Services: services,
 			Payload: response_order_processing_seller.ResponseUnApproveTransaksiSeller{
 				Message: "Gagal, kredensial seller tidak valid.",
-			},
-		}
-	}
-
-	var namaSeller string = ""
-	if err_nama := db.Model(models.Seller{}).Select("nama").
-		Where(models.Seller{ID: seller.ID, Username: seller.Username}).
-		Limit(1).
-		Take(&namaSeller).Error; err_nama != nil {
-		log.Printf("[WARN] Data seller tidak valid untuk ID %d", seller.ID)
-		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
-			Services: services,
-			Payload: response_order_processing_seller.ResponseUnApproveTransaksiSeller{
-				Message: "Gagal, data seller tidak valid.",
 			},
 		}
 	}

@@ -88,8 +88,34 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 	}
 
 	enumMap := map[string][]string{
-		"status_transaksi":  {"Dibayar", "Diproses", "Waiting", "Dikirim", "Selesai", "Dibatalkan"},
+		"status_transaksi": {"Dibayar", "Diproses", "Waiting", "Dikirim", "Selesai", "Dibatalkan"},
+		// Dibayar adalah status default sebuah transaksi sampai seller melakukan approval.
+		// Setelah transaksi di-approve oleh seller, status akan berubah menjadi "Diproses".
+		// Status akan berubah lagi menjadi "Waiting" setelah seller memutuskan untuk mengirim barang.
+		// Status menjadi "Dikirim" ketika seller sudah menyerahkan barang ke kurir.
+		// Status menjadi "Selesai" ketika pengguna telah menerima barang dan mengonfirmasi bahwa transaksi telah selesai.
+		// "Dibatalkan" digunakan ketika pengguna atau seller membatalkan transaksi, baik karena kesepakatan maupun sepihak.
+		// Pembatalan hanya bisa dilakukan selama status masih "Dibayar".
+
 		"status_pengiriman": {"Packaging", "Picked Up", "Diperjalanan", "Sampai", "Trouble"},
+		// "Packaging" muncul di tabel pengiriman dan terjadi ketika status transaksi adalah "Diproses".
+		// Status berubah menjadi "Picked Up" ketika status transaksi berubah menjadi "Dikirim".
+		// Status menjadi "Diperjalanan" ketika kurir memperbarui status sendiri selama proses pengantaran.
+		// Dalam status ini, kurir juga mengupdate catatan serta koordinat (latitude, longitude)
+		// di tabel "jejak_pengiriman" yang merupakan child dari tabel "pengiriman".
+		// Status "Sampai" akan dikonfirmasi oleh kurir saat barang tiba di tujuan.
+		// Segala hal tak terduga seperti barang tidak sesuai, masalah di jalan, atau kerusakan barang
+		// akan masuk ke status "Trouble". Namun untuk saat ini, kita berasumsi semua berjalan lancar.
+
+		"status_paid_failed": {"Ditinjau", "Pending", "Batal", "Lanjut"},
+		// "Ditinjau" berarti sistem sedang melakukan pemeriksaan terhadap transaksi gagal.
+		// Kegagalan umumnya disebabkan oleh kesalahan foreign key, sehingga sistem akan melakukan self-healing data.
+		// Setelah proses perbaikan (self-healing) selesai, status akan otomatis berubah menjadi "Pending".
+		// Pada tahap "Pending", pengguna dapat memilih untuk melanjutkan atau membatalkan.
+		// Secara default, jika tidak ada tindakan, status akan otomatis berubah menjadi "Batal" setelah 5 jam.
+		// Jika pengguna memilih untuk melanjutkan, status berubah menjadi "Lanjut".
+		// Dalam status "Lanjut", data akan dialihkan ke tabel transaksi dan pembayaran,
+		// kemudian proses akan berlanjut seperti transaksi normal pada umumnya.
 	}
 
 	for enumName, values := range enumMap {

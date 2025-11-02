@@ -6,12 +6,12 @@ import (
 )
 
 type PayloadApproveOrder struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	DataTransaction []models.Transaksi             `json:"seller_transaksi_order_approve"`
 }
 
 type PayloadUnApproveOrder struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"data_identitas_seller"`
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	Alasan          string                         `json:"alasan_order_unapprove"`
 	DataTransaction []models.Transaksi             `json:"seller_transaksi_order_unapprove"`
 }

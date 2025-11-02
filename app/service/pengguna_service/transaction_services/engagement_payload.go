@@ -66,11 +66,23 @@ type PayloadLockTransaksiVa struct {
 	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
 }
 
+type PayloadPaidFailedTransaksiVa struct {
+	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
+	PaymentResult any                                          `json:"payment_result"`
+	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
+}
+
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Payload Struct Lock Transaksi Wallet
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadLockTransaksiWallet struct {
+	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
+	PaymentResult payment_wallet.WalletResponse                `json:"payment_result"`
+	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
+}
+
+type PayloadPaidFailedTransaksiWallet struct {
 	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
 	PaymentResult payment_wallet.WalletResponse                `json:"payment_result"`
 	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
@@ -84,6 +96,12 @@ type PayloadLockTransaksiGerai struct {
 	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
 	PaymentResult payment_gerai.GeraiResponse                  `json:"payment_result"`
 	IdAlamatUser  int64                                        `json:"alamat_data_hold"`
+}
+
+type PayloadPaidFailedTransaksiGerai struct {
+	DataHold      []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
+	PaymentResult payment_gerai.GeraiResponse                  `json:"payment_result"`
+	IdAlamatUser  int64
 }
 
 type PayloadMemberikanUlasan struct {

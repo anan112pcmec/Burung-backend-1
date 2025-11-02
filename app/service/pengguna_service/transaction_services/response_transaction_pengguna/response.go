@@ -66,6 +66,10 @@ type ResponseLockTransaksi struct {
 	Message string `json:"pesan_lock_transaksi"`
 }
 
+type ResponsePaidFailedTransaksi struct {
+	Message string `json:"pesan_paid_failed_transaksi"`
+}
+
 // type ResponsePendingTransaksi struct {
 // 	Message string `json:"pesan_pending_transaksi"`
 // }

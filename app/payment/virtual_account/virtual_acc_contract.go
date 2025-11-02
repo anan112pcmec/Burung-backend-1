@@ -19,6 +19,7 @@ import (
 type Response interface {
 	Pembayaran() (models.Pembayaran, bool)
 	Pending(rds *redis.Client, id_user int64) bool
+	StandardResponse() (models.PaidFailed, bool)
 }
 
 func Bayar(r Response) (models.Pembayaran, bool) {
@@ -232,4 +233,120 @@ func (b *PermataVirtualAccount) Pending(rds *redis.Client, id_user int64) bool {
 	}
 
 	return status
+}
+
+// //////////////////////////////////////////////////////////////////////////////////////////
+// Implementasi StandardResponse
+// //////////////////////////////////////////////////////////////////////////////////////////
+
+func StandardResponseOut(r Response) (models.PaidFailed, bool) {
+	return r.StandardResponse()
+}
+
+func (b *BcaVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool) {
+	var status bool = true
+	pf := models.PaidFailed{
+		FinishRedirectUrl: b.FinishRedirectUrl,
+		FraudStatus:       b.FraudStatus,
+		GrossAmount:       b.GrossAmount,
+		OrderId:           b.OrderId,
+		PaymentType:       b.PaymentType,
+		PdfUrl:            b.PdfUrl,
+		StatusCode:        b.StatusCode,
+		StatusMessage:     b.StatusMessage,
+		TransactionId:     b.TransactionId,
+		TransactionStatus: b.TransactionStatus,
+		TransactionTime:   b.TransactionTime,
+		Bank:              b.VaNumbers[0].Bank,
+		VaNumber:          b.BcaVaNumber,
+	}
+
+	if pf.VaNumber == "" {
+		pf.VaNumber = b.VaNumbers[0].VaNumber
+	}
+
+	if pf.VaNumber == "" {
+		status = false
+	}
+
+	return pf, status
+}
+
+func (b *BniVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool) {
+	var status bool = true
+	pf := models.PaidFailed{
+		FinishRedirectUrl: b.FinishRedirectUrl,
+		FraudStatus:       b.FraudStatus,
+		GrossAmount:       b.GrossAmount,
+		OrderId:           b.OrderId,
+		PaymentType:       b.PaymentType,
+		PdfUrl:            b.PdfUrl,
+		StatusCode:        b.StatusCode,
+		StatusMessage:     b.StatusMessage,
+		TransactionId:     b.TransactionId,
+		TransactionStatus: b.TransactionStatus,
+		TransactionTime:   b.TransactionTime,
+		Bank:              b.VaNumbers[0].Bank,
+		VaNumber:          b.VaNumbers[0].VaNumber,
+	}
+
+	if pf.VaNumber == "" {
+		status = false
+	}
+
+	return pf, status
+}
+
+func (b *BriVirtualAccountResponse) StandardResponse() (models.PaidFailed, bool) {
+	var status bool = true
+	pf := models.PaidFailed{
+		FinishRedirectUrl: b.FinishRedirectUrl,
+		FraudStatus:       b.FraudStatus,
+		GrossAmount:       b.GrossAmount,
+		OrderId:           b.OrderId,
+		PaymentType:       b.PaymentType,
+		PdfUrl:            b.PdfUrl,
+		StatusCode:        b.StatusCode,
+		StatusMessage:     b.StatusMessage,
+		TransactionId:     b.TransactionId,
+		TransactionStatus: b.TransactionStatus,
+		TransactionTime:   b.TransactionTime,
+		Bank:              b.VaNumbers[0].Bank,
+		VaNumber:          b.VaNumbers[0].VaNumber,
+	}
+
+	if pf.VaNumber == "" {
+		status = false
+	}
+
+	return pf, status
+}
+
+func (b *PermataVirtualAccount) StandardResponse() (models.PaidFailed, bool) {
+	var status bool = true
+	pf := models.PaidFailed{
+		FinishRedirectUrl: b.FinishRedirectUrl,
+		FraudStatus:       b.FraudStatus,
+		GrossAmount:       b.GrossAmount,
+		OrderId:           b.OrderId,
+		PaymentType:       b.PaymentType,
+		PdfUrl:            b.PdfUrl,
+		StatusCode:        b.StatusCode,
+		StatusMessage:     b.StatusMessage,
+		TransactionId:     b.TransactionId,
+		TransactionStatus: b.TransactionStatus,
+		TransactionTime:   b.TransactionTime,
+		Bank:              b.VaNumbers[0].Bank,
+		VaNumber:          b.PermataVaNumber,
+	}
+
+	if pf.VaNumber == "" {
+		pf.VaNumber = b.VaNumbers[0].VaNumber
+	}
+
+	if pf.VaNumber == "" {
+		status = false
+	}
+
+	return pf, status
 }

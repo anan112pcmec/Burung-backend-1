@@ -15,6 +15,7 @@ import (
 	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment"
 	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment/gerai"
 	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment/virtual_account"
+	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment/wallet"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
@@ -867,6 +868,168 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	}
 }
 
+func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *response.ResponseForm {
+	services := "PaidFailedTransaksiVa"
+
+	// --- Parse bank VA ---
+	bank, err_p := payment_gateaway.ParseVirtualAccount(data.PaymentResult)
+	if err_p != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusBadRequest,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			},
+		}
+	}
+
+	// --- Encode/Decode payment result ---
+	raw, err_m := json.Marshal(data.PaymentResult)
+	if err_m != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			},
+		}
+	}
+
+	var resp payment_va.Response
+
+	switch bank {
+	case "bca":
+		var obj payment_va.BcaVirtualAccountResponse
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			}}
+		}
+		resp = &obj
+
+	case "bni":
+		var obj payment_va.BniVirtualAccountResponse
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			}}
+		}
+		resp = &obj
+
+	case "bri":
+		var obj payment_va.BriVirtualAccountResponse
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			}}
+		}
+		resp = &obj
+
+	case "permata":
+		var obj payment_va.PermataVirtualAccount
+		if err := json.Unmarshal(raw, &obj); err != nil {
+			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			}}
+		}
+		resp = &obj
+
+	default:
+		return &response.ResponseForm{
+			Status:   http.StatusBadRequest,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Bank tidak dikenali",
+			},
+		}
+	}
+
+	if resp == nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengenali virtual account",
+			},
+		}
+	}
+
+	standard_response, ok := resp.StandardResponse()
+	if !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: "Gagal mengambil standard response",
+			},
+		}
+	}
+
+	standard_response.IdPengguna = data.DataHold[0].IDUser
+
+	// --- Jalankan transaksi database ---
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Simpan ke PaidFailed
+		if err := tx.Create(&standard_response).Error; err != nil {
+			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
+		}
+
+		// Ambil ID PaidFailed
+		var pf int64 = 0
+		if err := tx.Model(&models.PaidFailed{}).
+			Select("id").Where(&models.PaidFailed{
+			IdPengguna:    data.DataHold[0].IDUser,
+			OrderId:       standard_response.OrderId,
+			TransactionId: standard_response.TransactionId,
+		}).Limit(1).Take(&pf).Error; err != nil {
+			return fmt.Errorf("gagal mengambil id PaidFailed: %w", err)
+		}
+
+		if pf == 0 {
+			return fmt.Errorf("id PaidFailed tidak ditemukan")
+		}
+
+		// Simpan TransaksiFailed per item
+		for i, d := range data.DataHold {
+			tf := models.TransaksiFailed{
+				IdPaidFailed:     pf,
+				IdPengguna:       d.IDUser,
+				IdSeller:         d.IDSeller,
+				IdBarangInduk:    d.IdBarangInduk,
+				IdKategoriBarang: d.IdKategoriBarang,
+				IdAlamat:         data.IdAlamatUser,
+				Catatan:          d.Message,
+				Kuantitas:        int16(d.Dipesan),
+				Total:            int64(d.Dipesan) * int64(d.HargaKategori),
+			}
+
+			if err := tx.Create(&tf).Error; err != nil {
+				return fmt.Errorf("gagal menyimpan transaksi ke-%d: %w", i+1, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: fmt.Sprintf("Transaksi gagal: %v", err),
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+			Message: "Berhasil",
+		},
+	}
+}
+
 // ////////////////////////////////////////////////////////////////////////////////////
 // Fungsi Prosedur Lock Transaksi Wallet
 // Befungsi saat sebuah transaksi sudah di bayar, setelah transaksi di bayar maka fungsi
@@ -919,6 +1082,76 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 		Services: services,
 		Payload: response_transaction_pengguna.ResponseLockTransaksi{
 			Message: "Transaksi berhasil dikunci.",
+		},
+	}
+}
+
+func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.DB) *response.ResponseForm {
+	services := "PaidFailedTransaksiWallet"
+
+	var resp payment_wallet.Response = &data.PaymentResult
+	standard_response, _ := resp.StandardResponse()
+
+	standard_response.IdPengguna = data.DataHold[0].IDUser
+	// --- Jalankan transaksi database ---
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Simpan ke PaidFailed
+		if err := tx.Create(&standard_response).Error; err != nil {
+			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
+		}
+
+		// Ambil ID PaidFailed
+		var pf int64 = 0
+		if err := tx.Model(&models.PaidFailed{}).
+			Select("id").Where(&models.PaidFailed{
+			IdPengguna:    data.DataHold[0].IDUser,
+			OrderId:       standard_response.OrderId,
+			TransactionId: standard_response.TransactionId,
+		}).Limit(1).Take(&pf).Error; err != nil {
+			return fmt.Errorf("gagal mengambil id PaidFailed: %w", err)
+		}
+
+		if pf == 0 {
+			return fmt.Errorf("id PaidFailed tidak ditemukan")
+		}
+
+		// Simpan TransaksiFailed per item
+		for i, d := range data.DataHold {
+			tf := models.TransaksiFailed{
+				IdPaidFailed:     pf,
+				IdPengguna:       d.IDUser,
+				IdSeller:         d.IDSeller,
+				IdBarangInduk:    d.IdBarangInduk,
+				IdKategoriBarang: d.IdKategoriBarang,
+				IdAlamat:         data.IdAlamatUser,
+				Catatan:          d.Message,
+				Kuantitas:        int16(d.Dipesan),
+				Total:            int64(d.Dipesan) * int64(d.HargaKategori),
+			}
+
+			if err := tx.Create(&tf).Error; err != nil {
+				return fmt.Errorf("gagal menyimpan transaksi ke-%d: %w", i+1, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: fmt.Sprintf("Transaksi gagal: %v", err),
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+			Message: "Berhasil",
 		},
 	}
 }
@@ -979,6 +1212,77 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 		Services: services,
 		Payload: response_transaction_pengguna.ResponseLockTransaksi{
 			Message: "Transaksi berhasil dikunci.",
+		},
+	}
+}
+
+func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB) *response.ResponseForm {
+	services := "PaidFailedTransaksiGerai"
+
+	var resp payment_gerai.Response = &data.PaymentResult
+	standard_response, _ := resp.StandardResponse()
+
+	standard_response.IdPengguna = data.DataHold[0].IDUser
+
+	// --- Jalankan transaksi database ---
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// Simpan ke PaidFailed
+		if err := tx.Create(&standard_response).Error; err != nil {
+			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
+		}
+
+		// Ambil ID PaidFailed
+		var pf int64 = 0
+		if err := tx.Model(&models.PaidFailed{}).
+			Select("id").Where(&models.PaidFailed{
+			IdPengguna:    data.DataHold[0].IDUser,
+			OrderId:       standard_response.OrderId,
+			TransactionId: standard_response.TransactionId,
+		}).Limit(1).Take(&pf).Error; err != nil {
+			return fmt.Errorf("gagal mengambil id PaidFailed: %w", err)
+		}
+
+		if pf == 0 {
+			return fmt.Errorf("id PaidFailed tidak ditemukan")
+		}
+
+		// Simpan TransaksiFailed per item
+		for i, d := range data.DataHold {
+			tf := models.TransaksiFailed{
+				IdPaidFailed:     pf,
+				IdPengguna:       d.IDUser,
+				IdSeller:         d.IDSeller,
+				IdBarangInduk:    d.IdBarangInduk,
+				IdKategoriBarang: d.IdKategoriBarang,
+				IdAlamat:         data.IdAlamatUser,
+				Catatan:          d.Message,
+				Kuantitas:        int16(d.Dipesan),
+				Total:            int64(d.Dipesan) * int64(d.HargaKategori),
+			}
+
+			if err := tx.Create(&tf).Error; err != nil {
+				return fmt.Errorf("gagal menyimpan transaksi ke-%d: %w", i+1, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+				Message: fmt.Sprintf("Transaksi gagal: %v", err),
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
+			Message: "Berhasil",
 		},
 	}
 }
