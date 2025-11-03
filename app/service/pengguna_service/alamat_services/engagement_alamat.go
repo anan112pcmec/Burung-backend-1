@@ -113,8 +113,8 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 	}
 
 	if err_hapus := db.Where(models.AlamatPengguna{
-		IDPengguna:      data.IdentitasPengguna.ID,
-		PanggilanAlamat: data.PanggilanAlamat,
+		ID:         data.IdAlamat,
+		IDPengguna: data.IdentitasPengguna.ID,
 	}).Delete(&models.AlamatPengguna{}).Error; err_hapus != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

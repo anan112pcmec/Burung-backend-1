@@ -91,6 +91,13 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_transaction_services.LockTransaksiVa(data, db)
+	case "/user/transaksi/payment-gateaway-snap-paided-failed/va":
+		var data pengguna_transaction_services.PayloadPaidFailedTransaksiVa
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_transaction_services.PaidFailedTransaksiVa(data, db)
 	case "/user/transaksi/payment-gateaway-snap-berhasil/wallet":
 		var data pengguna_transaction_services.PayloadLockTransaksiWallet
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -98,6 +105,13 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_transaction_services.LockTransaksiWallet(data, db)
+	case "/user/transaksi/payment-gateaway-snap-paided-failed/wallet":
+		var data pengguna_transaction_services.PayloadPaidFailedTransaksiWallet
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_transaction_services.PaidFailedTransaksiWallet(data, db)
 	case "/user/transaksi/payment-gateaway-snap-berhasil/gerai":
 		var data pengguna_transaction_services.PayloadLockTransaksiGerai
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -105,6 +119,13 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			return
 		}
 		hasil = pengguna_transaction_services.LockTransaksiGerai(data, db)
+	case "/user/transaksi/payment-gateaway-snap-paided-failed/gerai":
+		var data pengguna_transaction_services.PayloadPaidFailedTransaksiGerai
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_transaction_services.PaidFailedTransaksiGerai(data, db)
 
 	// case "/user/transaksi/payment-gateaway-snap-pending":
 	// 	var data pengguna_transaction_services.PayloadPendingTransaksi

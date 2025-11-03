@@ -87,7 +87,7 @@ type PembayaranFailed struct {
 	Bank              string         `gorm:"column:bank" json:"bank"`
 	VaNumber          string         `gorm:"column:va_number" json:"va_number"`
 	PaymentCode       string         `gorm:"column:payment_code" json:"payment_code"`
-	Status            string         `gorm:"column:status;type:status_paid_failed;default:'Ditinjau'" json:"status"`
+	Status            string         `gorm:"column:status;type:status_paid_failed;default:'Pending'" json:"status"`
 	CreatedAt         time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt         time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt         gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`

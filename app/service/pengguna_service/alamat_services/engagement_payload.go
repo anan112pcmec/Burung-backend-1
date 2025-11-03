@@ -20,5 +20,5 @@ type PayloadMasukanAlamatPengguna struct {
 
 type PayloadHapusAlamatPengguna struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	PanggilanAlamat   string                             `json:"panggilan_alamat_hapus_alamat"`
+	IdAlamat          int64                              `json:"id_alamat_hapus_alamat"`
 }

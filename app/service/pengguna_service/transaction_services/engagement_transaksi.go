@@ -10,6 +10,8 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
 
+	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
+	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment"
@@ -80,7 +82,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 				Where(&models.VarianBarang{
 					IdBarangInduk: keranjang.IdBarangInduk,
 					IdKategori:    keranjang.IdKategori,
-					Status:        "Ready",
+					Status:        barang_enums.Ready,
 				}).Count(&jumlahStok).Error; err != nil {
 				log.Printf("[%s] [Item-%d] Gagal menghitung stok: %v", services, idx, err)
 				return err
@@ -135,7 +137,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 					Where(&models.VarianBarang{
 						IdBarangInduk: kategori.IdBarangInduk,
 						IdKategori:    keranjang.IdKategori,
-						Status:        "Ready",
+						Status:        barang_enums.Ready,
 					}).
 					Limit(int(keranjang.Count)).
 					Pluck("id", &varianIDs).Error; err != nil {
@@ -159,7 +161,7 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
 					Updates(&models.VarianBarang{
-						Status:       "Dipesan",
+						Status:       barang_enums.Dipesan,
 						HoldBy:       data.IdentitasPengguna.ID,
 						HolderEntity: "Pengguna",
 					}).Error; err != nil {
@@ -249,7 +251,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 			var varianIDs []int64
 
 			if err := tx.Model(&models.VarianBarang{}).
-				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: "Dipesan", HoldBy: keranjang.IDUser}).
+				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: barang_enums.Dipesan, HoldBy: keranjang.IDUser}).
 				Limit(int(keranjang.Dipesan)).
 				Pluck("id", &varianIDs).Error; err != nil {
 				resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
@@ -262,7 +264,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
 					Updates(map[string]interface{}{
-						"status":        "Ready",
+						"status":        barang_enums.Ready,
 						"hold_by":       0,
 						"holder_entity": "",
 					}).Error; err != nil {
@@ -487,7 +489,7 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 		if err := db.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
 			IdBarangInduk: dc.IdBarangInduk,
 			IdKategori:    dc.IdKategoriBarang,
-			Status:        "Dipesan",
+			Status:        barang_enums.Dipesan,
 			HoldBy:        dc.IDUser,
 		}).Count(&hitung).Error; err != nil {
 			errcheck = true
@@ -643,7 +645,7 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 			var varianIDs []int64
 
 			if err := tx.Model(&models.VarianBarang{}).
-				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: "Dipesan", HoldBy: keranjang.IDUser}).
+				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: barang_enums.Dipesan, HoldBy: keranjang.IDUser}).
 				Limit(int(keranjang.Dipesan)).
 				Pluck("id", &varianIDs).Error; err != nil {
 				return err
@@ -653,7 +655,7 @@ func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.D
 				if err := tx.Model(&models.VarianBarang{}).
 					Where("id IN ?", varianIDs).
 					Updates(map[string]interface{}{
-						"status":        "Ready",
+						"status":        barang_enums.Ready,
 						"hold_by":       0,
 						"holder_entity": "",
 					}).Error; err != nil {
@@ -721,16 +723,17 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 		}
 
 		transaksi := models.Transaksi{
-			IdPengguna:    keranjang.IDUser,
-			IdSeller:      keranjang.IDSeller,
-			IdBarangInduk: keranjang.IdBarangInduk,
-			IdAlamat:      IdAlamatUser,
-			IdPembayaran:  pembayaranObj.ID,
-			KodeOrder:     pembayaranObj.KodeOrderTransaksi,
-			Status:        "Dibayar",
-			Metode:        pembayaranObj.PaymentType,
-			Kuantitas:     int16(keranjang.Dipesan),
-			Total:         keranjang.HargaKategori * keranjang.Dipesan,
+			IdPengguna:       keranjang.IDUser,
+			IdSeller:         keranjang.IDSeller,
+			IdBarangInduk:    keranjang.IdBarangInduk,
+			IdKategoriBarang: keranjang.IdKategoriBarang,
+			IdAlamat:         IdAlamatUser,
+			IdPembayaran:     pembayaranObj.ID,
+			KodeOrder:        pembayaranObj.KodeOrderTransaksi,
+			Status:           transaksi_enums.Dibayar,
+			Metode:           pembayaranObj.PaymentType,
+			Kuantitas:        int16(keranjang.Dipesan),
+			Total:            keranjang.HargaKategori * keranjang.Dipesan,
 		}
 
 		fmt.Printf("[TRACE] Membuat transaksi baru: %+v\n", transaksi)
@@ -748,12 +751,12 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 				IdBarangInduk: keranjang.IdBarangInduk,
 				IdKategori:    keranjang.IdKategoriBarang,
 				IdTransaksi:   0,
-				Status:        "Dipesan",
+				Status:        barang_enums.Dipesan,
 				HoldBy:        keranjang.IDUser,
 				HolderEntity:  "Pengguna",
 			}).
 			Updates(&models.VarianBarang{
-				Status:      "Diproses",
+				Status:      barang_enums.Diproses,
 				IdTransaksi: transaksi.ID,
 			}).Error; err != nil {
 			fmt.Printf("[ERROR] Gagal update varian barang: %v\n", err)
@@ -1006,6 +1009,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 				Catatan:            d.Message,
 				Kuantitas:          int16(d.Dipesan),
 				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
+				JenisPengiriman:    data.JenisLayananKurir,
 			}
 
 			if err := tx.Create(&tf).Error; err != nil {
