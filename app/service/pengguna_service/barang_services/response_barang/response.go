@@ -12,7 +12,7 @@ type ResponseLikesBarangUser struct {
 // Response Tambah Komentar
 // ////////////////////////////////////////////////////////////////////////////
 
-type ResponseTambahKomentarBarangUser struct {
+type ResponseMasukanKomentarBarangUser struct {
 	Message string `json:"pesan_tambah_komentar_barang"`
 }
 
@@ -30,6 +30,22 @@ type ResponseEditKomentarBarangUser struct {
 
 type ResponseHapusKomentarBarangUser struct {
 	Message string `json:"pesan_hapus_komentar_barang"`
+}
+
+type ResponseMasukanChildKomentar struct {
+	Message string `json:"pesan_masukan_child_komentar"`
+}
+
+type ResponseMentionChildKomentar struct {
+	Message string `json:"pesan_masukan_mention_child_komentar"`
+}
+
+type ResponseEditChildKomentar struct {
+	Message string `json:"pesan_edit_child_komentar"`
+}
+
+type ResponseHapusChildKomentar struct {
+	Message string `json:"pesan_hapus_child_komentar"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////

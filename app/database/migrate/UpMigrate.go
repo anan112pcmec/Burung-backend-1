@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+
 )
 
 func UpEntity(db *gorm.DB) {

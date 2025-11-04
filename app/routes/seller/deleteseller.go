@@ -16,6 +16,8 @@ import (
 func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var hasil *response.ResponseForm
 
+	ctx := r.Context()
+
 	switch r.URL.Path {
 	case "/seller/hapus_barang":
 		var data seller_service.PayloadHapusBarangInduk
@@ -42,6 +44,20 @@ func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_alamat_services.HapusAlamatGudang(data, db)
+	case "/seller/komentar-barang/hapus":
+		var data seller_service.PayloadHapusKomentarBarangInduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.HapusKomentarBarang(ctx, data, db)
+	case "/seller/komentar-child/hapus":
+		var data seller_service.PayloadHapusChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.HapusChildKomentar(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

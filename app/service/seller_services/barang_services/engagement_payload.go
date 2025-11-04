@@ -129,3 +129,69 @@ type PayloadEditAlamatBarangKategori struct {
 	IdKategoriBarang int64                          `json:"id_kategori_barang"`
 	IdAlamatGudang   int64                          `json:"id_alamat_gudang"`
 }
+
+type PayloadMasukanKomentarBarangInduk struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdBarangInduk   int32                          `json:"id_barang_induk_masukan_komentar"`
+	Komentar        string                         `json:"komentar_masukan_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Edit Komentar Barang Induk
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+type PayloadEditKomentarBarangInduk struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdKomentar      int64                          `json:"id_komentar_edit_komentar"`
+	Komentar        string                         `json:"komentar_edit_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Hapus Komentar Barang Induk
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadHapusKomentarBarangInduk struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdKomentar      int64                          `json:"id_komentar_hapus_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Masukan Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadMasukanChildKomentar struct {
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdKomentarBarang int64                          `json:"id_komentar_masukan_komentar"`
+	IdBarangInduk    int32                          `json:"id_barang_induk_child_komentar"`
+	Komentar         string                         `json:"komentar_masukan_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Mention Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadMentionChildKomentar struct {
+	IdentitasSeller   identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdBarangInduk     int32                          `json:"id_barang_induk_child_komentar"`
+	IdKomentar        int64                          `json:"id_komentar_child_komentar"`
+	UsernameMentioned string                         `json:"username_mention_komentar"`
+	Komentar          string                         `json:"komentar_mention_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Edit Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadEditChildKomentar struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdKomentar      int64                          `json:"id_child_komentar"`
+	Komentar        string                         `json:"komentar_child_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Hapus Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadHapusChildKomentar struct {
+	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdKomentar      int64                          `json:"id_child_komentar"`
+}

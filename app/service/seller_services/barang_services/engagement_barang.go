@@ -1,6 +1,7 @@
 package seller_service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -11,7 +12,7 @@ import (
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
+	response_seller_barang_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +27,7 @@ func MasukanBarangInduk(db *gorm.DB, data PayloadMasukanBarangInduk) *response.R
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseMasukanBarangInduk{
+			Payload: response_seller_barang_service.ResponseMasukanBarangInduk{
 				Message: "Gagal memasukkan barang karena kredensial seller tidak valid",
 			},
 		}
@@ -82,29 +83,61 @@ func MasukanBarangInduk(db *gorm.DB, data PayloadMasukanBarangInduk) *response.R
 				kategori.IdBarangInduk = int32(idInduk)
 
 				// Validasi Rekening
-				var jumlah_rek int64 = 0
-				if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
-					ID:       kategori.IDRekening,
-					IDSeller: d.IdentitasSeller.IdSeller,
-				}).Count(&jumlah_rek).Error; err != nil {
-					continue
-				}
+				if kategori.IDRekening == 0 {
+					var id_rekening int64 = 0
+					if err := tx.Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+						ID:        kategori.IDRekening,
+						IDSeller:  d.IdentitasSeller.IdSeller,
+						IsDefault: true,
+					}).Limit(1).Take(&id_rekening).Error; err != nil {
+						return fmt.Errorf("gagal Belum Memiliki Rekening")
+					}
 
-				if jumlah_rek != 1 {
-					continue
+					if id_rekening == 0 {
+						return fmt.Errorf("gagal Belum Memiliki Rekening")
+					}
+
+					kategori.IDRekening = id_rekening
+				} else {
+					var jumlah_rekening int64 = 0
+					if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+						ID:       kategori.IDRekening,
+						IDSeller: d.IdentitasSeller.IdSeller,
+					}).Count(&jumlah_rekening).Error; err != nil {
+						return err
+					}
+
+					if jumlah_rekening == 0 {
+						return fmt.Errorf("gagal Rekening Tidak Valid")
+					}
 				}
 
 				// Validasi Alamat Gudang
-				var jumlah_alamat int64 = 0
-				if err := tx.Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
-					ID:       kategori.IDAlamat,
-					IDSeller: d.IdentitasSeller.IdSeller,
-				}).Count(&jumlah_alamat).Error; err != nil {
-					continue
-				}
+				if kategori.IDAlamat == 0 {
+					var id_alamat int64 = 0
+					if err := tx.Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+						IDSeller: data.IdentitasSeller.IdSeller,
+					}).First(&id_alamat).Error; err != nil {
+						return err
+					}
 
-				if jumlah_alamat != 1 {
-					continue
+					if id_alamat == 0 {
+						return fmt.Errorf("gagal mendapatkan alamat")
+					}
+
+					kategori.IDAlamat = id_alamat
+				} else {
+					var jumlah_alamat int64 = 0
+					if err := tx.Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+						ID:       kategori.IDAlamat,
+						IDSeller: d.IdentitasSeller.IdSeller,
+					}).Count(&jumlah_alamat).Error; err != nil {
+						return err
+					}
+
+					if jumlah_alamat != 1 {
+						return fmt.Errorf("gagal belum ada alamat")
+					}
 				}
 
 				if err := tx.Create(&kategori).Error; err != nil {
@@ -151,7 +184,7 @@ func MasukanBarangInduk(db *gorm.DB, data PayloadMasukanBarangInduk) *response.R
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseMasukanBarangInduk{
+		Payload: response_seller_barang_service.ResponseMasukanBarangInduk{
 			Message: "Barang berhasil ditambahkan.",
 		},
 	}
@@ -169,7 +202,7 @@ func EditBarangInduk(db *gorm.DB, data PayloadEditBarangInduk) *response.Respons
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditBarangInduk{
 				Message: "Gagal: Kredensial Seller Tidak Valid",
 			},
 		}
@@ -189,7 +222,7 @@ func EditBarangInduk(db *gorm.DB, data PayloadEditBarangInduk) *response.Respons
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditBarangInduk{
 				Message: "Terjadi Kesalahan Server Saat Validasi Barang",
 			},
 		}
@@ -199,7 +232,7 @@ func EditBarangInduk(db *gorm.DB, data PayloadEditBarangInduk) *response.Respons
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditBarangInduk{
 				Message: "Gagal: Barang Tidak Ada atau Tidak Ditemukan",
 			},
 		}
@@ -233,7 +266,7 @@ func EditBarangInduk(db *gorm.DB, data PayloadEditBarangInduk) *response.Respons
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseEditBarangInduk{
+		Payload: response_seller_barang_service.ResponseEditBarangInduk{
 			Message: "Barang Berhasil Diubah.",
 		},
 	}
@@ -253,7 +286,7 @@ func HapusBarangInduk(db *gorm.DB, data PayloadHapusBarangInduk) *response.Respo
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseHapusBarangInduk{
+			Payload: response_seller_barang_service.ResponseHapusBarangInduk{
 				Message: "Gagal: Kredensial seller tidak valid",
 			},
 		}
@@ -278,7 +311,7 @@ func HapusBarangInduk(db *gorm.DB, data PayloadHapusBarangInduk) *response.Respo
 		return &response.ResponseForm{
 			Status:   http.StatusConflict,
 			Services: services,
-			Payload: response_barang_service.ResponseHapusBarangInduk{
+			Payload: response_seller_barang_service.ResponseHapusBarangInduk{
 				Message: fmt.Sprintf("Masih ada %v barang dalam transaksi", jumlahDalamTransaksi),
 			},
 		}
@@ -327,7 +360,7 @@ func HapusBarangInduk(db *gorm.DB, data PayloadHapusBarangInduk) *response.Respo
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseHapusBarangInduk{
+		Payload: response_seller_barang_service.ResponseHapusBarangInduk{
 			Message: "Barang berhasil dihapus.",
 		},
 	}
@@ -346,7 +379,7 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseTambahKategori{
+			Payload: response_seller_barang_service.ResponseTambahKategori{
 				Message: "Gagal: kredensial seller tidak valid",
 			},
 		}
@@ -374,7 +407,7 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseTambahKategori{
+			Payload: response_seller_barang_service.ResponseTambahKategori{
 				Message: "Gagal: Barang induk tidak ditemukan",
 			},
 		}
@@ -411,28 +444,60 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 					continue
 				}
 
-				var jumlah_rek int64 = 0
-				if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
-					ID:       d.KategoriBarang[i].IDRekening,
-					IDSeller: d.IdentitasSeller.IdSeller,
-				}).Count(&jumlah_rek).Error; err != nil {
-					continue
+				if d.KategoriBarang[i].IDRekening == 0 {
+					var id_rekening int64 = 0
+					if err := tx.Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+						ID:        d.KategoriBarang[i].IDRekening,
+						IDSeller:  d.IdentitasSeller.IdSeller,
+						IsDefault: true,
+					}).Limit(1).Take(&id_rekening).Error; err != nil {
+						return fmt.Errorf("gagal Belum Memiliki Rekening")
+					}
+
+					if id_rekening == 0 {
+						return fmt.Errorf("gagal Belum Memiliki Rekening")
+					}
+
+					d.KategoriBarang[i].IDRekening = id_rekening
+				} else {
+					var jumlah_rek int64 = 0
+					if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+						ID:       d.KategoriBarang[i].IDRekening,
+						IDSeller: d.IdentitasSeller.IdSeller,
+					}).Count(&jumlah_rek).Error; err != nil {
+						return fmt.Errorf("gagal masukan data rekening tidak valid")
+					}
+
+					if jumlah_rek != 1 {
+						return fmt.Errorf("gagal masukan data rekening tidak valid")
+					}
 				}
 
-				if jumlah_rek != 1 {
-					continue
-				}
+				if d.KategoriBarang[i].IDAlamat == 0 {
+					var id_alamat int64 = 0
+					if err := tx.Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+						IDSeller: data.IdentitasSeller.IdSeller,
+					}).First(&id_alamat).Error; err != nil {
+						return err
+					}
 
-				var jumlah_alamat int64 = 0
-				if err := tx.Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
-					ID:       d.KategoriBarang[i].IDAlamat,
-					IDSeller: d.IdentitasSeller.IdSeller,
-				}).Count(&jumlah_alamat).Error; err != nil {
-					continue
-				}
+					if id_alamat == 0 {
+						return fmt.Errorf("gagal mendapatkan alamat")
+					}
 
-				if jumlah_alamat != 1 {
-					continue
+					d.KategoriBarang[i].IDAlamat = id_alamat
+				} else {
+					var jumlah_alamat int64 = 0
+					if err := tx.Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+						ID:       d.KategoriBarang[i].IDAlamat,
+						IDSeller: d.IdentitasSeller.IdSeller,
+					}).Count(&jumlah_alamat).Error; err != nil {
+						return err
+					}
+
+					if jumlah_alamat != 1 {
+						return fmt.Errorf("gagal belum ada alamat")
+					}
 				}
 
 				if err := tx.Create(&d.KategoriBarang[i]).Error; err != nil {
@@ -484,7 +549,7 @@ func TambahKategoriBarang(db *gorm.DB, data PayloadTambahKategori) *response.Res
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseTambahKategori{
+		Payload: response_seller_barang_service.ResponseTambahKategori{
 			Message: "Kategori barang berhasil ditambahkan (async-safe).",
 		},
 	}
@@ -502,7 +567,7 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditKategori{
+			Payload: response_seller_barang_service.ResponseEditKategori{
 				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
 		}
@@ -529,7 +594,7 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditKategori{
+			Payload: response_seller_barang_service.ResponseEditKategori{
 				Message: "Gagal Baang Induk Tidak Ditemukan",
 			},
 		}
@@ -567,7 +632,7 @@ func EditKategoriBarang(db *gorm.DB, data PayloadEditKategori) *response.Respons
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseEditKategori{
+		Payload: response_seller_barang_service.ResponseEditKategori{
 			Message: "Kategori barang berhasil diubah.",
 		},
 	}
@@ -586,7 +651,7 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditKategori{
+			Payload: response_seller_barang_service.ResponseEditKategori{
 				Message: "Gagal: Kredensial seller tidak valid",
 			},
 		}
@@ -614,7 +679,7 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditKategori{
+			Payload: response_seller_barang_service.ResponseEditKategori{
 				Message: "Gagal: Barang induk tidak ditemukan",
 			},
 		}
@@ -635,7 +700,7 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 			return &response.ResponseForm{
 				Status:   http.StatusConflict,
 				Services: services,
-				Payload: response_barang_service.ResponseHapusKategori{
+				Payload: response_seller_barang_service.ResponseHapusKategori{
 					Message: fmt.Sprintf("Tidak bisa menghapus kategori %s, masih ada %v stok dalam transaksi", kat.Nama, barangDalamTransaksi),
 				},
 			}
@@ -694,7 +759,7 @@ func HapusKategoriBarang(db *gorm.DB, data PayloadHapusKategori) *response.Respo
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseHapusKategori{
+		Payload: response_seller_barang_service.ResponseHapusKategori{
 			Message: "Kategori barang berhasil dihapus (soft delete manual).",
 		},
 	}
@@ -711,7 +776,7 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditStokBarang{
+			Payload: response_seller_barang_service.ResponseEditStokBarang{
 				Message: "Gagal: kredensial seller tidak valid",
 			},
 		}
@@ -738,7 +803,7 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditStokBarang{
+			Payload: response_seller_barang_service.ResponseEditStokBarang{
 				Message: "Gagal: Barang induk tidak ditemukan",
 			},
 		}
@@ -854,7 +919,7 @@ func EditStokBarang(db *gorm.DB, data PayloadEditStokBarang) *response.ResponseF
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseEditStokBarang{
+		Payload: response_seller_barang_service.ResponseEditStokBarang{
 			Message: "Proses update stok sedang berjalan",
 		},
 	}
@@ -867,7 +932,7 @@ func DownStokBarangInduk(db *gorm.DB, data PayloadDownBarangInduk) *response.Res
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseDownBarang{
+			Payload: response_seller_barang_service.ResponseDownBarang{
 				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
 		}
@@ -879,7 +944,7 @@ func DownStokBarangInduk(db *gorm.DB, data PayloadDownBarangInduk) *response.Res
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseDownBarang{
+			Payload: response_seller_barang_service.ResponseDownBarang{
 				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
@@ -890,7 +955,7 @@ func DownStokBarangInduk(db *gorm.DB, data PayloadDownBarangInduk) *response.Res
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseDownBarang{
+			Payload: response_seller_barang_service.ResponseDownBarang{
 				Message: "Gagal, barang tidak ditemukan.",
 			},
 		}
@@ -916,7 +981,7 @@ func DownStokBarangInduk(db *gorm.DB, data PayloadDownBarangInduk) *response.Res
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseDownBarang{
+		Payload: response_seller_barang_service.ResponseDownBarang{
 			Message: "Berhasil",
 		},
 	}
@@ -931,7 +996,7 @@ func DownKategoriBarang(db *gorm.DB, data PayloadDownKategoriBarang) *response.R
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseDownKategori{
+			Payload: response_seller_barang_service.ResponseDownKategori{
 				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
@@ -942,7 +1007,7 @@ func DownKategoriBarang(db *gorm.DB, data PayloadDownKategoriBarang) *response.R
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseDownKategori{
+			Payload: response_seller_barang_service.ResponseDownKategori{
 				Message: "Gagal, barang tidak ditemukan.",
 			},
 		}
@@ -968,7 +1033,7 @@ func DownKategoriBarang(db *gorm.DB, data PayloadDownKategoriBarang) *response.R
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseDownKategori{
+		Payload: response_seller_barang_service.ResponseDownKategori{
 			Message: "Berhasil",
 		},
 	}
@@ -981,7 +1046,7 @@ func EditRekeningBarangInduk(data PayloadEditRekeningBarangInduk, db *gorm.DB) *
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditRekeningBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditRekeningBarangInduk{
 				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
 		}
@@ -991,7 +1056,7 @@ func EditRekeningBarangInduk(data PayloadEditRekeningBarangInduk, db *gorm.DB) *
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_barang_service.ResponseEditRekeningBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditRekeningBarangInduk{
 				Message: "Gagal DataRekening Tidak Valid",
 			},
 		}
@@ -1005,7 +1070,7 @@ func EditRekeningBarangInduk(data PayloadEditRekeningBarangInduk, db *gorm.DB) *
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditRekeningBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditRekeningBarangInduk{
 				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
 			},
 		}
@@ -1015,7 +1080,7 @@ func EditRekeningBarangInduk(data PayloadEditRekeningBarangInduk, db *gorm.DB) *
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditRekeningBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditRekeningBarangInduk{
 				Message: "Gagal Rekening tidak Ditemukan",
 			},
 		}
@@ -1044,7 +1109,7 @@ func EditRekeningBarangInduk(data PayloadEditRekeningBarangInduk, db *gorm.DB) *
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditRekeningBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditRekeningBarangInduk{
 				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
 			},
 		}
@@ -1053,7 +1118,7 @@ func EditRekeningBarangInduk(data PayloadEditRekeningBarangInduk, db *gorm.DB) *
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseEditRekeningBarangInduk{
+		Payload: response_seller_barang_service.ResponseEditRekeningBarangInduk{
 			Message: "Berhasil",
 		},
 	}
@@ -1069,7 +1134,7 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangInduk{
 				Message: "Gagal, kredensial seller tidak valid.",
 			},
 		}
@@ -1086,7 +1151,7 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangInduk{
 				Message: "Gagal, barang induk tidak ditemukan atau kredensial seller tidak valid.",
 			},
 		}
@@ -1101,7 +1166,7 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangInduk{
 				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
@@ -1111,7 +1176,7 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangInduk{
 				Message: "Gagal, kredensial alamat tidak valid.",
 			},
 		}
@@ -1124,7 +1189,7 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangInduk{
 				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu",
 			},
 		}
@@ -1134,7 +1199,7 @@ func EditAlamatGudangBarangInduk(data PayloadEditAlamatBarangInduk, db *gorm.DB)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseEditAlamatBarangInduk{
+		Payload: response_seller_barang_service.ResponseEditAlamatBarangInduk{
 			Message: "Alamat gudang berhasil diubah.",
 		},
 	}
@@ -1150,7 +1215,7 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangKategori{
 				Message: "Gagal, kredensial seller tidak valid.",
 			},
 		}
@@ -1167,7 +1232,7 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangKategori{
 				Message: "Gagal, barang induk tidak ditemukan atau kredensial seller tidak valid.",
 			},
 		}
@@ -1182,7 +1247,7 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangKategori{
 				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
 			},
 		}
@@ -1192,7 +1257,7 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangKategori{
 				Message: "Gagal, kredensial alamat tidak valid.",
 			},
 		}
@@ -1206,7 +1271,7 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+			Payload: response_seller_barang_service.ResponseEditAlamatBarangKategori{
 				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu",
 			},
 		}
@@ -1216,8 +1281,248 @@ func EditAlamatGudangBarangKategori(data PayloadEditAlamatBarangKategori, db *go
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_barang_service.ResponseEditAlamatBarangKategori{
+		Payload: response_seller_barang_service.ResponseEditAlamatBarangKategori{
 			Message: "Alamat gudang berhasil diubah.",
+		},
+	}
+}
+
+func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+	services := "TambahKomentarBarang"
+	is_seller := false
+	var id_seller_take int64 = 0
+	if err := db.Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
+		ID: data.IdBarangInduk,
+	}).Take(&id_seller_take).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseMasukanKomentarBarangSeller{
+				Message: "Gagal Barang Tidak Ada",
+			},
+		}
+	}
+
+	if id_seller_take == int64(data.IdentitasSeller.IdSeller) {
+		is_seller = true
+	}
+
+	if err := db.Create(&models.Komentar{
+		IdBarangInduk: data.IdBarangInduk,
+		IdEntity:      int64(data.IdentitasSeller.IdSeller),
+		JenisEntity:   "Seller",
+		Komentar:      data.Komentar,
+		IsSeller:      is_seller,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseMasukanKomentarBarangSeller{
+				Message: "Gagal Memposting Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseMasukanKomentarBarangSeller{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+	services := "EditKomentarBarang"
+
+	if err := db.Model(&models.Komentar{}).Where(&models.Komentar{
+		ID:          data.IdKomentar,
+		IdEntity:    int64(data.IdentitasSeller.IdSeller),
+		JenisEntity: "Seller",
+	}).Update("komentar", data.Komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseEditKomentarBarangSeller{
+				Message: "Gagal Mengedit Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseEditKomentarBarangSeller{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+	services := "HapusKomentarBarang"
+
+	if err := db.Model(&models.Komentar{}).Where(&models.Komentar{
+		ID:          data.IdKomentar,
+		IdEntity:    int64(data.IdentitasSeller.IdSeller),
+		JenisEntity: "Seller",
+	}).Delete(&models.Komentar{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseHapusKomentarBarangSeller{
+				Message: "Gagal Menghapus Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseHapusKomentarBarangSeller{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "MasukanChildKomentar"
+	is_seller := false
+
+	var id_seller_take int64 = 0
+	if err := db.Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
+		ID: data.IdBarangInduk,
+	}).Take(&id_seller_take).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseMasukanKomentarBarangSeller{
+				Message: "Gagal Barang Tidak Ada",
+			},
+		}
+	}
+
+	if id_seller_take == int64(data.IdentitasSeller.IdSeller) {
+		is_seller = true
+	}
+	if err := db.Create(&models.KomentarChild{
+		IdKomentar:  data.IdKomentarBarang,
+		IdEntity:    int64(data.IdentitasSeller.IdSeller),
+		JenisEntity: "Seller",
+		IsiKomentar: data.Komentar,
+		IsSeller:    is_seller,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseMasukanChildKomentar{
+				Message: "Gagal Mengunggah Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseMasukanChildKomentar{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "MentionChildKomentar"
+
+	is_seller := false
+
+	var id_seller_take int64 = 0
+	if err := db.Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
+		ID: data.IdBarangInduk,
+	}).Take(&id_seller_take).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseMasukanKomentarBarangSeller{
+				Message: "Gagal Barang Tidak Ada",
+			},
+		}
+	}
+
+	if id_seller_take == int64(data.IdentitasSeller.IdSeller) {
+		is_seller = true
+	}
+
+	if err := db.Create(&models.KomentarChild{
+		IdKomentar:  data.IdKomentar,
+		IdEntity:    int64(data.IdentitasSeller.IdSeller),
+		JenisEntity: "Seller",
+		IsiKomentar: data.Komentar,
+		IsSeller:    is_seller,
+		Mention:     data.UsernameMentioned,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseMentionChildKomentar{
+				Message: "Gagal Membalas Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseMentionChildKomentar{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "EditChildKomentar"
+
+	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+		ID:          data.IdKomentar,
+		IdEntity:    int64(data.IdentitasSeller.IdSeller),
+		JenisEntity: "Pengguna",
+	}).Update("komentar", data.Komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseEditChildKomentar{
+				Message: "Gagal Mengedit Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseEditChildKomentar{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "HapusChildKomentar"
+	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+		ID:          data.IdKomentar,
+		IdEntity:    int64(data.IdentitasSeller.IdSeller),
+		JenisEntity: "Seller",
+	}).Delete(&models.KomentarChild{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_seller_barang_service.ResponseHapusChildKomentar{
+				Message: "Gagal Menghapus Komentar",
+			},
+		}
+	}
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_seller_barang_service.ResponseHapusChildKomentar{
+			Message: "Berhasil",
 		},
 	}
 }

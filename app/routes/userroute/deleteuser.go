@@ -21,12 +21,19 @@ func DeleteUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	switch r.URL.Path {
 	case "/user/komentar-barang/hapus":
-		var data pengguna_service.PayloadHapusKomentarBarang
+		var data pengguna_service.PayloadHapusKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.HapusKomentarBarang(ctx, data, db)
+	case "/user/komentar-child/hapus":
+		var data pengguna_service.PayloadHapusChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_service.HapusChildKomentar(ctx, data, db)
 	case "/user/keranjang-barang/hapus":
 		var data pengguna_service.PayloadHapusDataKeranjangBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

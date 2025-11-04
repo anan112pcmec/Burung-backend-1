@@ -29,12 +29,19 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 		}
 		hasil = pengguna_service.LikesBarang(data, db, rds_barang)
 	case "/user/komentar-barang/edit":
-		var data pengguna_service.PayloadEditKomentarBarang
+		var data pengguna_service.PayloadEditKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.EditKomentarBarang(ctx, data, db)
+	case "/user/komentar-child/edit":
+		var data pengguna_service.PayloadEditChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_service.EditChildKomentar(ctx, data, db)
 	case "/user/keranjang-barang/edit":
 		var data pengguna_service.PayloadEditDataKeranjangBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

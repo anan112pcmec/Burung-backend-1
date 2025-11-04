@@ -24,22 +24,18 @@ func (EntitySocialMedia) TableName() string {
 	return "entity_social_media"
 }
 
-// ///////////////////////////////////////////////////////////////////////////////////////////
-// ENGAGEMENT PENGGUNA
-// ///////////////////////////////////////////////////////////////////////////////////////////
-
 type Komentar struct {
 	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_komentar"`
 	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk"`
 	Baranginduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
-
-	IdEntity    int64      `gorm:"column:id_entity;not null" json:"id_entity"`
-	JenisEntity string     `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
-	Komentar    string     `gorm:"column:komentar;type:text;not null" json:"isi_komentar"`
-	IsSeller    bool       `gorm:"column:is_seller;not null;default:false" json:"is_seller_komentar"`
-	CreatedAt   time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt   *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+	IdEntity      int64       `gorm:"column:id_entity;not null" json:"id_entity"`
+	JenisEntity   string      `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
+	Komentar      string      `gorm:"column:komentar;type:text;not null" json:"isi_komentar"`
+	IsSeller      bool        `gorm:"column:is_seller;not null;default:false" json:"is_seller"`
+	Dibalas       int64       `gorm:"column:dibalas;type:int8;default:0;" json:"dibalas_komentar"`
+	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
 
 	// Relasi one-to-many
 	KomentarChild []KomentarChild `gorm:"foreignKey:IdKomentar;constraint:OnDelete:CASCADE;" json:"komentar_child,omitempty"`
@@ -50,14 +46,14 @@ func (Komentar) TableName() string {
 }
 
 type KomentarChild struct {
-	ID         int64    `gorm:"primaryKey;autoIncrement" json:"id_komentar_child"`
-	IdKomentar int64    `gorm:"column:id_komentar;not null" json:"id_komentar"`
-	Komentar   Komentar `gorm:"foreignKey:IdKomentar;references:ID;constraint:OnDelete:CASCADE;" json:"-"`
-
+	ID          int64      `gorm:"primaryKey;autoIncrement" json:"id_komentar_child"`
+	IdKomentar  int64      `gorm:"column:id_komentar;not null" json:"id_komentar"`
+	Komentar    Komentar   `gorm:"foreignKey:IdKomentar;references:ID;constraint:OnDelete:CASCADE;" json:"-"`
 	IdEntity    int64      `gorm:"column:id_entity;not null" json:"id_entity"`
 	JenisEntity string     `gorm:"column:jenis_entity;type:varchar(50);not null" json:"jenis_entity"`
 	IsiKomentar string     `gorm:"column:komentar;type:text;not null" json:"isi_komentar"`
 	IsSeller    bool       `gorm:"column:is_seller;not null;default:false" json:"is_seller_komentar"`
+	Mention     string     `gorm:"column:mention;type:text;not null" json:"mention_komentar"`
 	CreatedAt   time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt   *time.Time `gorm:"index" json:"deleted_at,omitempty"`
@@ -66,6 +62,10 @@ type KomentarChild struct {
 func (KomentarChild) TableName() string {
 	return "komentar_child"
 }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////
+// ENGAGEMENT PENGGUNA
+// ///////////////////////////////////////////////////////////////////////////////////////////
 
 type Keranjang struct {
 	IdPengguna     int64          `gorm:"column:id_pengguna;not null" json:"id_pengguna_keranjang"`

@@ -16,6 +16,8 @@ import (
 func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var hasil *response.ResponseForm
 
+	ctx := r.Context()
+
 	switch r.URL.Path {
 	case "/seller/masukan_barang":
 		var data seller_service.PayloadMasukanBarangInduk
@@ -24,6 +26,27 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_service.MasukanBarangInduk(db, data)
+	case "/seller/komentar-barang/tambah":
+		var data seller_service.PayloadMasukanKomentarBarangInduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.MasukanKomentarBarang(ctx, data, db)
+	case "/seller/komentar-child/tambah":
+		var data seller_service.PayloadMasukanChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.MasukanChildKomentar(ctx, data, db)
+	case "/seller/komentar-child-mention/tambah":
+		var data seller_service.PayloadMentionChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_service.MentionChildKomentar(ctx, data, db)
 	case "/seller/tambah_kategori_barang":
 		var data seller_service.PayloadTambahKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

@@ -22,12 +22,27 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 
 	switch r.URL.Path {
 	case "/user/komentar-barang/tambah":
-		var data pengguna_service.PayloadTambahKomentarBarang
+		var data pengguna_service.PayloadMasukanKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_service.TambahKomentarBarang(ctx, data, db)
+		hasil = pengguna_service.MasukanKomentarBarang(ctx, data, db)
+	case "/user/komentar-child/tambah":
+		var data pengguna_service.PayloadMasukanChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_service.MasukanChildKomentar(ctx, data, db)
+
+	case "/user/komentar-child-mention/tambah":
+		var data pengguna_service.PayloadMentionChildKomentar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_service.MentionChildKomentar(ctx, data, db)
 	case "/user/keranjang-barang/tambah":
 		var data pengguna_service.PayloadTambahDataKeranjangBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

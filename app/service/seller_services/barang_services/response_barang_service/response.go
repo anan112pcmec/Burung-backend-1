@@ -1,4 +1,4 @@
-package response_barang_service
+package response_seller_barang_service
 
 // ////////////////////////////////////////////////////////////////////////////////
 // Response Struct Masukan Barang Induk
@@ -94,4 +94,44 @@ type ResponseEditAlamatBarangInduk struct {
 
 type ResponseEditAlamatBarangKategori struct {
 	Message string `json:"pesan_edit_alamat_barang_kategori"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////
+// Response Tambah Komentar
+// ////////////////////////////////////////////////////////////////////////////
+
+type ResponseMasukanKomentarBarangSeller struct {
+	Message string `json:"pesan_tambah_komentar_barang"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////
+// Response Edit Komentar
+// ////////////////////////////////////////////////////////////////////////////
+
+type ResponseEditKomentarBarangSeller struct {
+	Message string `json:"pesan_edit_komentar_barang"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////
+// Response Hapus Komentar
+// ////////////////////////////////////////////////////////////////////////////
+
+type ResponseHapusKomentarBarangSeller struct {
+	Message string `json:"pesan_hapus_komentar_barang"`
+}
+
+type ResponseMasukanChildKomentar struct {
+	Message string `json:"pesan_masukan_child_komentar"`
+}
+
+type ResponseMentionChildKomentar struct {
+	Message string `json:"pesan_masukan_mention_child_komentar"`
+}
+
+type ResponseEditChildKomentar struct {
+	Message string `json:"pesan_edit_child_komentar"`
+}
+
+type ResponseHapusChildKomentar struct {
+	Message string `json:"pesan_hapus_child_komentar"`
 }

@@ -33,31 +33,71 @@ type PayloadLikesBarang struct {
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Payload Struct Tambah Komentar Barang
+// Payload Struct Masukan Komentar Barang Induk
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type PayloadTambahKomentarBarang struct {
+type PayloadMasukanKomentarBarangInduk struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	DataKomentar      models.Komentar                    `json:"data_payload_komentar"`
+	IdBarangInduk     int32                              `json:"id_barang_induk_masukan_komentar"`
+	Komentar          string                             `json:"komentar_masukan_komentar"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Payload Struct Edit Komentar Barang
+// Payload Struct Edit Komentar Barang Induk
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type PayloadEditKomentarBarang struct {
+type PayloadEditKomentarBarangInduk struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	DataEditKomentar  models.Komentar                    `json:"edit_payload_komentar"`
+	IdKomentar        int64                              `json:"id_komentar_edit_komentar"`
+	Komentar          string                             `json:"komentar_edit_komentar"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Payload Struct Hapus Komentar Barang
+// Payload Struct Hapus Komentar Barang Induk
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type PayloadHapusKomentarBarang struct {
+type PayloadHapusKomentarBarangInduk struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	IDKomentar        int64                              `json:"id_komentar_hapus_komentar"`
-	IdBarang          int32                              `json:"id_barang_induk_hapus_komentar"`
+	IdKomentar        int64                              `json:"id_komentar_hapus_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Masukan Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadMasukanChildKomentar struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdKomentarBarang  int64                              `json:"id_komentar_masukan_komentar"`
+	Komentar          string                             `json:"komentar_masukan_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Mention Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadMentionChildKomentar struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdKomentar        int64                              `json:"id_komentar_child_komentar"`
+	UsernameMentioned string                             `json:"username_mention_komentar"`
+	Komentar          string                             `json:"komentar_mention_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Edit Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadEditChildKomentar struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdKomentar        int64                              `json:"id_child_komentar"`
+	Komentar          string                             `json:"komentar_child_komentar"`
+}
+
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Hapus Child Komentar
+// ////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadHapusChildKomentar struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdKomentar        int64                              `json:"id_child_komentar"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -141,32 +141,21 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 // Engagement Barang Level Critical
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Tambah Komentar Barang
-// :Berfungsi Untuk mengunggah sebuah komentar pengguna
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+	services := "TambahKomentarBarang"
 
-func TambahKomentarBarang(ctx context.Context, data PayloadTambahKomentarBarang, db *gorm.DB) *response.ResponseForm {
-	services := "KomentarBarang"
-
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKomentarBarangUser{
-				Message: "Gagal: Data kamu tidak valid.",
-			},
-		}
-	}
-
-	data.DataKomentar.IdEntity = data.IdentitasPengguna.ID
-	data.DataKomentar.JenisEntity = "pengguna"
-	if err_db := db.WithContext(ctx).Model(models.Komentar{}).Create(&data.DataKomentar).Error; err_db != nil {
+	if err := db.Create(&models.Komentar{
+		IdBarangInduk: data.IdBarangInduk,
+		IdEntity:      data.IdentitasPengguna.ID,
+		JenisEntity:   "Pengguna",
+		Komentar:      data.Komentar,
+		IsSeller:      false,
+	}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKomentarBarangUser{
-				Message: "Gagal unggah komentar.",
+			Payload: response_engagement_barang_pengguna.ResponseMasukanKomentarBarangUser{
+				Message: "Gagal Memposting Komentar",
 			},
 		}
 	}
@@ -174,56 +163,25 @@ func TambahKomentarBarang(ctx context.Context, data PayloadTambahKomentarBarang,
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseTambahKomentarBarangUser{
-			Message: "Berhasil unggah komentar.",
+		Payload: response_engagement_barang_pengguna.ResponseMasukanKomentarBarangUser{
+			Message: "Berhasil",
 		},
 	}
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Edit Komentar Barang
-// :Berfungsi Untuk mengedit sebuah komentar pengguna
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarang, db *gorm.DB) *response.ResponseForm {
+func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
 	services := "EditKomentarBarang"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal: Data kamu tidak valid.",
-			},
-		}
-	}
-
-	result := db.WithContext(ctx).
-		Model(&models.Komentar{}).
-		Where(models.Komentar{
-			ID:            data.DataEditKomentar.ID,
-			IdBarangInduk: data.DataEditKomentar.IdBarangInduk,
-			IdEntity:      data.DataEditKomentar.IdEntity,
-		}).
-		Not(models.Komentar{Komentar: data.DataEditKomentar.Komentar}).
-		Update("komentar", data.DataEditKomentar.Komentar)
-
-	if result.Error != nil {
+	if err := db.Model(&models.Komentar{}).Where(&models.Komentar{
+		ID:          data.IdKomentar,
+		IdEntity:    data.IdentitasPengguna.ID,
+		JenisEntity: "Pengguna",
+	}).Update("komentar", data.Komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal mengedit komentar, coba lagi nanti.",
-			},
-		}
-	}
-
-	if result.RowsAffected == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Komentar tidak ditemukan.",
+				Message: "Gagal Mengedit Komentar",
 			},
 		}
 	}
@@ -232,53 +190,24 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarang, db 
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-			Message: "Berhasil mengedit komentar.",
+			Message: "Berhasil",
 		},
 	}
 }
 
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Hapus Komentar Barang
-// :Berfungsi Untuk menghapus sebuah komentar pengguna
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarang, db *gorm.DB) *response.ResponseForm {
+func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
 	services := "HapusKomentarBarang"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
-				Message: "Gagal: Data kamu tidak valid.",
-			},
-		}
-	}
-
-	result := db.WithContext(ctx).Unscoped().
-		Where(&models.Komentar{
-			ID:            data.IDKomentar,
-			IdBarangInduk: data.IdBarang,
-			IdEntity:      data.IdentitasPengguna.ID,
-		}).
-		Delete(&models.Komentar{})
-
-	if result.Error != nil {
+	if err := db.Model(&models.Komentar{}).Where(&models.Komentar{
+		ID:          data.IdKomentar,
+		IdEntity:    data.IdentitasPengguna.ID,
+		JenisEntity: "Pengguna",
+	}).Delete(&models.Komentar{}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
-				Message: "Gagal hapus komentar.",
-			},
-		}
-	}
-
-	if result.RowsAffected == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
-				Message: "Komentar tidak ditemukan.",
+			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
+				Message: "Gagal Menghapus Komentar",
 			},
 		}
 	}
@@ -287,7 +216,114 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarang, d
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
-			Message: "Berhasil hapus komentar.",
+			Message: "Berhasil",
+		},
+	}
+}
+
+func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "MasukanChildKomentar"
+
+	if err := db.Create(&models.KomentarChild{
+		IdKomentar:  data.IdKomentarBarang,
+		IdEntity:    data.IdentitasPengguna.ID,
+		JenisEntity: "Pengguna",
+		IsiKomentar: data.Komentar,
+		IsSeller:    false,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseMasukanChildKomentar{
+				Message: "Gagal Mengunggah Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_engagement_barang_pengguna.ResponseMasukanChildKomentar{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "MentionChildKomentar"
+
+	if err := db.Create(&models.KomentarChild{
+		IdKomentar:  data.IdKomentar,
+		IdEntity:    data.IdentitasPengguna.ID,
+		JenisEntity: "Pengguna",
+		IsiKomentar: data.Komentar,
+		IsSeller:    false,
+		Mention:     data.UsernameMentioned,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseMentionChildKomentar{
+				Message: "Gagal Membalas Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_engagement_barang_pengguna.ResponseMentionChildKomentar{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "EditChildKomentar"
+
+	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+		ID:          data.IdKomentar,
+		IdEntity:    data.IdentitasPengguna.ID,
+		JenisEntity: "Pengguna",
+	}).Update("komentar", data.Komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
+				Message: "Gagal Mengedit Komentar",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db *gorm.DB) *response.ResponseForm {
+	services := "HapusChildKomentar"
+	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+		ID:          data.IdKomentar,
+		IdEntity:    data.IdentitasPengguna.ID,
+		JenisEntity: "Pengguna",
+	}).Delete(&models.KomentarChild{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
+				Message: "Gagal Menghapus Komentar",
+			},
+		}
+	}
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
+			Message: "Berhasil",
 		},
 	}
 }
