@@ -44,7 +44,7 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKendaraan.StatusPerizinan = "Pending"
+		data.DataInformasiKendaraan.Status = "Pending"
 		data.DataInformasiKendaraan.ID = 0
 		if err_ajukan := tx.Create(&data.DataInformasiKendaraan).Error; err_ajukan != nil {
 			log.Printf("[ERROR] Gagal mengajukan informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err_ajukan)
@@ -89,7 +89,7 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKendaraan.StatusPerizinan = "Pending"
+		data.DataInformasiKendaraan.Status = "Pending"
 		if err_updateInformasi := tx.Model(models.InformasiKendaraanKurir{}).Where(models.InformasiKendaraanKurir{
 			ID:      data.DataInformasiKendaraan.ID,
 			IDkurir: data.DataIdentitasKurir.IdKurir,
@@ -153,7 +153,7 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKurir.StatusPerizinan = "Pending"
+		data.DataInformasiKurir.Status = "Pending"
 		data.DataInformasiKurir.ID = 0
 		if err_ajukan := tx.Create(&data.DataInformasiKurir).Error; err_ajukan != nil {
 			log.Printf("[ERROR] Gagal mengajukan data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err_ajukan)
@@ -198,7 +198,7 @@ func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *respon
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKurir.StatusPerizinan = "Pending"
+		data.DataInformasiKurir.Status = "Pending"
 		if err_edit_informasi := tx.Model(models.InformasiKurir{}).Where(models.InformasiKurir{
 			ID:      data.DataInformasiKurir.ID,
 			IDkurir: data.DataIdentitasKurir.IdKurir,

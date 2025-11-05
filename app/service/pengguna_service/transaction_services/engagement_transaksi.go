@@ -108,13 +108,17 @@ func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.Respo
 			}
 
 			// Ambil nama seller
-			var nama_seller string
+			var nama_seller string = ""
 			if errNamaSeller := tx.Model(&models.Seller{}).
 				Select("nama").
 				Where(&models.Seller{ID: barang.SellerID}).
 				First(&nama_seller).Error; errNamaSeller != nil {
 				log.Printf("[%s] [Item-%d] Gagal ambil Nama Seller: %v", services, idx, errNamaSeller)
 				return errNamaSeller
+			}
+
+			if nama_seller == "" {
+				fmt.Errorf("gagal mendapatkan seller tidak valid")
 			}
 
 			resp := response_transaction_pengguna.CheckoutData{
@@ -357,7 +361,7 @@ func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, dat
 	}
 
 	fmt.Println("[TRACE] Generate ItemDetail dan TotalHarga")
-	items, TotalHarga := helper.GenerateItemDetail(data, db, jenis_layanan)
+	items, TotalHarga := helper.GenerateItemDetail(data, db, jenis_layanan, alamat)
 	fmt.Printf("[TRACE] TotalHarga: %v\n", TotalHarga)
 
 	var PM []snap.SnapPaymentType
@@ -480,6 +484,26 @@ func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.Resp
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload:  "Gagal Validasi User Tidak Valid",
+		}
+	}
+
+	var count_seller int64 = 0
+
+	if err := db.Model(&models.Seller{}).Where(&models.Seller{
+		ID: data.DataCheckout.DataResponse[0].IDSeller,
+	}).Count(&count_seller).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload:  "Gagal Seller Tidak Ada",
+		}
+	}
+
+	if count_seller == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload:  "Gagal Seller tidak valid",
 		}
 	}
 
@@ -781,7 +805,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	services := "LockTransaksiVa"
 
 	for _, keranjang := range data.DataHold {
-		if keranjang.IDSeller == 0 && keranjang.IDUser == 0 && keranjang.IdBarangInduk == 0 {
+		if keranjang.IDSeller == 0 || keranjang.IDUser == 0 || keranjang.IdBarangInduk == 0 {
 			return &response.ResponseForm{
 				Status:   http.StatusBadRequest,
 				Services: services,
@@ -844,6 +868,8 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 		if !ok {
 			return fmt.Errorf("gagal membuat pembayaran %s", bank)
 		}
+
+		pembayaran.IdPengguna = data.DataHold[0].IDUser
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
@@ -851,7 +877,6 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 		//
 		// Sanitasi Id Pengguna
 		//
-		pembayaran.IdPengguna = data.DataHold[0].IDUser
 
 		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
 

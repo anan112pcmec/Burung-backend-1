@@ -7,7 +7,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-
 )
 
 func UpEntity(db *gorm.DB) {
@@ -170,7 +169,7 @@ func UpTransaksi(db *gorm.DB) {
 
 func UpEngagementEntity(db *gorm.DB) {
 	var wg sync.WaitGroup
-	errCh := make(chan error, 17)
+	errCh := make(chan error, 19)
 
 	modelsToMigrate := []interface{}{
 		&models.Komentar{},
@@ -179,17 +178,19 @@ func UpEngagementEntity(db *gorm.DB) {
 		&models.BarangDisukai{},
 		&models.Follower{},
 		&models.EntitySocialMedia{},
-		&models.AktivitasPengguna{},
 		&models.Diskon{},
 		&models.AlamatPengguna{},
 		&models.AlamatSeller{},
 		&models.RekeningSeller{},
-		&models.BalanceKurirLog{},
 		&models.Jenis_Seller{},
 		&models.BatalTransaksi{},
+		&models.AlamatGudang{},
 		&models.InformasiKendaraanKurir{},
 		&models.InformasiKurir{},
-		&models.AlamatGudang{},
+		&models.InformasiNarik{},
+		&models.AlamatKurir{},
+		&models.RekeningKurir{},
+		&models.SaldoKurir{},
 	}
 
 	wg.Add(len(modelsToMigrate))

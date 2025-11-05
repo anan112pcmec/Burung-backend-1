@@ -62,12 +62,6 @@ func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *Response
 
 		}
 
-		go func() {
-			_ = db.Create(&models.AktivitasSeller{
-				Aksi: "Mengubah Username",
-			})
-		}()
-
 		return &ResponseUbahUsername{
 			Message: "Gagal, coba gunakan nama yang disarankan",
 			Saran:   saran,

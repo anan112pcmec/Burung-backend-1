@@ -17,6 +17,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
+
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,19 +68,6 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 			}
 		}()
 	}
-
-	go func() {
-		aksiDilakukan := models.AktivitasPengguna{
-			IdPengguna:     user.ID,
-			WaktuDilakukan: time.Now(),
-			Aksi:           "Login",
-		}
-
-		if err := db.Unscoped().Create(&aksiDilakukan).Error; err != nil {
-			log.Printf("gagal menyimpan aktivitas pengguna (unscoped): %v", err)
-		}
-
-	}()
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,

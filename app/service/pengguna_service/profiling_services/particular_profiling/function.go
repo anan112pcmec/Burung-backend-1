@@ -83,12 +83,6 @@ func UbahUsernamePengguna(db *gorm.DB, id_pengguna int64, username string) *Resp
 			}
 		}
 
-		go func() {
-			_ = db.Create(&models.AktivitasPengguna{
-				Aksi: "Mengubah Username",
-			}).Error
-		}()
-
 		log.Printf("[WARN] Username '%s' sudah digunakan. Menyediakan saran.", username)
 		return &ResponseUbahUsername{
 			Message: "Username sudah digunakan. Silakan pilih salah satu saran berikut.",

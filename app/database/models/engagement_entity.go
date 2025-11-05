@@ -112,22 +112,6 @@ type BarangWishlist struct {
 	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
 }
 
-// Decline Di versi Selanjutnya
-type AktivitasPengguna struct {
-	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_pengguna"`
-	IdPengguna     int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_aktivitas_pengguna"`
-	Pengguna       Pengguna   `gorm:"foreignKey:IdPengguna;references:ID"`
-	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_pengguna"`
-	Aksi           string     `gorm:"column:aksi;type:aksi_pengguna" json:"aksi_aktivitas_pengguna"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-func (AktivitasPengguna) TableName() string {
-	return "aktivitas_pengguna"
-}
-
 type AlamatPengguna struct {
 	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id_alamat_user"`
 	IDPengguna      int64          `gorm:"column:id_pengguna;not null" json:"id_pengguna_alamat_user"`
@@ -251,79 +235,6 @@ func (RekeningSeller) TableName() string {
 	return "rekening_seller"
 }
 
-// Decline Di versi Selanjutnya
-type AktivitasSeller struct {
-	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_aktivitas_seller"`
-	IdSeler        int32      `gorm:"column:id_seller;not null" json:"id_seller_aktivitas_seller"`
-	Seller         Seller     `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
-	WaktuDilakukan time.Time  `gorm:"column:waktu_dilakukan;autoCreateTime" json:"waktu_dilakukan_aktivitas_seller"`
-	Aksi           string     `gorm:"column:aksi;type:aksi_seller" json:"aksi_aktivitas_seller"`
-	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt      time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt      *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-func (AktivitasSeller) TableName() string {
-	return "aktivitas_seller"
-}
-
-// ///////////////////////////////////////////////////////////////////////////////////////////
-// ENGAGEMENT KURIR
-// ///////////////////////////////////////////////////////////////////////////////////////////
-
-type BalanceKurirLog struct {
-	ID        int64      `gorm:"primaryKey;autoIncrement" json:"id_balance_kurir"`
-	KurirID   int64      `gorm:"column:kurir_id;not null" json:"kurir_id"`
-	Kurir     Kurir      `gorm:"foreignKey:KurirID;references:ID" json:"-"`
-	Amount    int64      `gorm:"column:amount;type:bigint;default:0" json:"amount_balance_kurir"`
-	Type      string     `gorm:"column:type;type:varchar(10);default:'credit'" json:"type_balance_kurir"`
-	Catatan   string     `gorm:"column:catatan;type:text" json:"catatan_balance_kurir"`
-	CreatedAt time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-func (BalanceKurirLog) TableName() string {
-	return "balance_kurir_log"
-}
-
-type InformasiKendaraanKurir struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_kendaraan_kurir"`
-	IDkurir         int64      `gorm:"column:id_kurir;not null" json:"id_kurir_kendaraan_kurir"`
-	Kurir           Kurir      `gorm:"foreignKey:IDkurir;references:ID" json:"-"`
-	JenisKendaraan  string     `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null; default:'Motor'" json:"jenis_kendaraan_informasi_kendaraan_kurir"`
-	NamaKendaraan   string     `gorm:"column:nama_kendaraan;type:text;not null" json:"nama_kendaraan_informasi_kendaraan_kurir"`
-	RodaKendaraan   string     `gorm:"column:roda_kendaraan;type:roda_kendaraan_kurir;not null" json:"roda_kendaraan_informasi_kendaraan_kurir"`
-	STNK            bool       `gorm:"column:informasi_stnk;type:boolean;not null; default:false" json:"informasi_stnk_informasi_kendaraan_kurir"`
-	BPKB            bool       `gorm:"column:informasi_bpkb;type:boolean;not null; default:false" json:"informasi_bpkb_informasi_kendaraan_kurir"`
-	StatusPerizinan string     `gorm:"column:status;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_informasi_kendaraan_kurir"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt       *time.Time `gorm:"index"`
-}
-
-func (InformasiKendaraanKurir) TableName() string {
-	return "informasi_kendaraan_kurir"
-}
-
-type InformasiKurir struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_kurir"`
-	IDkurir         int64      `gorm:"column:id_kurir;not null" json:"id_kurir_informasi_kurir"`
-	Kurir           Kurir      `gorm:"foreignKey:IDkurir;references:ID" json:"-"`
-	Umur            int8       `gorm:"column:umur;type:int;not null" json:"umur_informasi_kurir"`
-	Alasan          string     `gorm:"column:alasan;type:text" json:"alasan_informasi_kurir"`
-	Ktp             bool       `gorm:"column:informasi_ktp;type:boolean;not null;default:false" json:"informasi_ktp_informasi_kurir"`
-	Alamat          string     `gorm:"column:alamat;type:text" json:"alamat_informasi_kurir"`
-	StatusPerizinan string     `gorm:"column:status;type:status_perizinan_kendaraan;not null; default:'Pending'" json:"status_informasi_kurir"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt       *time.Time `gorm:"index"`
-}
-
-func (InformasiKurir) TableName() string {
-	return "informasi_kurir"
-}
-
 type AlamatGudang struct {
 	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id_alamat_gudang"`
 	IDSeller        int32          `gorm:"column:id_seller;not null" json:"id_seller_alamat_gudang"`
@@ -344,4 +255,111 @@ type AlamatGudang struct {
 
 func (AlamatGudang) TableName() string {
 	return "alamat_gudang"
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////
+// ENGAGEMENT KURIR
+// ///////////////////////////////////////////////////////////////////////////////////////////
+
+type InformasiKurir struct {
+	ID           int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_kurir"`
+	IDkurir      int64      `gorm:"column:id_kurir;not null" json:"id_kurir_informasi_kurir"`
+	Kurir        Kurir      `gorm:"foreignKey:IDkurir;references:ID" json:"-"`
+	TanggalLahir string     `gorm:"column:tanggal_lahir;type:text" json:"tanggal_lahir_informasi_kurir" `
+	Alasan       string     `gorm:"column:alasan;type:text" json:"alasan_informasi_kurir"`
+	Ktp          bool       `gorm:"column:informasi_ktp;type:boolean;not null;default:false" json:"informasi_ktp_informasi_kurir"`
+	InformasiSim bool       `gorm:"column:informasi_sim;type:boolean;not null;default:false" json:"informasi_sim_informasi_kurir"`
+	Status       string     `gorm:"column:status;type:status_perizinan;not null; default:'Pending'" json:"status_informasi_kurir"`
+	CreatedAt    time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt    *time.Time `gorm:"index"`
+}
+
+func (InformasiKurir) TableName() string {
+	return "informasi_kurir"
+}
+
+type InformasiKendaraanKurir struct {
+	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_kendaraan_kurir"`
+	IDkurir        int64      `gorm:"column:id_kurir;not null" json:"id_kurir_kendaraan_kurir"`
+	Kurir          Kurir      `gorm:"foreignKey:IDkurir;references:ID" json:"-"`
+	JenisKendaraan string     `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null; default:'Motor'" json:"jenis_kendaraan_informasi_kendaraan_kurir"`
+	NamaKendaraan  string     `gorm:"column:nama_kendaraan;type:text;not null" json:"nama_kendaraan_informasi_kendaraan_kurir"`
+	RodaKendaraan  string     `gorm:"column:roda_kendaraan;type:roda_kendaraan_kurir;not null" json:"roda_kendaraan_informasi_kendaraan_kurir"`
+	STNK           bool       `gorm:"column:informasi_stnk;type:boolean;not null; default:false" json:"informasi_stnk_informasi_kendaraan_kurir"`
+	BPKB           bool       `gorm:"column:informasi_bpkb;type:boolean;not null; default:false" json:"informasi_bpkb_informasi_kendaraan_kurir"`
+	NoRangka       string     `gorm:"column:nomor_rangka;type:text" json:"nomor_rangka_informasi_kendaraan_kurir"`
+	NoMesin        string     `gorm:"column:nomor_mesin;type:text;" json:"nomor_mesin_informasi_kendaraan_kurir"`
+	Status         string     `gorm:"column:status;type:status_perizinan;not null;default:'Pending'" json:"status_informasi_kendaraan_kurir"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt      time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt      *time.Time `gorm:"index"`
+}
+
+func (InformasiKendaraanKurir) TableName() string {
+	return "informasi_kendaraan_kurir"
+}
+
+type AlamatKurir struct {
+	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_alamat_kurir"`
+	IdKurir         int64      `gorm:"column:id_kurir;not null" json:"id_kurir_alamat_kurir"`
+	Kurir           Kurir      `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	PanggilanAlamat string     `gorm:"column:panggilan_alamat;type:text;not null" json:"panggilan_alamat_kurir"`
+	NomorTelephone  string     `gorm:"column:nomor_telefon;type:varchar(25);not null" json:"nomor_telefon_alamat_kurir"`
+	NamaAlamat      string     `gorm:"column:nama_alamat;type:text" json:"nama_alamat_kurir"`
+	Kota            string     `gorm:"column:kota;type:varchar(100)" json:"kota_alamat_kurir"`
+	KodeNegara      string     `gorm:"column:kode_negara;type:varchar(10)" json:"kode_negara_alamat_kurir"`
+	KodePos         string     `gorm:"column:kode_pos;type:varchar(10)" json:"kode_pos_alamat_kurir"`
+	Deskripsi       string     `gorm:"column:deskripsi;type:text" json:"deskripsi_alamat_kurir"`
+	Longitude       float64    `gorm:"column:longitude;type:decimal(10,8)" json:"longitude_alamat_kurir"`
+	Latitude        float64    `gorm:"column:latitude;type:decimal(10,8)" json:"latitude_alamat_kurir"`
+	CreatedAt       time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt       *time.Time `gorm:"index"`
+}
+
+func (AlamatKurir) TableName() string {
+	return "alamat_kurir"
+}
+
+type RekeningKurir struct {
+	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_rekening_kurir"`
+	IdKurir         int64      `gorm:"column:id_kurir;not null" json:"id_kurir_rekening_kurir"`
+	Kurir           Kurir      `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	NamaBank        string     `gorm:"column:nama_bank;type:varchar(50);not null" json:"nama_bank_rekening_kurir"`
+	NomorRekening   string     `gorm:"column:nomor_rekening;type:varchar(50);not null" json:"nomor_rekening_kurir"`
+	PemilikRekening string     `gorm:"column:pemilik_rekening;type:varchar(30);not null" json:"pemilik_rekening_kurir"`
+	CreatedAt       time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt       *time.Time `gorm:"index"`
+}
+
+func (RekeningKurir) TableName() string {
+	return "rekening_kurir"
+}
+
+type SaldoKurir struct {
+	ID        int64      `gorm:"primaryKey;autoIncrement" json:"id_saldo_kurir"`
+	IdKurir   int64      `gorm:"column:id_kurir;not null" json:"id_kurir_saldo_kurir"`
+	Kurir     Kurir      `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	Saldo     int64      `gorm:"column:saldo;type:bigint;not null;default:0" json:"saldo_kurir"`
+	CreatedAt time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt *time.Time `gorm:"index"`
+}
+
+func (SaldoKurir) TableName() string {
+	return "saldo_kurir"
+}
+
+type InformasiNarik struct {
+	ID        int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_narik"`
+	IdKurir   int64      `gorm:"column:id_kurir;not null" json:"id_kurir_informasi_narik"`
+	Kurir     Kurir      `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	Status    string     `gorm:"column:status;type:status_kurir_narik;not null;default:'Off'" json:"status_informasi_narik"`
+	Longitude float64    `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_user"`
+	Latitude  float64    `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_user"`
+	CreatedAt time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
+	DeletedAt *time.Time `gorm:"index"`
 }
