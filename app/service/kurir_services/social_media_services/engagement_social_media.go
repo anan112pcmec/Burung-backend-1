@@ -1,6 +1,7 @@
 package kurir_social_media_services
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -11,10 +12,10 @@ import (
 	response_social_media_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/social_media_services/response_social_media_services"
 )
 
-func EngagementSocialMediaKurir(data PayloadEngageSocialMedia, db *gorm.DB) *response.ResponseForm {
+func EngagementSocialMediaKurir(ctx context.Context, data PayloadEngageSocialMedia, db *gorm.DB) *response.ResponseForm {
 	services := "EngagementSocialMediaKurir"
 
-	if _, status := data.DataIdentitas.Validating(db); !status {
+	if _, status := data.DataIdentitas.Validating(ctx, db); !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,

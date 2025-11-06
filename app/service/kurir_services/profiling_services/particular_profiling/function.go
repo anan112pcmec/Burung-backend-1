@@ -156,7 +156,6 @@ func UbahEmail(id_kurir int64, username, email string, db *gorm.DB) ResponseUbah
 	return ResponseUbahGmail{
 		Message: "Berhasil",
 	}
-
 }
 
 func UbahDeskripsi(id_kurir int64, username, deskripsi string, db *gorm.DB) ResponseUbahDeskripsi {

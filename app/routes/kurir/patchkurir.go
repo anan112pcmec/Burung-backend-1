@@ -20,6 +20,7 @@ import (
 
 func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
 	var hasil *response.ResponseForm
+	ctx := r.Context()
 	switch r.URL.Path {
 	case "/kurir/profiling/personal-update":
 		var data kurir_profiling_service.PayloadPersonalProfilingKurir
@@ -34,63 +35,63 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_profiling_service.GeneralProfilingKurir(data, db)
+		hasil = kurir_profiling_service.GeneralProfilingKurir(ctx, data, db)
 	case "/kurir/informasi/edit-informasi-kendaraan":
 		var data kurir_informasi_services.PayloadEditInformasiDataKendaraan
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_informasi_services.EditInformasiKendaraan(data, db)
+		hasil = kurir_informasi_services.EditInformasiKendaraan(ctx, data, db)
 	case "/kurir/informasi/edit-informasi-kurir":
 		var data kurir_informasi_services.PayloadEditInformasiDataKurir
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_informasi_services.EditInformasiKurir(data, db)
+		hasil = kurir_informasi_services.EditInformasiKurir(ctx, data, db)
 	case "/kurir/pengiriman/update-pengiriman":
 		var data kurir_pengiriman_services.PayloadUpdatePengiriman
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_pengiriman_services.UpdatePengirimanKurir(data, db)
+		hasil = kurir_pengiriman_services.UpdatePengirimanKurir(ctx, data, db)
 	case "/kurir/credential/preubah-password":
 		var data kurir_credential_services.PayloadPreUbahPassword
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_credential_services.PreUbahPasswordKurir(data, db, rds)
+		hasil = kurir_credential_services.PreUbahPasswordKurir(ctx, data, db, rds)
 	case "/kurir/credential/validate-ubah-password":
 		var data kurir_credential_services.PayloadValidateUbahPassword
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_credential_services.ValidateUbahPasswordKurir(data, db, rds)
+		hasil = kurir_credential_services.ValidateUbahPasswordKurir(ctx, data, db, rds)
 	case "/kurir/social-media/social-media-engage":
 		var data kurir_social_media_services.PayloadEngageSocialMedia
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_social_media_services.EngagementSocialMediaKurir(data, db)
+		hasil = kurir_social_media_services.EngagementSocialMediaKurir(ctx, data, db)
 	case "/kurir/alamat/edit-alamat":
 		var data kurir_alamat_services.PayloadEditAlamatKurir
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_alamat_services.EditAlamatKurir(data, db)
+		hasil = kurir_alamat_services.EditAlamatKurir(ctx, data, db)
 	case "/kurir/rekening/edit-rekening":
 		var data kurir_rekening_services.PayloadEditRekeningKurir
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_rekening_services.EditRekeningKurir(data, db)
+		hasil = kurir_rekening_services.EditRekeningKurir(ctx, data, db)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

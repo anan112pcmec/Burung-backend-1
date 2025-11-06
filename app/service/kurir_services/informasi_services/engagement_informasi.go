@@ -1,6 +1,7 @@
 package kurir_informasi_services
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -11,10 +12,10 @@ import (
 	response_informasi_services_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/informasi_services/response_informasi_services"
 )
 
-func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
+func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
 	services := "AjukanInformasiKendaraanKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -27,37 +28,45 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 		}
 	}
 
-	var id_pengajuan int64 = 0
-	_ = db.Model(models.InformasiKendaraanKurir{}).Select("id").Where(models.InformasiKendaraanKurir{
+	var id_pengajuan_data_kendaraan int64 = 0
+	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Take(&id_pengajuan)
-
-	if id_pengajuan != 0 {
-		log.Printf("[WARN] Sudah ada pengajuan kendaraan yang belum diproses untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, tunggu pengajuan sebelumnya ditindak kami.",
-			},
-		}
-	}
-
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKendaraan.Status = "Pending"
-		data.DataInformasiKendaraan.ID = 0
-		if err_ajukan := tx.Create(&data.DataInformasiKendaraan).Error; err_ajukan != nil {
-			log.Printf("[ERROR] Gagal mengajukan informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err_ajukan)
-			return err_ajukan
-		}
-		return nil
-	}); err != nil {
-		log.Printf("[ERROR] Gagal transaksi pengajuan informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
+	}).Limit(1).Take(&id_pengajuan_data_kendaraan).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
+				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_pengajuan_data_kendaraan != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
+				Message: "Gagal, Kamu sudah membuat pengajuan",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Create(&models.InformasiKendaraanKurir{
+		IDkurir:        data.DataIdentitasKurir.IdKurir,
+		JenisKendaraan: data.JenisKendaraan,
+		NamaKendaraan:  data.NamaKendaraan,
+		RodaKendaraan:  data.RodaKendaraan,
+		STNK:           data.InformasiStnk,
+		BPKB:           data.InformasiBpkb,
+		NoRangka:       data.NomorRangka,
+		NoMesin:        data.NomorMesin,
+		Status:         "Pending",
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKendaraan{
+				Message: "Gagal, server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
@@ -72,10 +81,10 @@ func AjukanInformasiKendaraan(data PayloadInformasiDataKendaraan, db *gorm.DB) *
 	}
 }
 
-func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
-	services := "EditInformasiKendaraan"
+func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
+	services := "EditInformasiKendaraanKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -88,23 +97,46 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKendaraan.Status = "Pending"
-		if err_updateInformasi := tx.Model(models.InformasiKendaraanKurir{}).Where(models.InformasiKendaraanKurir{
-			ID:      data.DataInformasiKendaraan.ID,
-			IDkurir: data.DataIdentitasKurir.IdKurir,
-		}).Limit(1).Updates(&data.DataInformasiKendaraan).Error; err_updateInformasi != nil {
-			log.Printf("[ERROR] Gagal mengedit informasi kendaraan ID %d untuk kurir ID %d: %v", data.DataInformasiKendaraan.ID, data.DataIdentitasKurir.IdKurir, err_updateInformasi)
-			return err_updateInformasi
-		}
-		return nil
-	}); err != nil {
-		log.Printf("[ERROR] Gagal transaksi edit informasi kendaraan untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
+	var id_data_informasi_kendaraan int64 = 0
+	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
+		ID:      data.IdInformasiKendaraan,
+		IDkurir: data.DataIdentitasKurir.IdKurir,
+	}).Limit(1).Take(&id_data_informasi_kendaraan).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
+				Message: "Gagal, Server Sedang Sibuk Coba Lagi Lain Waktu",
+			},
+		}
+	}
+
+	if id_data_informasi_kendaraan == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
+				Message: "Gagal, Data Tidak Valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Where(&models.InformasiKendaraanKurir{
+		ID: data.IdInformasiKendaraan,
+	}).Updates(&models.InformasiKendaraanKurir{
+		JenisKendaraan: data.JenisKendaraan,
+		NamaKendaraan:  data.NamaKendaraan,
+		RodaKendaraan:  data.RodaKendaraan,
+		STNK:           data.InformasiStnk,
+		BPKB:           data.InformasiBpkb,
+		NoRangka:       data.NomorRangka,
+		NoMesin:        data.NomorMesin,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseEditInformasiKendaraan{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
@@ -120,10 +152,10 @@ func EditInformasiKendaraan(data PayloadEditInformasiDataKendaraan, db *gorm.DB)
 
 }
 
-func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
+func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
 	services := "AjukanInformasiKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -136,12 +168,20 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 		}
 	}
 
-	var id_pengajuan int64 = 0
-	_ = db.Model(models.InformasiKurir{}).Select("id").Where(models.InformasiKurir{
+	var id_data_pengajuan_informasi int64 = 0
+	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Take(&id_pengajuan)
+	}).Limit(1).Take(&id_data_pengajuan_informasi).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
 
-	if id_pengajuan != 0 {
+	if id_data_pengajuan_informasi != 0 {
 		log.Printf("[WARN] Sudah ada pengajuan data kurir yang belum diproses untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
 		return &response.ResponseForm{
 			Status:   http.StatusConflict,
@@ -152,21 +192,19 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKurir.Status = "Pending"
-		data.DataInformasiKurir.ID = 0
-		if err_ajukan := tx.Create(&data.DataInformasiKurir).Error; err_ajukan != nil {
-			log.Printf("[ERROR] Gagal mengajukan data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err_ajukan)
-			return err_ajukan
-		}
-		return nil
-	}); err != nil {
-		log.Printf("[ERROR] Gagal transaksi pengajuan data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
+	if err := db.WithContext(ctx).Create(&models.InformasiKurir{
+		IDkurir:      data.DataIdentitasKurir.IdKurir,
+		TanggalLahir: data.TanggalLahir,
+		Alasan:       data.Alasan,
+		Ktp:          data.InformasiKtp,
+		InformasiSim: data.InformasiSim,
+		Status:       "Pending",
+	}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
+				Message: "Gagal Server Sedang Sibuk Coba Lagi Lain Waktu",
 			},
 		}
 	}
@@ -181,10 +219,10 @@ func AjukanInformasiKurir(data PayloadInformasiDataKurir, db *gorm.DB) *response
 	}
 }
 
-func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
+func EditInformasiKurir(ctx context.Context, data PayloadEditInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
 	services := "EditInformasiKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -197,23 +235,43 @@ func EditInformasiKurir(data PayloadEditInformasiDataKurir, db *gorm.DB) *respon
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		data.DataInformasiKurir.Status = "Pending"
-		if err_edit_informasi := tx.Model(models.InformasiKurir{}).Where(models.InformasiKurir{
-			ID:      data.DataInformasiKurir.ID,
-			IDkurir: data.DataIdentitasKurir.IdKurir,
-		}).Updates(&data.DataInformasiKurir).Error; err_edit_informasi != nil {
-			log.Printf("[ERROR] Gagal mengedit data kurir ID %d untuk kurir ID %d: %v", data.DataInformasiKurir.ID, data.DataIdentitasKurir.IdKurir, err_edit_informasi)
-			return err_edit_informasi
-		}
-		return nil
-	}); err != nil {
-		log.Printf("[ERROR] Gagal transaksi edit data kurir untuk kurir ID %d: %v", data.DataIdentitasKurir.IdKurir, err)
+	var id_data_pengajuan_informasi int64 = 0
+	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
+		ID:      data.IdInformasiKurir,
+		IDkurir: data.DataIdentitasKurir.IdKurir,
+	}).Limit(1).Take(&id_data_pengajuan_informasi).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
+				Message: "Gagal, server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_pengajuan_informasi == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
+				Message: "Gagal, data Tidak valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Where(&models.InformasiKurir{
+		ID: data.IdInformasiKurir,
+	}).Updates(&models.InformasiKurir{
+		TanggalLahir: data.TanggalLahir,
+		Alasan:       data.Alasan,
+		Ktp:          data.InformasiKtp,
+		InformasiSim: data.InformasiSim,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_informasi_services_kurir.ResponseEditInformasiKurir{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}

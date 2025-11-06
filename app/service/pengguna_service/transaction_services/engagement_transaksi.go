@@ -904,7 +904,6 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *response.ResponseForm {
 	services := "PaidFailedTransaksiVa"
 
-	// --- Parse bank VA ---
 	bank, err_p := payment_gateaway.ParseVirtualAccount(data.PaymentResult)
 	if err_p != nil {
 		return &response.ResponseForm{
@@ -916,7 +915,6 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		}
 	}
 
-	// --- Encode/Decode payment result ---
 	raw, err_m := json.Marshal(data.PaymentResult)
 	if err_m != nil {
 		return &response.ResponseForm{
@@ -1000,14 +998,12 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 
 	standard_response.IdPengguna = data.DataHold[0].IDUser
 
-	// --- Jalankan transaksi database ---
 	err := db.Transaction(func(tx *gorm.DB) error {
-		// Simpan ke PaidFailed
+
 		if err := tx.Create(&standard_response).Error; err != nil {
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
 		}
 
-		// Ambil ID PaidFailed
 		var pf int64 = 0
 		if err := tx.Model(&models.PembayaranFailed{}).
 			Select("id").Where(&models.PembayaranFailed{
@@ -1022,7 +1018,6 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 			return fmt.Errorf("id PaidFailed tidak ditemukan")
 		}
 
-		// Simpan TransaksiFailed per item
 		for i, d := range data.DataHold {
 			tf := models.TransaksiFailed{
 				IdPembayaranFailed: pf,

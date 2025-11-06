@@ -1,6 +1,7 @@
 package kurir_alamat_services
 
 import (
+	"context"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -10,14 +11,14 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services/response_alamat_service_kurir"
 )
 
-func MasukanAlamatKurir(data PayloadMasukanAlamatKurir, db *gorm.DB) *response.ResponseForm {
+func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db *gorm.DB) *response.ResponseForm {
 	services := "MasukanAlamatKurir"
 
 	// Validasi identitas kurir
-	_, valid := data.IdentitasKurir.Validating(db)
+	_, valid := data.IdentitasKurir.Validating(ctx, db)
 	if !valid {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseMasukanAlamatKurir{
 				Message: "Gagal: Data kurir tidak valid",
@@ -27,8 +28,8 @@ func MasukanAlamatKurir(data PayloadMasukanAlamatKurir, db *gorm.DB) *response.R
 
 	// Cek apakah nama alamat sudah pernah digunakan
 	var countNamaSama int64
-	if err := db.Model(&models.AlamatKurir{}).
-		Where(&models.AlamatKurir{NamaAlamat: data.NamaAlamat}).
+	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).
+		Where(&models.AlamatKurir{IdKurir: data.IdentitasKurir.IdKurir, NamaAlamat: data.NamaAlamat}).
 		Count(&countNamaSama).Error; err != nil {
 
 		return &response.ResponseForm{
@@ -51,7 +52,8 @@ func MasukanAlamatKurir(data PayloadMasukanAlamatKurir, db *gorm.DB) *response.R
 	}
 
 	// Simpan alamat baru
-	if err := db.Create(&models.AlamatKurir{
+	if err := db.WithContext(ctx).Create(&models.AlamatKurir{
+		IdKurir:         data.IdentitasKurir.IdKurir,
 		PanggilanAlamat: data.PanggilanAlamat,
 		NomorTelephone:  data.NomorTelephone,
 		NamaAlamat:      data.NamaAlamat,
@@ -82,14 +84,14 @@ func MasukanAlamatKurir(data PayloadMasukanAlamatKurir, db *gorm.DB) *response.R
 	}
 }
 
-func EditAlamatKurir(data PayloadEditAlamatKurir, db *gorm.DB) *response.ResponseForm {
+func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *gorm.DB) *response.ResponseForm {
 	services := "EditAlamatKurir"
 
 	// Validasi identitas kurir
-	_, valid := data.IdentitasKurir.Validating(db)
+	_, valid := data.IdentitasKurir.Validating(ctx, db)
 	if !valid {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseEditAlamatKurir{
 				Message: "Gagal: Data kurir tidak valid",
@@ -98,24 +100,21 @@ func EditAlamatKurir(data PayloadEditAlamatKurir, db *gorm.DB) *response.Respons
 	}
 
 	// Cek apakah alamat dengan ID dan kurir terkait benar-benar ada
-	var countExist int64
-	if err := db.Model(&models.AlamatKurir{}).
-		Where(&models.AlamatKurir{
-			ID:      data.IDAlamatKurir,
-			IdKurir: data.IdentitasKurir.IdKurir,
-		}).
-		Count(&countExist).Error; err != nil {
-
+	var id_data_alamat int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
+		ID:      data.IDAlamatKurir,
+		IdKurir: data.IdentitasKurir.IdKurir,
+	}).Limit(1).Take(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseEditAlamatKurir{
-				Message: "Gagal: Server sedang sibuk, coba lagi lain waktu",
+				Message: "Gagal Data Alamat Tidak Valid",
 			},
 		}
 	}
 
-	if countExist == 0 {
+	if id_data_alamat == 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -126,7 +125,7 @@ func EditAlamatKurir(data PayloadEditAlamatKurir, db *gorm.DB) *response.Respons
 	}
 
 	// Update data alamat
-	if err := db.Model(&models.AlamatKurir{}).
+	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).
 		Where(&models.AlamatKurir{ID: data.IDAlamatKurir}).
 		Updates(&models.AlamatKurir{
 			PanggilanAlamat: data.PanggilanAlamat,
@@ -159,14 +158,14 @@ func EditAlamatKurir(data PayloadEditAlamatKurir, db *gorm.DB) *response.Respons
 	}
 }
 
-func HapusAlamatKurir(data PayloadHapusAlamatKurir, db *gorm.DB) *response.ResponseForm {
+func HapusAlamatKurir(ctx context.Context, data PayloadHapusAlamatKurir, db *gorm.DB) *response.ResponseForm {
 	services := "HapusAlamatKurir"
 
 	// Validasi identitas kurir
-	_, valid := data.IdentitasKurir.Validating(db)
+	_, valid := data.IdentitasKurir.Validating(ctx, db)
 	if !valid {
 		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
+			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseHapusAlamatKurir{
 				Message: "Gagal: Data kurir tidak valid",
@@ -175,29 +174,26 @@ func HapusAlamatKurir(data PayloadHapusAlamatKurir, db *gorm.DB) *response.Respo
 	}
 
 	// Cek apakah alamat milik kurir tersebut ada
-	var countExist int64
-	if err := db.Model(&models.AlamatKurir{}).
-		Where(&models.AlamatKurir{
-			ID:      data.IdAlamatKurir,
-			IdKurir: data.IdentitasKurir.IdKurir,
-		}).
-		Count(&countExist).Error; err != nil {
-
+	var id_data_alamat int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
+		ID:      data.IdAlamatKurir,
+		IdKurir: data.IdentitasKurir.IdKurir,
+	}).Limit(1).Take(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseHapusAlamatKurir{
-				Message: "Gagal: Tidak dapat memverifikasi data alamat, coba lagi nanti",
+				Message: "Gagal Data Alamat Tidak Valid",
 			},
 		}
 	}
 
-	if countExist == 0 {
+	if id_data_alamat == 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseHapusAlamatKurir{
-				Message: "Gagal: Alamat itu tidak ada",
+				Message: "Gagal: Data alamat tidak ditemukan",
 			},
 		}
 	}

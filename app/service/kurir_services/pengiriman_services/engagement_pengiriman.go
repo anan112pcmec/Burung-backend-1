@@ -1,6 +1,7 @@
 package kurir_pengiriman_services
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -11,7 +12,7 @@ import (
 	response_pengiriman_services_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/pengiriman_services/response_pengiriman_services"
 )
 
-func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.ResponseForm {
+func AmbilPengirimanKurir(ctx context.Context, data PayloadAmbilPengiriman, db *gorm.DB) *response.ResponseForm {
 	const MAX_PENGIRIMAN = 5
 	services := "AmbilPengirimanKurir"
 	var hasilPengirimanStatus []response_pengiriman_services_kurir.AmbilPengirimanDetail
@@ -159,10 +160,10 @@ func AmbilPengirimanKurir(data PayloadAmbilPengiriman, db *gorm.DB) *response.Re
 	}
 }
 
-func UpdatePengirimanKurir(data PayloadUpdatePengiriman, db *gorm.DB) *response.ResponseForm {
+func UpdatePengirimanKurir(ctx context.Context, data PayloadUpdatePengiriman, db *gorm.DB) *response.ResponseForm {
 	services := "UpdatePengirimanKurir"
 
-	_, status := data.Kredensial.Validating(db)
+	_, status := data.Kredensial.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.Kredensial.IdKurir)
@@ -175,7 +176,7 @@ func UpdatePengirimanKurir(data PayloadUpdatePengiriman, db *gorm.DB) *response.
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var statusP string
 		_ = tx.Model(models.Pengiriman{}).Select("status").Where(models.Pengiriman{
 			ID: data.DataJejakPengiriman.IdPengiriman,

@@ -18,10 +18,10 @@ import (
 	response_credential_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/credential_services/response_credential_services"
 )
 
-func PreUbahPasswordKurir(data PayloadPreUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func PreUbahPasswordKurir(ctx context.Context, data PayloadPreUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordKurir"
 
-	kurir, status := data.DataIdentitas.Validating(db)
+	kurir, status := data.DataIdentitas.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Identitas kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
@@ -111,10 +111,10 @@ func PreUbahPasswordKurir(data PayloadPreUbahPassword, db *gorm.DB, rds *redis.C
 	}
 }
 
-func ValidateUbahPasswordKurir(data PayloadValidateUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func ValidateUbahPasswordKurir(ctx context.Context, data PayloadValidateUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordKurir"
 
-	_, status := data.DataIdentitas.Validating(db)
+	_, status := data.DataIdentitas.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Identitas kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
@@ -127,7 +127,6 @@ func ValidateUbahPasswordKurir(data PayloadValidateUbahPassword, db *gorm.DB, rd
 		}
 	}
 
-	ctx := context.Background()
 	key := fmt.Sprintf("kurir_ubah_password_by_otp:%s", data.OtpKey)
 
 	result, err_rds := rds.HGetAll(ctx, key).Result()

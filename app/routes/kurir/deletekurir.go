@@ -13,6 +13,7 @@ import (
 )
 
 func DeleteKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var hasil *response.ResponseForm
 	switch r.URL.Path {
 	case "/kurir/alamat/hapus-alamat":
@@ -21,14 +22,14 @@ func DeleteKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_alamat_services.HapusAlamatKurir(data, db)
+		hasil = kurir_alamat_services.HapusAlamatKurir(ctx, data, db)
 	case "/kurir/rekening/hapus-rekening":
 		var data kurir_rekening_services.PayloadHapusRekeningKurir
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_rekening_services.HapusRekeningKurir(data, db)
+		hasil = kurir_rekening_services.HapusRekeningKurir(ctx, data, db)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

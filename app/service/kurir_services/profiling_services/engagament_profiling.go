@@ -1,6 +1,7 @@
 package kurir_profiling_service
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -63,11 +64,11 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 	}
 }
 
-func GeneralProfilingKurir(data PayloadGeneralProfiling, db *gorm.DB) *response.ResponseForm {
+func GeneralProfilingKurir(ctx context.Context, data PayloadGeneralProfiling, db *gorm.DB) *response.ResponseForm {
 	services := "GeneralProfilingKurir"
 	var hasil_update_deskripsi particular_profiling_kurir.ResponseUbahDeskripsi
 
-	_, status := data.DataIdentitas.Validating(db)
+	_, status := data.DataIdentitas.Validating(ctx, db)
 
 	if !status {
 		return &response.ResponseForm{
