@@ -56,28 +56,28 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_credential_services.MembuatSecretPinPengguna(data, db)
+		hasil = pengguna_credential_services.MembuatSecretPinPengguna(ctx, data, db)
 	case "/user/alamat/membuat-alamat":
 		var data pengguna_alamat_services.PayloadMasukanAlamatPengguna
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_alamat_services.MasukanAlamatPengguna(data, db)
+		hasil = pengguna_alamat_services.MasukanAlamatPengguna(ctx, data, db)
 	case "/user/transaksi/checkout-barang":
 		var data pengguna_transaction_services.PayloadCheckoutBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_transaction_services.CheckoutBarangUser(data, db)
+		hasil = pengguna_transaction_services.CheckoutBarangUser(ctx, data, db)
 	case "/user/social-media/follow-seller":
 		var data pengguna_social_media_service.PayloadFollowOrUnfollowSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_social_media_service.FollowSeller(data, db)
+		hasil = pengguna_social_media_service.FollowSeller(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

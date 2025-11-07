@@ -4,14 +4,18 @@ package response_alamat_service_pengguna
 // Response Struct Membuat Alamat
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type ResponseMembuatAlamat struct {
+type ResponseMembuatAlamatPengguna struct {
 	Messages string `json:"pesan_membuat_alamat_pengguna"`
+}
+
+type ResponseEditAlamatPengguna struct {
+	Message string `json:"pesan_edit_alamat_pengguna"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Response Struct Hapus Alamat
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type ResponseHapusAlamat struct {
-	Messages string `json:"pesan_hapus_alamat_pengguna"`
+type ResponseHapusAlamatPengguna struct {
+	Message string `json:"pesan_hapus_alamat_pengguna"`
 }

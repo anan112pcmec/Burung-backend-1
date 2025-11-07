@@ -10,7 +10,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	kurir_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services"
 	kurir_informasi_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/informasi_services"
-	kurir_pengiriman_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/pengiriman_services"
 	kurir_rekening_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/rekening_services"
 )
 
@@ -18,13 +17,6 @@ func PostKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var hasil *response.ResponseForm
 	switch r.URL.Path {
-	case "/kurir/pengiriman/ambil-pengiriman":
-		var data kurir_pengiriman_services.PayloadAmbilPengiriman
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = kurir_pengiriman_services.AmbilPengirimanKurir(ctx, data, db)
 	case "/kurir/informasi/ajukan-informasi-kendaraan":
 		var data kurir_informasi_services.PayloadInformasiDataKendaraan
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

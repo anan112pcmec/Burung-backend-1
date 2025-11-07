@@ -28,7 +28,7 @@ import (
 // yang tidak diinginkan dan penyalahgunaan pihak lain pada sebuah akun
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordPengguna"
 
 	if data.FaktorKedua != "OTP" && data.FaktorKedua != "PIN" {
@@ -42,7 +42,7 @@ func PreUbahPasswordPengguna(data PayloadPreUbahPasswordPengguna, db *gorm.DB, r
 		}
 	}
 
-	user, status := data.IdentitasPengguna.Validating(db)
+	user, status := data.IdentitasPengguna.Validating(ctx, db)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -283,10 +283,10 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 // :Berfungsi untuk membuat secret pin
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func MembuatSecretPinPengguna(data PayloadMembuatPinPengguna, db *gorm.DB) *response.ResponseForm {
+func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "MembuatSecretPinPengguna"
 
-	user, status := data.IdentitasPengguna.Validating(db)
+	user, status := data.IdentitasPengguna.Validating(ctx, db)
 
 	if !status {
 		return &response.ResponseForm{
@@ -350,10 +350,10 @@ func MembuatSecretPinPengguna(data PayloadMembuatPinPengguna, db *gorm.DB) *resp
 // :Berfungsi untuk mengupdate secret pin
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UpdateSecretPinPengguna(data PayloadUpdatePinPengguna, db *gorm.DB) *response.ResponseForm {
+func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "UpdateSecretPinPengguna"
 
-	user, status := data.IdentitasPengguna.Validating(db)
+	user, status := data.IdentitasPengguna.Validating(ctx, db)
 
 	if !status {
 		return &response.ResponseForm{

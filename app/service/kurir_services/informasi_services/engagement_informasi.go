@@ -31,7 +31,7 @@ func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKend
 	var id_pengajuan_data_kendaraan int64 = 0
 	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_pengajuan_data_kendaraan).Error; err != nil {
+	}).Limit(1).Scan(&id_pengajuan_data_kendaraan).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -101,7 +101,7 @@ func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKe
 	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
 		ID:      data.IdInformasiKendaraan,
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_data_informasi_kendaraan).Error; err != nil {
+	}).Limit(1).Scan(&id_data_informasi_kendaraan).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -169,17 +169,9 @@ func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, d
 	}
 
 	var id_data_pengajuan_informasi int64 = 0
-	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
+	_ = db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_data_pengajuan_informasi).Error; err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Payload: response_informasi_services_kurir.ResponseAjukanInformasiKurir{
-				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
-			},
-		}
-	}
+	}).Limit(1).Scan(&id_data_pengajuan_informasi).Error
 
 	if id_data_pengajuan_informasi != 0 {
 		log.Printf("[WARN] Sudah ada pengajuan data kurir yang belum diproses untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
@@ -239,7 +231,7 @@ func EditInformasiKurir(ctx context.Context, data PayloadEditInformasiDataKurir,
 	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
 		ID:      data.IdInformasiKurir,
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_data_pengajuan_informasi).Error; err != nil {
+	}).Limit(1).Scan(&id_data_pengajuan_informasi).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,

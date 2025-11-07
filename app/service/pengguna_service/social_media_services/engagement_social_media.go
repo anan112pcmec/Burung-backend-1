@@ -1,6 +1,7 @@
 package pengguna_social_media_service
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -16,10 +17,10 @@ import (
 // Berfungsi Untuk menautkan atau melampirkan akun / social media mereka ke sistem burung
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EngageTautkanSocialMediaPengguna(data PayloadEngageTautkanSocialMedia, db *gorm.DB) *response.ResponseForm {
+func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTautkanSocialMedia, db *gorm.DB) *response.ResponseForm {
 	services := "TambahkanSocialMediaPenguna"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		log.Printf("[WARN] Kredensial pengguna tidak valid untuk ID %d", data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -143,10 +144,10 @@ func EngageTautkanSocialMediaPengguna(data PayloadEngageTautkanSocialMedia, db *
 // Berfungsi Untuk hapus social media mereka yang terhubung ke sistem burung
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EngageHapusSocialMedia(data PayloadEngageHapusSocialMedia, db *gorm.DB) *response.ResponseForm {
+func EngageHapusSocialMedia(ctx context.Context, data PayloadEngageHapusSocialMedia, db *gorm.DB) *response.ResponseForm {
 	services := "EngageHapusSocialMedia"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		log.Printf("[WARN] Kredensial pengguna tidak valid untuk ID %d", data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -206,10 +207,10 @@ func EngageHapusSocialMedia(data PayloadEngageHapusSocialMedia, db *gorm.DB) *re
 // Berfungsi Untuk Memfollow sebuah seller
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func FollowSeller(data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
+func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
 	services := "FollowSeller"
 
-	_, status := data.IdentitasUser.Validating(db)
+	_, status := data.IdentitasUser.Validating(ctx, db)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -268,10 +269,10 @@ func FollowSeller(data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.Res
 // Berfungsi Untuk unfollowe seller
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UnfollowSeller(data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
+func UnfollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
 	services := "UnfollowSeller"
 
-	_, status := data.IdentitasUser.Validating(db)
+	_, status := data.IdentitasUser.Validating(ctx, db)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,

@@ -27,11 +27,11 @@ type Pengiriman struct {
 	IdAlamatPengiriman  int64          `gorm:"column:id_alamat_pengiriman;not null" json:"id_alamat_pengiriman"`
 	Alamat              AlamatPengguna `gorm:"foreignKey:IdAlamatPengiriman;references:ID" json:"-"`
 	IdKurir             int64          `gorm:"column:id_kurir;not null" json:"id_kurir_pengiriman"`
-	NomorResi           string         `gorm:"column:nomor_resi;type:varchar(100);not null;default:''" json:"nomor_resi_pengiriman"`
-	Layanan             string         `gorm:"column:layanan_pengiriman_kurir;type:jenis_kendaraan_kurir;not null;default:'Unknown'" json:"layanan_pengiriman"`
+	KendaraanRequired   string         `gorm:"column:kendaraan_required;type:jenis_kendaraan_kurir;not null" json:"kendaraan_required_pengiriman"`
 	JenisPengiriman     string         `gorm:"column:jenis_pengiriman;not null;default:'reguler'" json:"jenis_pengiriman_transaksi"`
 	Status              string         `gorm:"column:status;type:status_pengiriman;not null" json:"status_pengiriman"`
 	BiayaKirim          int16          `gorm:"column:biaya_kirim;type:int2;not null;default:0" json:"biaya_kirim_pengiriman"`
+	JarakTempuh         string         `gorm:"column:jarak_tempuh;type:varchar(100);not null" json:"jarak_tempuh_pengiriman"`
 	KurirPaid           int32          `gorm:"column:kurir_paid;type:int4;not null;default:0" json:"kurir_paid_pengiriman"`
 	BeratTotalKG        int16          `gorm:"column:berat_total_kg;type:int2;not null;default:0" json:"berat_total_kg_pengiriman"`
 	CreatedAt           time.Time      `gorm:"autoCreateTime" json:"created_at"`
@@ -49,7 +49,8 @@ type JejakPengiriman struct {
 	Pengiriman   Pengiriman     `gorm:"foreignKey:IdPengiriman;references:ID"`
 	Lokasi       string         `gorm:"column:lokasi;type:text;" json:"lokasi_jejak_pengiriman"`
 	Keterangan   string         `gorm:"column:keterangan;type:text;not null;" json:"keterangan_jejak_pengiriman"`
-	DicatatPada  time.Time      `gorm:"column:dicatat_pada;autoCreateTime" json:"dicatat_pada_jejak_pengiriman"`
+	Latitude     float64        `gorm:"column:latitude;type:numeric(10,8);not null;" json:"latitude_jejak_pengiriman"`
+	Longtitude   float64        `gorm:"column:longtitude;type:numeric(10,8);not null" json:"longtitude_jejak_pengiriman"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`

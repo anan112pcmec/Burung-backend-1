@@ -25,10 +25,14 @@ func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir,
 		}
 	}
 
-	var id_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
-		IdKurir: data.IdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_alamat).Error; err != nil {
+	var id_alamat int64
+	if err := db.WithContext(ctx).
+		Model(&models.RekeningKurir{}).
+		Select("id").
+		Where(&models.RekeningKurir{IdKurir: data.IdentitasKurir.IdKurir}).
+		Limit(1).
+		Scan(&id_alamat).Error; err != nil {
+
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -86,11 +90,14 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *g
 		}
 	}
 
-	var id_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
-		ID:      data.IdRekening,
-		IdKurir: data.IdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_alamat).Error; err != nil {
+	var id_alamat int64
+	if err := db.WithContext(ctx).
+		Model(&models.RekeningKurir{}).
+		Select("id").
+		Where(&models.RekeningKurir{ID: data.IdRekening, IdKurir: data.IdentitasKurir.IdKurir}).
+		Limit(1).
+		Scan(&id_alamat).Error; err != nil {
+
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -150,11 +157,14 @@ func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db 
 		}
 	}
 
-	var id_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
-		ID:      data.IdRekening,
-		IdKurir: data.IdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_alamat).Error; err != nil {
+	var id_alamat int64
+	if err := db.WithContext(ctx).
+		Model(&models.RekeningKurir{}).
+		Select("id").
+		Where(&models.RekeningKurir{ID: data.IdRekening, IdKurir: data.IdentitasKurir.IdKurir}).
+		Limit(1).
+		Scan(&id_alamat).Error; err != nil {
+
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -169,7 +179,7 @@ func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db 
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_rekening_services_kurir.ResponseMasukanRekeningKurir{
-				Message: "Maksimal hanya memasukan 1 rekening",
+				Message: "Data Rekening Tidak Ditemukan",
 			},
 		}
 	}

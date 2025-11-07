@@ -1,7 +1,6 @@
 package pengguna_alamat_services
 
 import (
-	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
 )
 
@@ -11,7 +10,33 @@ import (
 
 type PayloadMasukanAlamatPengguna struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	DataAlamat        models.AlamatPengguna              `json:"data_alamat_pengguna"`
+	PanggilanAlamat   string                             `json:"panggilan_alamat"`
+	NomorTelephone    string                             `json:"nomor_telefon"`
+	NamaAlamat        string                             `json:"nama_alamat"`
+	Kota              string                             `json:"kota"`
+	KodePos           string                             `json:"kode_pos"`
+	KodeNegara        string                             `json:"kode_negara"`
+	Deskripsi         string                             `json:"deskripsi"`
+	Longitude         float64                            `json:"longitude"`
+	Latitude          float64                            `json:"latitude"`
+}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Edit Alamat Pengguna
+// ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type PayloadEditAlamatPengguna struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdAlamatPengguna  int64                              `json:"id_alamat_pengguna"`
+	PanggilanAlamat   string                             `json:"panggilan_alamat"`
+	NomorTelephone    string                             `json:"nomor_telefon"`
+	NamaAlamat        string                             `json:"nama_alamat"`
+	Kota              string                             `json:"kota"`
+	KodePos           string                             `json:"kode_pos"`
+	KodeNegara        string                             `json:"kode_negara"`
+	Deskripsi         string                             `json:"deskripsi"`
+	Longitude         float64                            `json:"longitude"`
+	Latitude          float64                            `json:"latitude"`
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -20,5 +45,5 @@ type PayloadMasukanAlamatPengguna struct {
 
 type PayloadHapusAlamatPengguna struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	IdAlamat          int64                              `json:"id_alamat_hapus_alamat"`
+	IdAlamatPengguna  int64                              `json:"id_alamat_hapus_alamat"`
 }

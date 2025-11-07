@@ -68,6 +68,7 @@ func (KomentarChild) TableName() string {
 // ///////////////////////////////////////////////////////////////////////////////////////////
 
 type Keranjang struct {
+	ID             int64          `gorm:"primaryKey;autoIncrement" json:"id_keranjang"`
 	IdPengguna     int64          `gorm:"column:id_pengguna;not null" json:"id_pengguna_keranjang"`
 	Pengguna       Pengguna       `gorm:"foreignKey:IdPengguna;references:ID"`
 	IdSeller       int32          `gorm:"column:id_seller;not null" json:"id_seller_barang_induk_keranjang"`

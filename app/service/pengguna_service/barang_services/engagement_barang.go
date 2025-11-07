@@ -2,9 +2,9 @@ package pengguna_service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -47,18 +47,51 @@ func ViewBarang(data PayloadViewBarang, rds *redis.Client, db *gorm.DB) {
 // :Berfungsi Untuk Menambah Dan Mengurangi Likes Barang induk dan mencatat barangdisukai
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "LikesBarang"
+	var wg sync.WaitGroup
 
-	var existing models.BarangDisukai
-	err := db.Unscoped().Model(&models.BarangDisukai{}).
-		Where(&models.BarangDisukai{IdPengguna: data.IDUser, IdBarangInduk: data.IDBarang}).
-		First(&existing).Error
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusOK,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
+				Message: "Gagal Menghapus Alamat, Identitas Mu Tidak Sesuai.",
+			},
+		}
+	}
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		if err := db.Create(&models.BarangDisukai{
-			IdPengguna:    data.IDUser,
-			IdBarangInduk: data.IDBarang,
+	var id_pengguna_disukai int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).Select("id_pengguna").Where(&models.BarangDisukai{
+		IdPengguna:    data.IdentitasPengguna.ID,
+		IdBarangInduk: data.IDBarangInduk,
+	}).Limit(1).Scan(&id_pengguna_disukai).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_pengguna_disukai == 0 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err_incr_rds := rds.HIncrBy(
+				ctx,
+				fmt.Sprintf("barang:%d", data.IDBarangInduk),
+				"likes_barang_induk",
+				1,
+			).Err(); err_incr_rds != nil {
+				fmt.Println("Gagal increment likes di Redis:", err_incr_rds)
+			}
+		}()
+
+		if err := db.WithContext(ctx).Create(&models.BarangDisukai{
+			IdPengguna:    data.IdentitasPengguna.ID,
+			IdBarangInduk: data.IDBarangInduk,
 		}).Error; err != nil {
 			fmt.Println("Gagal likes:", err)
 			return &response.ResponseForm{
@@ -70,17 +103,7 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 			}
 		}
 
-		go func() {
-			ctx := context.Background()
-			if err_incr_rds := rds.HIncrBy(
-				ctx,
-				fmt.Sprintf("barang:%d", data.IDBarang),
-				"likes_barang_induk",
-				1,
-			).Err(); err_incr_rds != nil {
-				fmt.Println("Gagal increment likes di Redis:", err_incr_rds)
-			}
-		}()
+		wg.Wait()
 
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
@@ -89,13 +112,25 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 				Message: "Disukai",
 			},
 		}
-	}
+	} else {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err_decr_rds := rds.HIncrBy(
+				ctx,
+				fmt.Sprintf("barang:%d", data.IDBarangInduk),
+				"likes_barang_induk",
+				-1,
+			).Err(); err_decr_rds != nil {
+				fmt.Println("Gagal decrement likes di Redis:", err_decr_rds)
+			}
+		}()
 
-	if err == nil {
-		if err := db.Unscoped().Model(&models.BarangDisukai{}).
+		wg.Wait()
+		if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).
 			Where(models.BarangDisukai{
-				IdPengguna:    existing.IdPengguna,
-				IdBarangInduk: existing.IdBarangInduk,
+				IdPengguna:    data.IdentitasPengguna.ID,
+				IdBarangInduk: data.IDBarangInduk,
 			}).Delete(&models.BarangDisukai{}).Error; err != nil {
 			fmt.Println("Gagal Hapus Likes:", err)
 			return &response.ResponseForm{
@@ -107,17 +142,6 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 			}
 		}
 
-		go func() {
-			if err_decr_rds := rds.HIncrBy(
-				context.Background(),
-				fmt.Sprintf("barang:%d", data.IDBarang),
-				"likes_barang_induk",
-				-1,
-			).Err(); err_decr_rds != nil {
-				fmt.Println("Gagal decrement likes di Redis:", err_decr_rds)
-			}
-		}()
-
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
@@ -125,15 +149,6 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 				Message: "Tidak Disukai",
 			},
 		}
-	}
-
-	fmt.Println("Error cek existing likes:", err)
-	return &response.ResponseForm{
-		Status:   http.StatusInternalServerError,
-		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-			Message: "Terjadi kesalahan.",
-		},
 	}
 }
 
@@ -144,7 +159,7 @@ func LikesBarang(data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *respo
 func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
 	services := "TambahKomentarBarang"
 
-	if err := db.Create(&models.Komentar{
+	if err := db.WithContext(ctx).Create(&models.Komentar{
 		IdBarangInduk: data.IdBarangInduk,
 		IdEntity:      data.IdentitasPengguna.ID,
 		JenisEntity:   "Pengguna",
@@ -172,10 +187,33 @@ func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBaran
 func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
 	services := "EditKomentarBarang"
 
-	if err := db.Model(&models.Komentar{}).Where(&models.Komentar{
+	var id_komentar int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Komentar{}).Select("id").Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
 		JenisEntity: "Pengguna",
+	}).Limit(1).Scan(&id_komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_komentar == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
+				Message: "Gagal Data Komentar Tidak Ditemukan",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
+		ID: data.IdKomentar,
 	}).Update("komentar", data.Komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -198,15 +236,38 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
 	services := "HapusKomentarBarang"
 
-	if err := db.Model(&models.Komentar{}).Where(&models.Komentar{
+	var id_komentar int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Komentar{}).Select("id").Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
 		JenisEntity: "Pengguna",
+	}).Limit(1).Scan(&id_komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_komentar == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
+				Message: "Gagal Data Komentar Tidak Ditemukan",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
+		ID: data.IdKomentar,
 	}).Delete(&models.Komentar{}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
+			Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
 				Message: "Gagal Menghapus Komentar",
 			},
 		}
@@ -224,7 +285,7 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInd
 func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar, db *gorm.DB) *response.ResponseForm {
 	services := "MasukanChildKomentar"
 
-	if err := db.Create(&models.KomentarChild{
+	if err := db.WithContext(ctx).Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentarBarang,
 		IdEntity:    data.IdentitasPengguna.ID,
 		JenisEntity: "Pengguna",
@@ -252,7 +313,7 @@ func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar,
 func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar, db *gorm.DB) *response.ResponseForm {
 	services := "MentionChildKomentar"
 
-	if err := db.Create(&models.KomentarChild{
+	if err := db.WithContext(ctx).Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
 		JenisEntity: "Pengguna",
@@ -281,10 +342,33 @@ func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar,
 func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *gorm.DB) *response.ResponseForm {
 	services := "EditChildKomentar"
 
-	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+	var id_edit_child_komentar int64 = 0
+	if err := db.WithContext(ctx).Model(&models.KomentarChild{}).Select("id").Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
 		JenisEntity: "Pengguna",
+	}).Limit(1).Scan(&id_edit_child_komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_edit_child_komentar == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
+				Message: "Gagal Data Komentar Tidak Valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+		ID: data.IdKomentar,
 	}).Update("komentar", data.Komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -306,10 +390,33 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 
 func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db *gorm.DB) *response.ResponseForm {
 	services := "HapusChildKomentar"
-	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+
+	var id_edit_child_komentar int64 = 0
+	if err := db.WithContext(ctx).Model(&models.KomentarChild{}).Select("id").Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
 		JenisEntity: "Pengguna",
+	}).Limit(1).Scan(&id_edit_child_komentar).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_edit_child_komentar == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
+				Message: "Gagal Data Komentar Tidak Valid",
+			},
+		}
+	}
+	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+		ID: data.IdKomentar,
 	}).Delete(&models.KomentarChild{}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -336,7 +443,7 @@ func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db 
 func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangBarang, db *gorm.DB) *response.ResponseForm {
 	services := "TambahKeranjangBarang"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -346,12 +453,10 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		}
 	}
 
-	var total int64
-	if err := db.WithContext(ctx).
-		Model(&models.Keranjang{}).
-		Where(models.Keranjang{IdPengguna: data.DataTambahKeranjang.IdPengguna}).
-		Limit(LIMITKERANJANG).
-		Count(&total).Error; err != nil {
+	var id_total []int64
+	if err := db.WithContext(ctx).Model(&models.Keranjang{}).Select("id").Where(models.Keranjang{
+		IdPengguna: data.IdentitasPengguna.ID,
+	}).Limit(LIMITKERANJANG).Scan(&id_total).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -361,7 +466,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		}
 	}
 
-	if total >= int64(LIMITKERANJANG) {
+	if len(id_total) >= LIMITKERANJANG {
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
@@ -371,39 +476,40 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		}
 	}
 
-	err := db.WithContext(ctx).
-		Where(&models.Keranjang{
-			IdPengguna:    data.DataTambahKeranjang.IdPengguna,
-			IdBarangInduk: data.DataTambahKeranjang.IdBarangInduk,
-			IdKategori:    data.DataTambahKeranjang.IdKategori,
-		}).
-		Take(&models.Keranjang{}).Error
-
-	if err == nil {
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Kamu sudah memiliki barang ini di keranjang.",
-			},
-		}
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	var id_data_keranjang int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Keranjang{}).Select("id").Where(&models.Keranjang{
+		IdPengguna:    data.IdentitasPengguna.ID,
+		IdSeller:      data.IdSeller,
+		IdBarangInduk: data.IdBarangInduk,
+		IdKategori:    data.IdKategori,
+	}).Limit(1).Scan(&id_data_keranjang).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Terjadi kesalahan saat cek keranjang.",
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
 
-	// Hardcoded
-	data.DataTambahKeranjang.Count = 0
-	data.DataTambahKeranjang.Status = "Ready"
-	//
+	if id_data_keranjang != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
+				Message: "Gagal Kamu sudah memiliki itu di keranjang mu",
+			},
+		}
+	}
 
-	if err := db.WithContext(ctx).Create(&data.DataTambahKeranjang).Error; err != nil {
+	if err := db.WithContext(ctx).Create(&models.Keranjang{
+		IdPengguna:    data.IdentitasPengguna.ID,
+		IdSeller:      data.IdSeller,
+		IdBarangInduk: data.IdBarangInduk,
+		IdKategori:    data.IdKategori,
+		Status:        "Ready",
+		Count:         0,
+	}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -430,7 +536,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBarang, db *gorm.DB) *response.ResponseForm {
 	services := "EditKeranjangBarang"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -440,37 +546,36 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		}
 	}
 
-	var keranjang models.Keranjang
-	if err := db.WithContext(ctx).
-		Where(&models.Keranjang{IdPengguna: data.IdentitasPengguna.ID, IdBarangInduk: data.IdBarangInduk}).
-		First(&keranjang).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &response.ResponseForm{
-				Status:   http.StatusNotFound,
-				Services: services,
-				Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-					Message: "Barang tersebut tidak ada di keranjang.",
-				},
-			}
-		}
+	var id_data_keranjang int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Keranjang{}).Select("id").Where(&models.Keranjang{
+		ID:         data.IdKeranjang,
+		IdPengguna: data.IdentitasPengguna.ID,
+	}).Limit(1).Scan(&id_data_keranjang).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Terjadi kesalahan saat cek keranjang.",
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
 
-	var stok int64
-	if err := db.WithContext(ctx).
-		Model(&models.VarianBarang{}).
-		Where(&models.VarianBarang{
-			IdKategori:    data.IdKategori,
-			IdBarangInduk: data.IdBarangInduk,
-			Status:        "Ready",
-		}).
-		Count(&stok).Error; err != nil {
+	if id_data_keranjang == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
+				Message: "Gagal Data Keranjang Tidak Ditemukan",
+			},
+		}
+	}
+
+	var id_stok []int64
+	if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+		IdKategori:    data.IdKategori,
+		IdBarangInduk: data.IdBarangInduk,
+		Status:        "Ready",
+	}).Limit(int(data.Jumlah)).Scan(&id_stok).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -480,7 +585,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		}
 	}
 
-	if stok < int64(data.Jumlah) {
+	if int64(len(id_stok)) < data.Jumlah {
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
@@ -492,7 +597,9 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 
 	if err := db.WithContext(ctx).
 		Model(&models.Keranjang{}).
-		Where(&models.Keranjang{IdPengguna: data.IdentitasPengguna.ID, IdBarangInduk: data.IdBarangInduk}).
+		Where(&models.Keranjang{
+			ID: data.IdKeranjang,
+		}).
 		Update("count", data.Jumlah).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -520,7 +627,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBarang, db *gorm.DB) *response.ResponseForm {
 	services := "HapusKeranjangBarang"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -530,10 +637,33 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 		}
 	}
 
-	if err_hapus := db.Unscoped().Model(&models.Keranjang{}).Where(&models.Keranjang{
-		IdPengguna:    data.DataHapusKeranjang.IdPengguna,
-		IdBarangInduk: data.DataHapusKeranjang.IdBarangInduk,
-		IdKategori:    data.DataHapusKeranjang.IdKategori,
+	var id_data_keranjang int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Keranjang{}).Select("id").Where(&models.Keranjang{
+		ID:         data.IdKeranjang,
+		IdPengguna: data.IdentitasPengguna.ID,
+	}).Limit(1).Scan(&id_data_keranjang).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_keranjang == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
+				Message: "Gagal Data Keranjang Tidak Ditemukan",
+			},
+		}
+	}
+
+	if err_hapus := db.WithContext(ctx).Model(&models.Keranjang{}).Where(&models.Keranjang{
+		ID:         data.IdKeranjang,
+		IdPengguna: data.IdentitasPengguna.ID,
 	}).Delete(&models.Keranjang{}).Error; err_hapus != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

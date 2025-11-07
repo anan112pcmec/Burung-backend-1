@@ -12,7 +12,6 @@ import (
 	kurir_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services"
 	kurir_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/credential_services"
 	kurir_informasi_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/informasi_services"
-	kurir_pengiriman_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/pengiriman_services"
 	kurir_profiling_service "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services"
 	kurir_rekening_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/rekening_services"
 	kurir_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/social_media_services"
@@ -50,20 +49,6 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_informasi_services.EditInformasiKurir(ctx, data, db)
-	case "/kurir/pengiriman/update-pengiriman":
-		var data kurir_pengiriman_services.PayloadUpdatePengiriman
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = kurir_pengiriman_services.UpdatePengirimanKurir(ctx, data, db)
-	case "/kurir/credential/preubah-password":
-		var data kurir_credential_services.PayloadPreUbahPassword
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = kurir_credential_services.PreUbahPasswordKurir(ctx, data, db, rds)
 	case "/kurir/credential/validate-ubah-password":
 		var data kurir_credential_services.PayloadValidateUbahPassword
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

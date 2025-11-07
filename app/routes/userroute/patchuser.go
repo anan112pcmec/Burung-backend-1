@@ -27,7 +27,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_service.LikesBarang(data, db, rds_barang)
+		hasil = pengguna_service.LikesBarang(ctx, data, db, rds_barang)
 	case "/user/komentar-barang/edit":
 		var data pengguna_service.PayloadEditKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -62,7 +62,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_credential_services.PreUbahPasswordPengguna(data, db, rds_engagement)
+		hasil = pengguna_credential_services.PreUbahPasswordPengguna(ctx, data, db, rds_engagement)
 	case "/user/credential/validate-password-otp":
 		var data pengguna_credential_services.PayloadValidateOTPPasswordPengguna
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -83,14 +83,14 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_credential_services.UpdateSecretPinPengguna(data, db)
+		hasil = pengguna_credential_services.UpdateSecretPinPengguna(ctx, data, db)
 	case "/user/transaksi/payment-gateaway-snap":
 		var data pengguna_transaction_services.PayloadSnapTransaksiRequest
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_transaction_services.SnapTransaksi(data, db)
+		hasil = pengguna_transaction_services.SnapTransaksi(ctx, data, db)
 	case "/user/transaksi/payment-gateaway-snap-berhasil/va":
 		var data pengguna_transaction_services.PayloadLockTransaksiVa
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -147,7 +147,7 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_social_media_service.EngageTautkanSocialMediaPengguna(data, db)
+		hasil = pengguna_social_media_service.EngageTautkanSocialMediaPengguna(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

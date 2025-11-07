@@ -1,6 +1,7 @@
 package pengguna_alamat_services
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -15,23 +16,23 @@ import (
 // Fungsi Masukan Alamat Pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *response.ResponseForm {
+func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "MasukanAlamatPengguna"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
 				Messages: "Gagal Identitas Kamu Tidak Selaras Dengan Target.",
 			},
 		}
 	}
 
-	var count int64
-	if err := db.Model(&models.AlamatPengguna{}).
-		Where(models.AlamatPengguna{IDPengguna: data.DataAlamat.IDPengguna}).
-		Count(&count).Error; err != nil {
+	var id_data_alamat []int64
+	if err := db.WithContext(ctx).Select("id").Model(&models.AlamatPengguna{}).
+		Where(models.AlamatPengguna{IDPengguna: data.IdentitasPengguna.ID}).
+		Limit(5).Scan(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -39,39 +40,39 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		}
 	}
 
-	if count >= 5 {
+	if len(id_data_alamat) == 5 {
 		return &response.ResponseForm{
 			Status:   http.StatusForbidden,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
 				Messages: "Batas Maksimum Penyimpanan Alamat Tercapai (Maksimal 5 Alamat).",
 			},
 		}
 	}
 
 	var existing models.AlamatPengguna
-	errcheck := db.Where(models.AlamatPengguna{
+	errcheck := db.WithContext(ctx).Where(models.AlamatPengguna{
 		IDPengguna:      data.IdentitasPengguna.ID,
-		PanggilanAlamat: data.DataAlamat.PanggilanAlamat,
+		PanggilanAlamat: data.PanggilanAlamat,
 	}).First(&existing).Error
 
 	if errors.Is(errcheck, gorm.ErrRecordNotFound) {
-		if err := db.Create(&models.AlamatPengguna{
+		if err := db.WithContext(ctx).Create(&models.AlamatPengguna{
 			IDPengguna:      data.IdentitasPengguna.ID,
-			PanggilanAlamat: data.DataAlamat.PanggilanAlamat,
-			NamaAlamat:      data.DataAlamat.NamaAlamat,
-			Deskripsi:       data.DataAlamat.Deskripsi,
-			NomorTelephone:  data.DataAlamat.NomorTelephone,
-			Kota:            data.DataAlamat.Kota,
-			KodePos:         data.DataAlamat.KodePos,
-			KodeNegara:      data.DataAlamat.KodeNegara,
-			Longitude:       data.DataAlamat.Longitude,
-			Latitude:        data.DataAlamat.Latitude,
+			PanggilanAlamat: data.PanggilanAlamat,
+			NamaAlamat:      data.NamaAlamat,
+			Deskripsi:       data.Deskripsi,
+			NomorTelephone:  data.NomorTelephone,
+			Kota:            data.Kota,
+			KodePos:         data.KodePos,
+			KodeNegara:      data.KodeNegara,
+			Longitude:       data.Longitude,
+			Latitude:        data.Latitude,
 		}).Error; err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
-				Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+				Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
 					Messages: "Terjadi Kesalahan Pada Server. Silakan Coba Beberapa Saat Lagi.",
 				},
 			}
@@ -80,7 +81,7 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 		return &response.ResponseForm{
 			Status:   http.StatusConflict,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
 				Messages: "Alamat Dengan Panggilan Tersebut Sudah Ada. Silakan Gunakan Panggilan Lain.",
 			},
 		}
@@ -89,8 +90,76 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_alamat_service_pengguna.ResponseMembuatAlamat{
+		Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
 			Messages: "Alamat Berhasil Ditambahkan.",
+		},
+	}
+}
+
+func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db *gorm.DB) *response.ResponseForm {
+	services := "EditAlamatPengguna"
+
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
+				Messages: "Gagal Identitas Kamu Tidak Selaras Dengan Target.",
+			},
+		}
+	}
+
+	var id_alamat_pengguna int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
+		ID:         data.IdAlamatPengguna,
+		IDPengguna: data.IdentitasPengguna.ID,
+	}).Limit(1).Scan(&id_alamat_pengguna).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_alamat_pengguna == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
+				Message: "Gagal Data Alamat Tidak Valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Where(&models.AlamatPengguna{
+		ID: data.IdAlamatPengguna,
+	}).Updates(&models.AlamatPengguna{
+		PanggilanAlamat: data.PanggilanAlamat,
+		NamaAlamat:      data.NamaAlamat,
+		Deskripsi:       data.Deskripsi,
+		NomorTelephone:  data.NomorTelephone,
+		Kota:            data.Kota,
+		KodePos:         data.KodePos,
+		KodeNegara:      data.KodeNegara,
+		Longitude:       data.Longitude,
+		Latitude:        data.Latitude,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
+			Message: "Berhasil",
 		},
 	}
 }
@@ -99,28 +168,51 @@ func MasukanAlamatPengguna(data PayloadMasukanAlamatPengguna, db *gorm.DB) *resp
 // Fungsi Hapus Alamat Pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response.ResponseForm {
+func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, db *gorm.DB) *response.ResponseForm {
 	services := "HapusAlamatPengguna"
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-				Messages: "Gagal Menghapus Alamat, Identitas Mu Tidak Sesuai.",
+			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
+				Message: "Gagal Menghapus Alamat, Identitas Mu Tidak Sesuai.",
 			},
 		}
 	}
 
-	if err_hapus := db.Where(models.AlamatPengguna{
-		ID:         data.IdAlamat,
+	var id_alamat_pengguna int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
+		ID:         data.IdAlamatPengguna,
 		IDPengguna: data.IdentitasPengguna.ID,
+	}).Limit(1).Scan(&id_alamat_pengguna).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_alamat_pengguna == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
+				Message: "Gagal Data Alamat Tidak Valid",
+			},
+		}
+	}
+
+	if err_hapus := db.WithContext(ctx).Where(models.AlamatPengguna{
+		ID: data.IdAlamatPengguna,
 	}).Delete(&models.AlamatPengguna{}).Error; err_hapus != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-				Messages: "Terjadi Kesalahan Pada Server Saat Menghapus Alamat. Silakan Coba Beberapa Saat Lagi.",
+			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
+				Message: "Terjadi Kesalahan Pada Server Saat Menghapus Alamat. Silakan Coba Beberapa Saat Lagi.",
 			},
 		}
 	}
@@ -128,8 +220,8 @@ func HapusAlamatPengguna(data PayloadHapusAlamatPengguna, db *gorm.DB) *response
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_alamat_service_pengguna.ResponseHapusAlamat{
-			Messages: "Alamat Berhasil Dihapus.",
+		Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
+			Message: "Alamat Berhasil Dihapus.",
 		},
 	}
 }

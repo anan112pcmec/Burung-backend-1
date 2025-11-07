@@ -1,9 +1,7 @@
 package pengguna_service
 
 import (
-	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -24,8 +22,8 @@ type PayloadViewBarang struct {
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadLikesBarang struct {
-	IDBarang int32 `json:"id_barang_induk_likes"`
-	IDUser   int64 `json:"id_user_likes"`
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IDBarangInduk     int32                              `json:"id_barang_induk_likes"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,8 +104,10 @@ type PayloadHapusChildKomentar struct {
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadTambahDataKeranjangBarang struct {
-	IdentitasPengguna   identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	DataTambahKeranjang models.Keranjang                   `json:"data_payload_tambah_keranjang"`
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdSeller          int32                              `json:"id_seller"`
+	IdBarangInduk     int32                              `json:"id_barang_induk"`
+	IdKategori        int64                              `json:"id_kategori_barang"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,8 +116,10 @@ type PayloadTambahDataKeranjangBarang struct {
 
 type PayloadEditDataKeranjangBarang struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	models.Keranjang
-	Jumlah int64 `json:"data_payload_edit_keranjang"`
+	IdKeranjang       int64                              `json:"id_keranjang"`
+	IdBarangInduk     int32                              `json:"id_barang_induk"`
+	IdKategori        int64                              `json:"id_kategori_barang"`
+	Jumlah            int64                              `json:"jumlah_di_keranjang"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,6 +127,6 @@ type PayloadEditDataKeranjangBarang struct {
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadHapusDataKeranjangBarang struct {
-	IdentitasPengguna  identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
-	DataHapusKeranjang models.Keranjang                   `json:"data_payload_hapus_keranjang"`
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdKeranjang       int64                              `json:"id_keranjang"`
 }

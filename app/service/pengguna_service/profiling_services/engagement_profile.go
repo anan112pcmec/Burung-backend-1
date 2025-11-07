@@ -21,7 +21,7 @@ func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProf
 	var hasil_update_username particular_profiling_pengguna.ResponseUbahUsername
 	var hasil_update_nama particular_profiling_pengguna.ResponseUbahNama
 
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,

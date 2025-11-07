@@ -1,6 +1,7 @@
 package pengguna_transaction_services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -31,12 +32,12 @@ import (
 // Befungsi Untuk membuat checkout Barang Sebelum Akhirnya melakukan transaksi
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func CheckoutBarangUser(data PayloadCheckoutBarang, db *gorm.DB) *response.ResponseForm {
+func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
 	log.Printf("[%s] Memulai proses checkout untuk user ID: %v", services, data.IdentitasPengguna.ID)
 
 	// Validasi pengguna
-	if _, status := data.IdentitasPengguna.Validating(db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		log.Printf("[%s] Kredensial pengguna tidak valid untuk user ID: %v", services, data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
@@ -474,11 +475,11 @@ func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.Respons
 // pendukungnya)
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func SnapTransaksi(data PayloadSnapTransaksiRequest, db *gorm.DB) *response.ResponseForm {
+func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *gorm.DB) *response.ResponseForm {
 	services := "SnapTransaksiUser"
 	fmt.Println("[TRACE] Start SnapTransaksi")
 
-	model, status := data.IdentitasPengguna.Validating(db)
+	model, status := data.IdentitasPengguna.Validating(ctx, db)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
