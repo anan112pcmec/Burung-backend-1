@@ -1,6 +1,8 @@
 package identity_seller
 
 import (
+	"context"
+
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
@@ -12,7 +14,7 @@ type IdentitySeller struct {
 	EmailSeller string `json:"email_seller"`
 }
 
-func (i IdentitySeller) Validating(db *gorm.DB) (model models.Seller, status bool) {
+func (i IdentitySeller) Validating(ctx context.Context, db *gorm.DB) (model models.Seller, status bool) {
 	var seller models.Seller
 	if i.IdSeller == 0 {
 		return seller, false
@@ -26,11 +28,11 @@ func (i IdentitySeller) Validating(db *gorm.DB) (model models.Seller, status boo
 		return seller, false
 	}
 
-	_ = db.Model(&models.Seller{}).Where(&models.Seller{
+	_ = db.WithContext(ctx).Model(&models.Seller{}).Where(&models.Seller{
 		ID:       i.IdSeller,
 		Username: i.Username,
 		Email:    i.EmailSeller,
-	}).Take(&seller)
+	}).Limit(1).Take(&seller)
 
 	if seller.ID == 0 {
 		return seller, false

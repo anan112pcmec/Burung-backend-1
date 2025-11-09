@@ -13,6 +13,8 @@ type PayloadMasukanBarangInduk struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	BarangInduk     models.BarangInduk             `json:"data_barang_induk"`
 	KategoriBarang  []models.KategoriBarang        `json:"data_kategori_barang_induk"`
+	IdAlamatGudang  int64                          `json:"id_alamat_gudang"`
+	IdRekening      int64                          `json:"id_rekening"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -21,7 +23,10 @@ type PayloadMasukanBarangInduk struct {
 
 type PayloadEditBarangInduk struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	BarangInduk     models.BarangInduk             `json:"barang_induk_edit"`
+	IdBarangInduk   int64                          `json:"id_barang_induk"`
+	NamaBarang      string                         `json:"nama_barang"`
+	JenisBarang     string                         `json:"jenis_barang"`
+	Deskripsi       string                         `json:"deskripsi"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -30,7 +35,7 @@ type PayloadEditBarangInduk struct {
 
 type PayloadHapusBarangInduk struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	BarangInduk     models.BarangInduk             `json:"barang_induk_hapus"`
+	IdBarangInduk   int64                          `json:"id_barang_induk"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -41,6 +46,8 @@ type PayloadTambahKategori struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
 	IdBarangInduk   int32                          `json:"id_barang_induk_tambah_kategori"`
 	KategoriBarang  []models.KategoriBarang        `json:"tambah_kategori_barang"`
+	IdAlamatGudang  int64                          `json:"id_alamat_gudang"`
+	IdRekening      int64                          `json:"id_rekening"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,9 +55,15 @@ type PayloadTambahKategori struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadEditKategori struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	IdBarangInduk   int32                          `json:"id_barang_induk_edit_kategori"`
-	KategoriBarang  []models.KategoriBarang        `json:"edit_kategori_barang"`
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdBarangInduk    int32                          `json:"id_barang_induk_edit_kategori"`
+	IdKategoriBarang int64                          `json:"id_kategori_barang"`
+	Nama             string                         `json:"nama"`
+	Deskripsi        string                         `json:"deskripsi"`
+	Warna            string                         `json:"warna"`
+	DimensiPanjang   int16                          `json:"dimensi_panjang"`
+	DimensiLebar     int16                          `json:"dimensi_lebar"`
+	Sku              string                         `json:"sku"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,10 +71,14 @@ type PayloadEditKategori struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadHapusKategori struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	IdBarangInduk   int32                          `json:"id_barang_induk_hapus_kategori"`
-	KategoriBarang  []models.KategoriBarang        `json:"hapus_kategori_barang"`
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdBarangInduk    int32                          `json:"id_barang_induk"`
+	IdKategoriBarang int64                          `json:"id_kategori_barang"`
 }
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Payload Struct Edit Stok Kategori
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type IdKategoriDanStok struct {
 	IdKategoriBarang   int64  `json:"id_kategori_barang_edit_stok"`
@@ -74,10 +91,11 @@ type IdKategoriDanStok struct {
 // Payload Edit Stok Barang
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-type PayloadEditStokBarang struct {
-	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	IdBarangInduk   int32                          `json:"id_barang_induk_stok_edit"`
-	Barang          []IdKategoriDanStok            `json:"stok_barang_edit"`
+type PayloadEditStokKategoriBarang struct {
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdBarangInduk    int32                          `json:"id_barang_induk"`
+	IdKategoriBarang int64                          `json:"id_kategori"`
+	UpdateStok       int64                          `json:"update_stok"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

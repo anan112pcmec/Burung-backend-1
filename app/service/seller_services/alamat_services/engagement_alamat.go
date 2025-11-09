@@ -1,7 +1,7 @@
 package seller_alamat_services
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
 
@@ -18,10 +18,10 @@ import (
 // gudang yang boleh dilampirkan alamat nya
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TambahAlamatGudang(data PayloadTambahAlamatGudang, db *gorm.DB) *response.ResponseForm {
+func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "TambahAlamatGudang"
 
-	_, status := data.IdentitasSeller.Validating(db)
+	_, status := data.IdentitasSeller.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -34,21 +34,50 @@ func TambahAlamatGudang(data PayloadTambahAlamatGudang, db *gorm.DB) *response.R
 		}
 	}
 
-	data.Data.ID = 0
-	data.Data.IDSeller = data.IdentitasSeller.IdSeller
-
-	if err_tambah_alamat := db.Create(&data.Data).Error; err_tambah_alamat != nil {
-		log.Printf("[ERROR] Gagal menambah alamat gudang untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err_tambah_alamat)
+	var id_data_alamat int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+		IDSeller:   data.IdentitasSeller.IdSeller,
+		NamaAlamat: data.NamaAlamat,
+	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_services_seller.ResponseTambahAlamatGudang{
-				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
 
-	log.Printf("[INFO] Alamat gudang berhasil ditambahkan untuk seller ID %d", data.IdentitasSeller.IdSeller)
+	if id_data_alamat != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseTambahAlamatGudang{
+				Message: "Gagal Kamu sudah memiliki alamat dengan nama yang sama",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Create(&models.AlamatGudang{
+		IDSeller:        data.IdentitasSeller.IdSeller,
+		PanggilanAlamat: data.PanggilanAlamat,
+		NomorTelephone:  data.NomorTelefon,
+		NamaAlamat:      data.NamaAlamat,
+		Kota:            data.Kota,
+		KodePos:         data.KodePos,
+		KodeNegara:      data.KodeNegara,
+		Deskripsi:       data.Deskripsi,
+		Longitude:       data.Longitude,
+		Latitude:        data.Latitude,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseTambahAlamatGudang{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -63,10 +92,10 @@ func TambahAlamatGudang(data PayloadTambahAlamatGudang, db *gorm.DB) *response.R
 // Berfungsi Untuk Seller manakala mereka ingin mengedit gudang mereka entah perubahan titik, nama dll
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EditAlamatGudang(data PayloadEditAlamatGudang, db *gorm.DB) *response.ResponseForm {
+func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "EditAlamatGudang"
 
-	_, status := data.IdentitasSeller.Validating(db)
+	_, status := data.IdentitasSeller.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -79,15 +108,48 @@ func EditAlamatGudang(data PayloadEditAlamatGudang, db *gorm.DB) *response.Respo
 		}
 	}
 
-	if err_edit_alamat := db.Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
-		ID: data.Data.ID,
-	}).Updates(&data.Data).Error; err_edit_alamat != nil {
-		log.Printf("[ERROR] Gagal mengedit alamat gudang ID %d untuk seller ID %d: %v", data.Data.ID, data.IdentitasSeller.IdSeller, err_edit_alamat)
+	var id_data_alamat int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+		ID:       data.IdAlamatGudang,
+		IDSeller: data.IdentitasSeller.IdSeller,
+	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_services_seller.ResponseEditAlamatGudang{
-				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_alamat == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseEditAlamatGudang{
+				Message: "Gagal Data alamat tidak valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+		ID: data.IdAlamatGudang,
+	}).Updates(&models.AlamatGudang{
+		PanggilanAlamat: data.PanggilanAlamat,
+		NomorTelephone:  data.NomorTelefon,
+		NamaAlamat:      data.NamaAlamat,
+		Kota:            data.Kota,
+		KodePos:         data.KodePos,
+		KodeNegara:      data.KodeNegara,
+		Deskripsi:       data.Deskripsi,
+		Longitude:       data.Longitude,
+		Latitude:        data.Latitude,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseEditAlamatGudang{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
@@ -107,10 +169,10 @@ func EditAlamatGudang(data PayloadEditAlamatGudang, db *gorm.DB) *response.Respo
 // Berfungsi Untuk Menghapus Suatu Alamat Gudang Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusAlamatGudang(data PayloadHapusAlamatGudang, db *gorm.DB) *response.ResponseForm {
+func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "HapusAlamatGudang"
 
-	_, status := data.IdentitasSeller.Validating(db)
+	_, status := data.IdentitasSeller.Validating(ctx, db)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -123,35 +185,58 @@ func HapusAlamatGudang(data PayloadHapusAlamatGudang, db *gorm.DB) *response.Res
 		}
 	}
 
-	var count int64 = 0
+	var id_data_alamat int64 = 0
 
-	if err_check := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
-		IDAlamat: data.IdGudang,
-	}).Count(&count).Error; err_check != nil {
+	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+		ID:       data.IdGudang,
+		IDSeller: data.IdentitasSeller.IdSeller,
+	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_alamat_services_seller.ResponseHapusAlamatGudang{
-				Message: "Gagal Server Sedang sibuk coba lagi lain waktu",
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
 
-	if count != 0 {
+	if id_data_alamat == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseHapusAlamatGudang{
+				Message: "Gagal masukan data alamat tidak valid",
+			},
+		}
+	}
+
+	var total int64 = 0
+	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+		IDAlamat: data.IdGudang,
+	}).Count(&total).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_alamat_services_seller.ResponseHapusAlamatGudang{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if total != 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_alamat_services_seller.ResponseHapusAlamatGudang{
-				Message: fmt.Sprintf("Gagal Ganti dahulu alamat kategori mu sejumlah %v", count),
+				Message: "Gagal kamu tidak bisa menghapus alamat ini karna masih digunakan oleh beberapa barangmu alihkan terlebih dahulu",
 			},
 		}
 	}
 
-	if err_hapus := db.Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
+	if err_hapus := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
 		ID:       data.IdGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Delete(&models.AlamatGudang{}).Error; err_hapus != nil {
-		log.Printf("[ERROR] Gagal menghapus alamat gudang ID %d untuk seller ID %d: %v", data.IdGudang, data.IdentitasSeller.IdSeller, err_hapus)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -160,8 +245,6 @@ func HapusAlamatGudang(data PayloadHapusAlamatGudang, db *gorm.DB) *response.Res
 			},
 		}
 	}
-
-	log.Printf("[INFO] Alamat gudang berhasil dihapus untuk seller ID %d", data.IdentitasSeller.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,

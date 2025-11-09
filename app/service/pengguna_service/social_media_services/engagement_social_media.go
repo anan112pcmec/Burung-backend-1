@@ -221,17 +221,21 @@ func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *g
 		}
 	}
 
-	var follower models.Follower
-	// reset agar jelas
-	follower.IdFollowed = 0
-	follower.IdFollower = 0
+	var id_data_follower int64 = 0
 
-	_ = db.Model(&models.Follower{}).
+	if err := db.WithContext(ctx).Model(&models.Follower{}).Select("id").
 		Where(&models.Follower{IdFollower: data.IdentitasUser.ID, IdFollowed: int64(data.IdSeller)}).
-		Take(&follower).Error
+		Limit(1).Scan(&id_data_follower).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_social_media_pengguna.ResponseFollowSeller{
+				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
 
-	// jika belum ada record follow, buat
-	if follower.IdFollowed == 0 && follower.IdFollower == 0 {
+	if id_data_follower == 0 {
 		if err := db.Create(&models.Follower{
 			IdFollower: data.IdentitasUser.ID,
 			IdFollowed: int64(data.IdSeller),
@@ -283,28 +287,38 @@ func UnfollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db 
 		}
 	}
 
-	result := db.Where(&models.Follower{
+	var id_follower int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Follower{}).Select("id").Where(&models.Follower{
 		IdFollower: data.IdentitasUser.ID,
 		IdFollowed: int64(data.IdSeller),
-	}).Delete(&models.Follower{})
+	}).Limit(1).Scan(&id_follower).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_social_media_pengguna.ResponseUnfollowSeller{
+				Message: "Gagal,server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
 
-	if result.Error != nil {
+	if id_follower == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_social_media_pengguna.ResponseUnfollowSeller{
+				Message: "Gagal data tidak ditemukan",
+			},
+		}
+	}
+
+	if result := db.WithContext(ctx).Where(&models.Follower{
+		ID: id_follower,
+	}).Delete(&models.Follower{}).Error; result != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_social_media_pengguna.ResponseUnfollowSeller{
 				Message: "Gagal unfollow seller, coba lagi lain waktu.",
-			},
-		}
-	}
-
-	// kalau tidak ada row yang dihapus, berarti belum follow atau sudah dihapus
-	if result.RowsAffected == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_social_media_pengguna.ResponseUnfollowSeller{
-				Message: "Gagal, kamu belum follow seller tersebut.",
 			},
 		}
 	}

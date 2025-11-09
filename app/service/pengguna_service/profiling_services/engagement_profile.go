@@ -30,9 +30,9 @@ func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProf
 
 	hasil_update_gmail = *particular_profiling_pengguna.UbahEmailPengguna(ctx, data.IdentitasPengguna.ID, data.EmailUpdate, db)
 
-	hasil_update_username = *particular_profiling_pengguna.UbahUsernamePengguna(db, data.IdentitasPengguna.ID, data.UsernameUpdate)
+	hasil_update_username = *particular_profiling_pengguna.UbahUsernamePengguna(ctx, db, data.IdentitasPengguna.ID, data.UsernameUpdate)
 
-	hasil_update_nama = *particular_profiling_pengguna.UbahNamaPengguna(data.IdentitasPengguna.ID, data.NamaUpdate, db)
+	hasil_update_nama = *particular_profiling_pengguna.UbahNamaPengguna(ctx, data.IdentitasPengguna.ID, data.NamaUpdate, db)
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,

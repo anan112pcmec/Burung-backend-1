@@ -191,6 +191,7 @@ func (BatalTransaksi) TableName() string {
 }
 
 type Follower struct {
+	ID         int64      `gorm:"primaryKey;autoIncrement" json:"id_follow"`
 	IdFollower int64      `gorm:"column:id_follower;not null" json:"id_follower"`
 	Pengguna   Pengguna   `gorm:"foreignKey:IdFollower;references:ID"` // user yang follow
 	IdFollowed int64      `gorm:"column:id_followed;not null" json:"id_followed"`

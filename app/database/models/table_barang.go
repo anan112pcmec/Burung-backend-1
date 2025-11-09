@@ -16,9 +16,8 @@ type BarangInduk struct {
 	Seller           Seller         `gorm:"foreignKey:SellerID;references:ID" json:"-"`
 	NamaBarang       string         `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
 	JenisBarang      string         `gorm:"column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis_barang_induk,omitempty"`
-	OriginalKategori string         `gorm:"column:original_kategori;type:varchar(250)" json:"original_kategori,omitempty"`
 	Deskripsi        string         `gorm:"column:deskripsi;type:text" json:"deskripsi_barang_induk,omitempty"`
-	TanggalRilis     string         `gorm:"column:tanggal_rilis;type:date;not null" json:"tanggal_rilis_barang_induk,omitempty"`
+	OriginalKategori int64          `gorm:"column:original_kategori;type:int8" json:"original_kategori,omitempty"`
 	Viewed           int32          `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed_barang_induk,omitempty"`
 	Likes            int32          `gorm:"column:likes;type:int4;not null;default:0" json:"likes_barang_induk,omitempty"`
 	TotalKomentar    int32          `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar_barang_induk,omitempty"`
@@ -28,36 +27,20 @@ type BarangInduk struct {
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
 }
 
-func (b *BarangInduk) Validating() string {
-	if b.SellerID == 0 {
-		return "Gagal: IdSeller kosong"
-	}
-	if b.NamaBarang == "" {
-		return "Gagal: Nama Barang kosong"
-	}
-	if b.JenisBarang == "" {
-		return "Gagal: Jenis Barang kosong"
-	}
-	if b.Deskripsi == "" {
-		return "Gagal: Deskripsi Barang kosong"
-	}
-	if b.TanggalRilis == "" {
-		return "Gagal: Tanggal Rilis kosong"
-	}
-
-	return "Data Lengkap"
-}
-
 func (BarangInduk) TableName() string {
 	return "barang_induk"
 }
 
 type KategoriBarang struct {
 	ID             int64          `gorm:"primaryKey;autoIncrement" json:"id_kategori_barang"`
+	SellerID       int32          `gorm:"column:id_seller;not null" json:"id_seller_kategori_barang"`
+	Seller         Seller         `gorm:"foreignKey:SellerID;references:ID" json:"-"`
 	IdBarangInduk  int32          `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_kategori"`
 	BarangInduk    BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID;constraint:OnDelete:CASCADE;" json:"-"`
 	IDAlamat       int64          `gorm:"column:id_alamat_gudang;type:int8" json:"id_alamat_gudang_kategori_barang"`
+	AlamatGudang   AlamatGudang   `gorm:"foreignKey:IDAlamat;references:ID" json:"-"`
 	IDRekening     int64          `gorm:"column:id_rekening;type:int8" json:"id_rekening_kategori_barang"`
+	RekeningSeller RekeningSeller `gorm:"foreignKey:IDRekening;references:ID" json:"-"`
 	Nama           string         `gorm:"column:nama;type:varchar(120);not null" json:"nama_kategori_barang"`
 	Deskripsi      string         `gorm:"column:deskripsi;type:text" json:"deskripsi_kategori_barang"`
 	Warna          string         `gorm:"column:warna;type:varchar(50)" json:"warna_kategori_barang"`
@@ -66,7 +49,8 @@ type KategoriBarang struct {
 	BeratGram      int16          `gorm:"column:berat_gram;type:int2" json:"berat_gram_kategori_barang"`
 	DimensiPanjang int16          `gorm:"column:dimensi_panjang_cm;type:int2" json:"dimensi_panjang_cm_kategori_barang"`
 	DimensiLebar   int16          `gorm:"column:dimensi_lebar_cm;type:int2" json:"dimensi_tinggi_cm_kategori_barang"`
-	Sku            string         `json:"sku_kategori"`
+	Sku            string         `gorm:"column:sku;type:varchar(20);not null" json:"sku_kategori"`
+	IsOriginal     bool           `gorm:"column:is_original;type:bool;not null;default:false" json:"is_original_kategori_barang"`
 	CreatedAt      time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt      time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt      gorm.DeletedAt `gorm:"index"`
