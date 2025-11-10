@@ -24,6 +24,14 @@ type ResponseTambahRekeningSeller struct {
 	Message string `json:"pesan_tambah_rekening_seller"`
 }
 
+type ResponseEditRekeningSeller struct {
+	Message string `json:"pesan_edit_rekening_seller"`
+}
+
+type ResponseSetDefaultRekeningSeller struct {
+	Message string `json:"pesan_set_default_rekening_seller"`
+}
+
 ///////////////////////////////////////////////////////////////////////
 // Response Struct Hapus Rekening Seller
 // ////////////////////////////////////////////////////////////////////

@@ -226,8 +226,7 @@ type RekeningSeller struct {
 	NamaBank        string     `gorm:"column:nama_bank;type:varchar(50);not null" json:"nama_bank_rekening_seller"`
 	NomorRekening   string     `gorm:"column:nomor_rekening;type:varchar(50);not null" json:"nomor_rekening_seller"`
 	PemilikRekening string     `gorm:"column:pemilik_rekening;type:varchar(100);not null" json:"pemilik_rekening_seller"`
-	IsDefault       bool       `gorm:"column:id_default;default:false" json:"is_default_rekening_seller"`
-	Status          string     `gorm:"column:status;type:varchar(20);default:'pending'" json:"status_rekening_seller"`
+	IsDefault       bool       `gorm:"column:is_default;default:false" json:"is_default_rekening_seller"`
 	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt       *time.Time `gorm:"index" json:"deleted_at,omitempty"`
@@ -257,6 +256,42 @@ type AlamatGudang struct {
 
 func (AlamatGudang) TableName() string {
 	return "alamat_gudang"
+}
+
+type DistributorData struct {
+	ID                        int64  `gorm:"primaryKey;autoIncrement" json:"id_distributor_data"`
+	SellerId                  int32  `gorm:"column:seller_id;not null" json:"id_seller_distributor_data"`
+	Seller                    Seller `gorm:"foreignKey:SellerId;references:ID" json:"-"`
+	NamaPerusahaan            string `gorm:"column:nama_perusahaan;type:text;not null" json:"nama_perusahaan_distributor_data"`
+	NIB                       string `gorm:"column:nib;type:varchar(15);not null" json:"nib_distributor_data"`
+	NPWP                      string `gorm:"column:npwp;type:varchar(18);not null" json:"npwp_distributor_data"`
+	DokumenIzinDistributorUrl string `gorm:"column:dokumen_izin_distributor;type:text;not null" json:"dokumen_izin_distributor_data"`
+	Alasan                    string `gorm:"column:alasan;type:text" json:"alasan_distributor_data"`
+	Status                    string `gorm:"column:status;type:status_jenis_seller;not null" json:"status_distributor_data"`
+}
+
+func (DistributorData) TableName() string {
+	return "distributor_data"
+}
+
+type BrandData struct {
+	ID                    int64  `gorm:"primaryKey;autoIncrement" json:"id_brand_data"`
+	SellerId              int32  `gorm:"column:seller_id;not null" json:"id_seller_brand_data"`
+	Seller                Seller `gorm:"foreignKey:SellerId;references:ID" json:"-"`
+	NamaPerusahaan        string `gorm:"column:nama_perusahaan;type:text;not null" json:"nama_perusahaan_brand_data"`
+	NegaraAsal            string `gorm:"column:negara_asal;type:varchar(57);not null;default:'indonesia'" json:"negara_asal_brand_data"`
+	LembagaPendaftaran    string `gorm:"column:lembaga_pendaftaran;type:text;not null" json:"lembaga_pendaftaran_brand_data"`
+	NomorPendaftaranMerek string `gorm:"column:nomor_pendaftaran_merek;type:text;not null" json:"nomor_pendaftaran_merek_brand_data"`
+	SertifikatMerekUrl    string `gorm:"column:sertifikat_merek_url;type:text;not null" json:"sertifikat_merek_url_brand_data"`
+	DokumenPerwakilanUrl  string `gorm:"column:dokumen_perwakilan_url;type:text;not null" json:"dokumen_perwakilan_url_brand_data"`
+	NIB                   string `gorm:"column:nib;type:varchar(15);not null" json:"nib_brand_data"`
+	NPWP                  string `gorm:"column:npwp;type:varchar(18);not null" json:"npwp_brand_data"`
+	Alasan                string `gorm:"column:alasan;type:text" json:"alasan_brand_data"`
+	Status                string `gorm:"column:status;type:status_jenis_seller;not null" json:"status_brand_data"`
+}
+
+func (BrandData) TableName() string {
+	return "brand_data"
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////

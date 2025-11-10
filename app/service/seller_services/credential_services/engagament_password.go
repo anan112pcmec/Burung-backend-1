@@ -23,10 +23,10 @@ import (
 // Berfungsi untuk mengirim kode otp ke gmail nantinya sebelum password benar benar diubah
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func PreUbahPasswordSeller(ctx context.Context, data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordSeller"
 
-	seller, status := data.IdentitasSeller.Validating(db)
+	seller, status := data.IdentitasSeller.Validating(ctx, db)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -60,52 +60,52 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 		}
 	}
 
-	go func() {
-		otp := helper.GenerateOTP()
-		key := fmt.Sprintf("seller_ubah_password_by_otp:%s", otp)
+	otp := helper.GenerateOTP()
+	key := fmt.Sprintf("seller_ubah_password_by_otp:%s", otp)
 
-		var email string
-
-		if err := db.Model(&models.Seller{}).
-			Where(&models.Seller{
-				ID: data.IdentitasSeller.IdSeller,
-			}).
-			Select("email").
-			Take(&email).Error; err != nil {
-
-			log.Printf("[ERROR] Gagal mengambil email seller ID %d: %v", data.IdentitasSeller.IdSeller, err)
-			return
+	if seller.Email == "" {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "Gagal data tidak valid coba hubungi cs",
+			},
 		}
+	}
 
-		to := []string{email}
-		subject := "Kode Mengubah Password Burung"
-		message := fmt.Sprintf("Kode Anda: %s\nMasa berlaku 3 menit.", otp)
+	to := []string{seller.Email}
+	subject := "Kode Mengubah Password Burung"
+	message := fmt.Sprintf("Kode Anda: %s\nMasa berlaku 3 menit.", otp)
 
-		if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-			log.Printf("[ERROR] Gagal mengirim email OTP ke %s: %v", email, err)
-		} else {
-			log.Printf("[INFO] Email OTP berhasil dikirim ke %s", email)
+	if err := emailservices.SendMail(to, nil, subject, message); err != nil {
+		log.Printf("[ERROR] Gagal mengirim email OTP ke %s: %v", seller.Email, err)
+	} else {
+		log.Printf("[INFO] Email OTP berhasil dikirim ke %s", seller.Email)
+	}
+
+	fields := map[string]interface{}{
+		"id_seller":     data.IdentitasSeller,
+		"username":      data.IdentitasSeller.Username,
+		"password_baru": string(hashedPassword),
+	}
+
+	pipe := rds.TxPipeline()
+	hset := pipe.HSet(ctx, key, fields)
+	exp := pipe.Expire(ctx, key, 3*time.Minute)
+
+	if _, err := pipe.Exec(ctx); err != nil {
+		log.Printf("[ERROR] Redis pipeline gagal: %v", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponsePreUbahPasswordSeller{
+				Message: "Gagal menyimpan data OTP. Coba lagi nanti.",
+			},
 		}
+	}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		fields := map[string]interface{}{
-			"id_seller":     data.IdentitasSeller,
-			"username":      data.IdentitasSeller.Username,
-			"password_baru": string(hashedPassword),
-		}
-
-		pipe := rds.TxPipeline()
-		hset := pipe.HSet(ctx, key, fields)
-		exp := pipe.Expire(ctx, key, 3*time.Minute)
-
-		if _, err := pipe.Exec(ctx); err != nil {
-			log.Printf("[ERROR] Redis pipeline gagal: %v", err)
-		}
-
-		_ = hset
-		_ = exp
-	}()
+	_ = hset
+	_ = exp
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
@@ -124,17 +124,6 @@ func PreUbahPasswordSeller(data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *
 func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordSeller"
 
-	if data.IDSeller == 0 {
-		log.Println("[WARN] ID seller tidak ditemukan pada permintaan validasi OTP.")
-		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
-			Services: services,
-			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
-				Message: "ID seller tidak ditemukan.",
-			},
-		}
-	}
-
 	if data.OtpKeyValidateSeller == "" {
 		log.Println("[WARN] OTP tidak ditemukan pada permintaan validasi OTP.")
 		return &response.ResponseForm{
@@ -142,18 +131,6 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 			Services: services,
 			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
 				Message: "OTP tidak ditemukan.",
-			},
-		}
-	}
-
-	var id_seller int32
-	if check_seller := db.Model(models.Seller{}).Select("id").Where(models.Seller{ID: data.IDSeller}).First(&id_seller).Error; check_seller != nil {
-		log.Printf("[WARN] Seller tidak ditemukan untuk validasi OTP: %v", check_seller)
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload: response_credential_seller.ResponseValidateUbahPasswordSeller{
-				Message: "Seller tidak ditemukan.",
 			},
 		}
 	}
@@ -174,8 +151,8 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 		}
 	}
 
-	if err_change_pass := db.Model(models.Seller{}).Where(models.Seller{ID: data.IDSeller}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
-		log.Printf("[ERROR] Gagal mengubah password seller ID %d: %v", data.IDSeller, err_change_pass)
+	if err_change_pass := db.Model(models.Seller{}).Where(models.Seller{ID: data.IdentitasSeller.IdSeller}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+		log.Printf("[ERROR] Gagal mengubah password seller ID %d: %v", data.IdentitasSeller.IdSeller, err_change_pass)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -185,7 +162,7 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 		}
 	}
 
-	log.Printf("[INFO] Password seller ID %d berhasil diubah via OTP.", data.IDSeller)
+	log.Printf("[INFO] Password seller ID %d berhasil diubah via OTP.", data.IdentitasSeller.IdSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,

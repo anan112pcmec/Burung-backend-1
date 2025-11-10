@@ -169,7 +169,7 @@ func UpTransaksi(db *gorm.DB) {
 
 func UpEngagementEntity(db *gorm.DB) {
 	var wg sync.WaitGroup
-	errCh := make(chan error, 19)
+	errCh := make(chan error, 21)
 
 	modelsToMigrate := []interface{}{
 		&models.Komentar{},
@@ -191,6 +191,8 @@ func UpEngagementEntity(db *gorm.DB) {
 		&models.AlamatKurir{},
 		&models.RekeningKurir{},
 		&models.SaldoKurir{},
+		&models.DistributorData{},
+		&models.BrandData{},
 	}
 
 	wg.Add(len(modelsToMigrate))

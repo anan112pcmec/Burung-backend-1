@@ -35,3 +35,9 @@ var (
 	FilmBroadcasting   = "Film & Broadcasting"
 	SemuaBarang        = "Semua Barang"
 )
+
+var (
+	Pending   = "Pending"
+	Confirmed = "Confirmed"
+	Declined  = "Declined"
+)

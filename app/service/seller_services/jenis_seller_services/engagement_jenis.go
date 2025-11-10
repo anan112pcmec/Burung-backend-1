@@ -1,7 +1,7 @@
 package jenis_seller_services
 
 import (
-	"log"
+	"context"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -12,86 +12,380 @@ import (
 
 )
 
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Prosedur Ajukan Ubah Jenis Seller
-// Berfungsi Untuk Mengajukan Perubahan jenis seller misal dari personal ke brands yang nantinya akan menunggu review
-// admin
-// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistributor, db *gorm.DB) *response.ResponseForm {
+	services := "MasukanDataDistributor"
 
-func AjukanUbahJenisSeller(data PayloadAjukanUbahJenisSeller, db *gorm.DB) *response.ResponseForm {
-	services := "AjukanUbahJenisSeller"
-
-	_, status := data.IdentitasSeller.Validating(db)
-
-	if !status {
-		log.Printf("[WARN] Identitas seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
-		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
-			Services: services,
-			Payload: response_jenis_seller.ResponseAjukanUbahJenisSeller{
-				Message: "Gagal, identitas seller tidak valid.",
-			},
-		}
-	}
-
-	var seller models.Seller
-	if err := db.Model(&models.Seller{}).Where(&models.Seller{
-		ID:       data.DataDiajukan.IdSeller,
-		Username: data.IdentitasSeller.Username,
-		Email:    data.IdentitasSeller.EmailSeller,
-	}).Limit(1).Take(&seller).Error; err != nil {
-		log.Printf("[ERROR] Gagal mengambil data seller ID %d: %v", data.DataDiajukan.IdSeller, err)
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Payload: response_jenis_seller.ResponseAjukanUbahJenisSeller{
-				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
-			},
-		}
-	}
-
-	if seller.ID == 0 {
-		log.Printf("[WARN] Data identitas tidak valid untuk seller ID %d", data.DataDiajukan.IdSeller)
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_jenis_seller.ResponseAjukanUbahJenisSeller{
-				Message: "Gagal, data identitas tidak valid.",
+			Payload: response_jenis_seller.ResponseMasukanDataDistributor{
+				Message: "Gagal data seller tidak valid",
 			},
 		}
 	}
 
-	if seller.Jenis == data.DataDiajukan.TargetJenis {
-		log.Printf("[WARN] Seller ID %d sudah memiliki jenis %s", seller.ID, seller.Jenis)
-		return &response.ResponseForm{
-			Status:   http.StatusBadRequest,
-			Services: services,
-			Payload: response_jenis_seller.ResponseAjukanUbahJenisSeller{
-				Message: "Gagal, kamu sudah berjenis demikian. Coba jenis lain.",
-			},
-		}
-	}
-
-	data.DataDiajukan.AlasanAdmin = ""
-	data.DataDiajukan.ValidationStatus = "Pending"
-
-	if err := db.Create(&data.DataDiajukan).Error; err != nil {
-		log.Printf("[ERROR] Gagal mengajukan perubahan jenis seller ID %d: %v", data.DataDiajukan.IdSeller, err)
+	var id_data_distributor int64 = 0
+	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
+		SellerId: data.IdentitasSeller.IdSeller,
+	}).Limit(1).Scan(&id_data_distributor).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_jenis_seller.ResponseAjukanUbahJenisSeller{
-				Message: "Gagal, server sedang sibuk. Coba lagi nanti.",
+			Payload: response_jenis_seller.ResponseMasukanDataDistributor{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
 
-	log.Printf("[INFO] Pengajuan perubahan jenis seller berhasil untuk seller ID %d", data.DataDiajukan.IdSeller)
+	if id_data_distributor != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataDistributor{
+				Message: "Gagal kamu sudah mengajukan data!.",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Create(&models.DistributorData{
+		SellerId:                  data.IdentitasSeller.IdSeller,
+		NamaPerusahaan:            data.NamaPerusahaan,
+		NIB:                       data.NIB,
+		NPWP:                      data.NPWP,
+		DokumenIzinDistributorUrl: data.DokumenIzinDistributorUrl,
+		Status:                    "Pending",
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataDistributor{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_jenis_seller.ResponseAjukanUbahJenisSeller{
-			Message: "Berhasil diajukan.",
+		Payload: response_jenis_seller.ResponseMasukanDataDistributor{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, db *gorm.DB) *response.ResponseForm {
+	services := "EditDataDistributor"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataDistributor{
+				Message: "Gagal data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_distributor int64 = 0
+	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
+		ID:       data.IdDistributorData,
+		SellerId: data.IdentitasSeller.IdSeller,
+		Status:   "Pending",
+	}).Limit(1).Scan(&id_data_distributor).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataDistributor{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_distributor == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataDistributor{
+				Message: "Gagal data yang dituju tidak ada",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Where(&models.DistributorData{
+		ID: data.IdDistributorData,
+	}).Updates(&models.DistributorData{
+		NamaPerusahaan:            data.NamaPerusahaan,
+		NIB:                       data.NIB,
+		NPWP:                      data.NPWP,
+		DokumenIzinDistributorUrl: data.DokumenIzinDistributorUrl,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataDistributor{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_jenis_seller.ResponseEditDataDistributor{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func HapusDataDistributor(ctx context.Context, data PayloadHapusDataDistributor, db *gorm.DB) *response.ResponseForm {
+	services := "HapusDataDistributor"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseHapusDataDistributor{
+				Message: "Gagal data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_distributor int64 = 0
+	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
+		ID:       data.IdDistributorData,
+		SellerId: data.IdentitasSeller.IdSeller,
+		Status:   "Pending",
+	}).Limit(1).Scan(&id_data_distributor).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseHapusDataDistributor{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_distributor == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseHapusDataDistributor{
+				Message: "Gagal data yang dituju tidak ada",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Where(&models.DistributorData{
+		ID: data.IdDistributorData,
+	}).Delete(&models.DistributorData{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseHapusDataDistributor{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_jenis_seller.ResponseHapusDataDistributor{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *gorm.DB) *response.ResponseForm {
+	services := "MasukanDataBrand"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataBrand{
+				Message: "Gagal data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_brand int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
+		SellerId: data.IdentitasSeller.IdSeller,
+	}).Limit(1).Scan(&id_data_brand).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataBrand{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_brand != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataBrand{
+				Message: "Gagal kamu sudah mengajukan data brand!.",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Create(&models.BrandData{
+		SellerId:              data.IdentitasSeller.IdSeller,
+		NamaPerusahaan:        data.NamaPerusahaan,
+		NegaraAsal:            data.NegaraAsal,
+		LembagaPendaftaran:    data.LembagaPendaftaran,
+		NomorPendaftaranMerek: data.NomorPendaftaranMerek,
+		SertifikatMerekUrl:    data.SertifikatMerekUrl,
+		DokumenPerwakilanUrl:  data.DokumenPerwakilanUrl,
+		NIB:                   data.NIB,
+		NPWP:                  data.NPWP,
+		Status:                "Pending",
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataBrand{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_jenis_seller.ResponseMasukanDataBrand{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *gorm.DB) *response.ResponseForm {
+	services := "EditDataBrand"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataBrand{
+				Message: "Gagal data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_brand int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
+		ID:       data.IdDataBrand,
+		SellerId: data.IdentitasSeller.IdSeller,
+		Status:   "Pending",
+	}).Limit(1).Scan(&id_data_brand).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataBrand{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_brand == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataBrand{
+				Message: "Gagal kamu sudah mengajukan data brand!.",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.BrandData{}).Where(&models.BrandData{
+		ID: data.IdDataBrand,
+	}).Updates(&models.BrandData{
+		NamaPerusahaan:        data.NamaPerusahaan,
+		NegaraAsal:            data.NegaraAsal,
+		LembagaPendaftaran:    data.LembagaPendaftaran,
+		NomorPendaftaranMerek: data.NomorPendaftaranMerek,
+		SertifikatMerekUrl:    data.SertifikatMerekUrl,
+		DokumenPerwakilanUrl:  data.DokumenPerwakilanUrl,
+		NIB:                   data.NIB,
+		NPWP:                  data.NPWP,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataBrand{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_jenis_seller.ResponseEditDataBrand{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func HapusDataBrand(ctx context.Context, data PayloadHapusDataBrand, db *gorm.DB) *response.ResponseForm {
+	services := "HapusDataBrand"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_jenis_seller.ResponseMasukanDataDistributor{
+				Message: "Gagal data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_brand int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
+		ID:       data.IdDataBrand,
+		SellerId: data.IdentitasSeller.IdSeller,
+		Status:   "Pending",
+	}).Limit(1).Scan(&id_data_brand).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataBrand{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.BrandData{}).Where(&models.BrandData{
+		ID: data.IdDataBrand,
+	}).Delete(&models.BrandData{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_jenis_seller.ResponseHapusDataBrand{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_brand == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_jenis_seller.ResponseEditDataBrand{
+				Message: "Gagal kamu sudah mengajukan data brand!.",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_jenis_seller.ResponseHapusDataBrand{
+			Message: "Berhasil",
 		},
 	}
 }

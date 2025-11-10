@@ -100,17 +100,15 @@ func AmbilRandomBarang(FinalTake int, ctx context.Context, rds *redis.Client, db
 			harga_kategori, _ := strconv.Atoi(data["harga"])
 
 			b := models.BarangInduk{
-				ID:               int32(id_barang),
-				SellerID:         int32(id_seller),
-				NamaBarang:       data["nama_barang_induk"],
-				JenisBarang:      data["jenis_barang_induk"],
-				OriginalKategori: data["original_kategori"],
-				Deskripsi:        data["deskripsi_barang_induk"],
-				TanggalRilis:     data["tanggal_rilis_barang_induk"],
-				Viewed:           int32(viewed),
-				Likes:            int32(likes),
-				TotalKomentar:    int32(total_komentar),
-				HargaKategoris:   int32(harga_kategori),
+				ID:             int32(id_barang),
+				SellerID:       int32(id_seller),
+				NamaBarang:     data["nama_barang_induk"],
+				JenisBarang:    data["jenis_barang_induk"],
+				Deskripsi:      data["deskripsi_barang_induk"],
+				Viewed:         int32(viewed),
+				Likes:          int32(likes),
+				TotalKomentar:  int32(total_komentar),
+				HargaKategoris: int32(harga_kategori),
 			}
 
 			mu.Lock()
@@ -231,17 +229,15 @@ func AmbilBarangJenis(FinalTake int, ctx context.Context, db *gorm.DB, rds *redi
 				harga_kategori, _ := strconv.Atoi(data["harga"])
 
 				b := models.BarangInduk{
-					ID:               int32(id_barang),
-					SellerID:         int32(id_seller),
-					NamaBarang:       data["nama_barang_induk"],
-					JenisBarang:      data["jenis_barang_induk"],
-					OriginalKategori: data["original_kategori"],
-					Deskripsi:        data["deskripsi_barang_induk"],
-					TanggalRilis:     data["tanggal_rilis_barang_induk"],
-					Viewed:           int32(viewed),
-					Likes:            int32(likes),
-					TotalKomentar:    int32(total_komentar),
-					HargaKategoris:   int32(harga_kategori),
+					ID:             int32(id_barang),
+					SellerID:       int32(id_seller),
+					NamaBarang:     data["nama_barang_induk"],
+					JenisBarang:    data["jenis_barang_induk"],
+					Deskripsi:      data["deskripsi_barang_induk"],
+					Viewed:         int32(viewed),
+					Likes:          int32(likes),
+					TotalKomentar:  int32(total_komentar),
+					HargaKategoris: int32(harga_kategori),
 				}
 
 				mu.Lock()
@@ -334,17 +330,15 @@ func AmbilBarangSeller(FinalTake int, ctx context.Context, db *gorm.DB, rds *red
 			harga_kategori, _ := strconv.Atoi(data["harga"])
 
 			b := models.BarangInduk{
-				ID:               int32(id_barang),
-				SellerID:         int32(id_seller),
-				NamaBarang:       data["nama_barang_induk"],
-				JenisBarang:      data["jenis_barang_induk"],
-				OriginalKategori: data["original_kategori"],
-				Deskripsi:        data["deskripsi_barang_induk"],
-				TanggalRilis:     data["tanggal_rilis_barang_induk"],
-				Viewed:           int32(viewed),
-				Likes:            int32(likes),
-				TotalKomentar:    int32(total_komentar),
-				HargaKategoris:   int32(harga_kategori),
+				ID:             int32(id_barang),
+				SellerID:       int32(id_seller),
+				NamaBarang:     data["nama_barang_induk"],
+				JenisBarang:    data["jenis_barang_induk"],
+				Deskripsi:      data["deskripsi_barang_induk"],
+				Viewed:         int32(viewed),
+				Likes:          int32(likes),
+				TotalKomentar:  int32(total_komentar),
+				HargaKategoris: int32(harga_kategori),
 			}
 			barang = append(barang, b)
 		}()
@@ -429,17 +423,15 @@ func AmbilBarangNama(FinalTake int, ctx context.Context, rds *redis.Client, db *
 					hargaKategoriInt, _ := strconv.Atoi(data["harga"])
 
 					b := models.BarangInduk{
-						ID:               int32(idBarangInt),
-						SellerID:         int32(idSellerInt),
-						NamaBarang:       data["nama_barang_induk"],
-						JenisBarang:      data["jenis_barang_induk"],
-						OriginalKategori: data["original_kategori"],
-						Deskripsi:        data["deskripsi_barang_induk"],
-						TanggalRilis:     data["tanggal_rilis_barang_induk"],
-						Viewed:           int32(viewedInt),
-						Likes:            int32(likesInt),
-						TotalKomentar:    int32(totalKomentarInt),
-						HargaKategoris:   int32(hargaKategoriInt),
+						ID:             int32(idBarangInt),
+						SellerID:       int32(idSellerInt),
+						NamaBarang:     data["nama_barang_induk"],
+						JenisBarang:    data["jenis_barang_induk"],
+						Deskripsi:      data["deskripsi_barang_induk"],
+						Viewed:         int32(viewedInt),
+						Likes:          int32(likesInt),
+						TotalKomentar:  int32(totalKomentarInt),
+						HargaKategoris: int32(hargaKategoriInt),
 					}
 
 					mu.Lock()
@@ -551,17 +543,15 @@ func AmbilBarangNamaDanJenis(FinalTake int, ctx context.Context, rds *redis.Clie
 			harga_kategori_int, _ := strconv.Atoi(data["harga"])
 
 			b := models.BarangInduk{
-				ID:               int32(id_barang_int),
-				SellerID:         int32(id_seller_int),
-				NamaBarang:       data["nama_barang_induk"],
-				JenisBarang:      data["jenis_barang_induk"],
-				OriginalKategori: data["original_kategori"],
-				Deskripsi:        data["deskripsi_barang_induk"],
-				TanggalRilis:     data["tanggal_rilis_barang_induk"],
-				Viewed:           int32(viewed_int),
-				Likes:            int32(likes_int),
-				TotalKomentar:    int32(total_komentar_int),
-				HargaKategoris:   int32(harga_kategori_int),
+				ID:             int32(id_barang_int),
+				SellerID:       int32(id_seller_int),
+				NamaBarang:     data["nama_barang_induk"],
+				JenisBarang:    data["jenis_barang_induk"],
+				Deskripsi:      data["deskripsi_barang_induk"],
+				Viewed:         int32(viewed_int),
+				Likes:          int32(likes_int),
+				TotalKomentar:  int32(total_komentar_int),
+				HargaKategoris: int32(harga_kategori_int),
 			}
 
 			mu.Lock()
@@ -646,17 +636,15 @@ func AmbilBarangNamaDanSeller(FinalTake int, ctx context.Context, rds *redis.Cli
 			harga_kategori, _ := strconv.Atoi(data["harga"])
 
 			b := models.BarangInduk{
-				ID:               int32(id_barang),
-				SellerID:         int32(id_seller),
-				NamaBarang:       data["nama_barang_induk"],
-				JenisBarang:      data["jenis_barang_induk"],
-				OriginalKategori: data["original_kategori"],
-				Deskripsi:        data["deskripsi_barang_induk"],
-				TanggalRilis:     data["tanggal_rilis_barang_induk"],
-				Viewed:           int32(viewed),
-				Likes:            int32(likes),
-				TotalKomentar:    int32(total_komentar),
-				HargaKategoris:   int32(harga_kategori),
+				ID:             int32(id_barang),
+				SellerID:       int32(id_seller),
+				NamaBarang:     data["nama_barang_induk"],
+				JenisBarang:    data["jenis_barang_induk"],
+				Deskripsi:      data["deskripsi_barang_induk"],
+				Viewed:         int32(viewed),
+				Likes:          int32(likes),
+				TotalKomentar:  int32(total_komentar),
+				HargaKategoris: int32(harga_kategori),
 			}
 			mu.Lock()
 			barang = append(barang, b)
@@ -752,17 +740,15 @@ func AmbilBarangJenisDanSeller(FinalTake int, ctx context.Context, rds *redis.Cl
 			harga_kategori_int, _ := strconv.Atoi(data["harga"])
 
 			b := models.BarangInduk{
-				ID:               int32(id_barang_int),
-				SellerID:         int32(id_seller_int),
-				NamaBarang:       data["nama_barang_induk"],
-				JenisBarang:      data["jenis_barang_induk"],
-				OriginalKategori: data["original_kategori"],
-				Deskripsi:        data["deskripsi_barang_induk"],
-				TanggalRilis:     data["tanggal_rilis_barang_induk"],
-				Viewed:           int32(viewed_int),
-				Likes:            int32(likes_int),
-				TotalKomentar:    int32(total_komentar_int),
-				HargaKategoris:   int32(harga_kategori_int),
+				ID:             int32(id_barang_int),
+				SellerID:       int32(id_seller_int),
+				NamaBarang:     data["nama_barang_induk"],
+				JenisBarang:    data["jenis_barang_induk"],
+				Deskripsi:      data["deskripsi_barang_induk"],
+				Viewed:         int32(viewed_int),
+				Likes:          int32(likes_int),
+				TotalKomentar:  int32(total_komentar_int),
+				HargaKategoris: int32(harga_kategori_int),
 			}
 
 			mu.Lock()
@@ -826,17 +812,15 @@ func AmbilDataBarangInduk(ctx context.Context, id_barang_induk int32, db *gorm.D
 		hargaKategori, _ := strconv.Atoi(dataRedis["harga"])
 
 		barangInduk = models.BarangInduk{
-			ID:               int32(idBarang),
-			SellerID:         int32(idSeller),
-			NamaBarang:       dataRedis["nama_barang_induk"],
-			JenisBarang:      dataRedis["jenis_barang_induk"],
-			OriginalKategori: dataRedis["original_kategori"],
-			Deskripsi:        dataRedis["deskripsi_barang_induk"],
-			TanggalRilis:     dataRedis["tanggal_rilis_barang_induk"],
-			Viewed:           int32(viewed),
-			Likes:            int32(likes),
-			TotalKomentar:    int32(totalKomentar),
-			HargaKategoris:   int32(hargaKategori),
+			ID:             int32(idBarang),
+			SellerID:       int32(idSeller),
+			NamaBarang:     dataRedis["nama_barang_induk"],
+			JenisBarang:    dataRedis["jenis_barang_induk"],
+			Deskripsi:      dataRedis["deskripsi_barang_induk"],
+			Viewed:         int32(viewed),
+			Likes:          int32(likes),
+			TotalKomentar:  int32(totalKomentar),
+			HargaKategoris: int32(hargaKategori),
 		}
 	} else {
 		var hasilDB models.BarangInduk
@@ -857,7 +841,7 @@ func AmbilDataBarangInduk(ctx context.Context, id_barang_induk int32, db *gorm.D
 			Select("harga").
 			Where(&models.KategoriBarang{
 				IdBarangInduk: hasilDB.ID,
-				Nama:          hasilDB.OriginalKategori,
+				ID:            hasilDB.OriginalKategori,
 			}).
 			Take(&hargaBarang).Error; err != nil {
 			fmt.Println("❌ Gagal ambil harga kategori:", err)
@@ -870,7 +854,6 @@ func AmbilDataBarangInduk(ctx context.Context, id_barang_induk int32, db *gorm.D
 			JenisBarang:      hasilDB.JenisBarang,
 			OriginalKategori: hasilDB.OriginalKategori,
 			Deskripsi:        hasilDB.Deskripsi,
-			TanggalRilis:     hasilDB.TanggalRilis,
 			Viewed:           hasilDB.Viewed,
 			Likes:            hasilDB.Likes,
 			TotalKomentar:    hasilDB.TotalKomentar,
@@ -899,7 +882,7 @@ func AmbilDataBarangInduk(ctx context.Context, id_barang_induk int32, db *gorm.D
 		wg.Add(1)
 		go func(idx int, kat response_barang.KategoriBarangDiambil) {
 			defer wg.Done()
-			if kat.Nama == barangInduk.OriginalKategori {
+			if kat.ID == barangInduk.OriginalKategori {
 				mu.Lock()
 				if !found {
 					kategoriBarang[idx].Original = true

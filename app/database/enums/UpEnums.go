@@ -27,6 +27,7 @@ func UpEnumsEntity(db *gorm.DB) error {
 		"jenis_kendaraan_kurir": {"Motor", "Mobil", "Truk", "Pickup", "Lainnya", "Unknown"},
 		"roda_kendaraan_kurir":  {"2", "3", "4"},
 		"status_kurir_narik":    {"Idle", "OnDelivery", "Off"},
+		"status_jenis_seller":   {"Pending", "Confirmed", "Declined"},
 	}
 
 	for enumName, values := range enumMap {

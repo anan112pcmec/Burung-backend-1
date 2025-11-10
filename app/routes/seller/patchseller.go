@@ -171,6 +171,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_service.EditChildKomentar(ctx, data, db)
+	case "/seller/rekening/edit-rekening":
+		var data seller_credential_services.PayloadEditNorekSeler
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_credential_services.EditRekeningSeller(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

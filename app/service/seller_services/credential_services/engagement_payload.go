@@ -1,7 +1,6 @@
 package seller_credential_services
 
 import (
-	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/identity_seller"
 )
 
@@ -20,8 +19,8 @@ type PayloadPreUbahPasswordSeller struct {
 // ////////////////////////////////////////////////////////////////////
 
 type PayloadValidateUbahPasswordSellerOTP struct {
-	IDSeller             int32  `json:"id_seller_validate"`
-	OtpKeyValidateSeller string `json:"otp_key_validate_ubah_password_seller"`
+	IdentitasSeller      identity_seller.IdentitySeller `json:"identitas_seller"`
+	OtpKeyValidateSeller string                         `json:"otp_key_validate_ubah_password_seller"`
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -29,8 +28,23 @@ type PayloadValidateUbahPasswordSellerOTP struct {
 // ////////////////////////////////////////////////////////////////////
 
 type PayloadTambahkanNorekSeller struct {
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	NamaBank         string                         `json:"nama_bank"`
+	NomorRekening    string                         `json:"nomor_rekening"`
+	PemilikiRekening string                         `json:"pemilik_rekening"`
+}
+
+type PayloadEditNorekSeler struct {
+	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
+	IdRekening       int64                          `json:"id_rekening"`
+	NamaBank         string                         `json:"nama_bank"`
+	NomorRekening    string                         `json:"nomor_rekening"`
+	PemilikiRekening string                         `json:"pemilik_rekening"`
+}
+
+type PayloadSetDefaultRekeningSeller struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	Data            models.RekeningSeller          `json:"data_rekening_seller"`
+	IdRekening      int64                          `json:"id_rekening"`
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -39,7 +53,6 @@ type PayloadTambahkanNorekSeller struct {
 
 type PayloadHapusNorekSeller struct {
 	IdentitasSeller identity_seller.IdentitySeller `json:"identitas_seller"`
-	NamaBank        string                         `json:"nama_bank_hapus_rekening"`
+	IdRekening      int64                          `json:"id_rekening"`
 	NomorRekening   string                         `json:"nomor_rekening_hapus_rekening"`
-	PemilikRekening string                         `json:"pemilik_rekening_hapus_rekening"`
 }

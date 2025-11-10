@@ -113,8 +113,8 @@ type PayloadDownBarangInduk struct {
 
 type PayloadDownKategoriBarang struct {
 	IdentitasSeller  identity_seller.IdentitySeller `json:"identitas_seller"`
-	IdBarangInduk    int32                          `json:"id_barang_induk_down"`
-	IdKategoriBarang int64                          `json:"id_kategori_barang_down"`
+	IdBarangInduk    int32                          `json:"id_barang_induk"`
+	IdKategoriBarang int64                          `json:"id_kategori_barang"`
 }
 
 // ////////////////////////////////////////////////////////////////////////////////

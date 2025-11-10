@@ -1,7 +1,7 @@
 package seller_credential_services
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
 
@@ -17,10 +17,11 @@ import (
 // Berfungsi untuk menambahkan rekening seller ke database
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *response.ResponseForm {
+func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller, db *gorm.DB) *response.ResponseForm {
 	services := "TambahRekeningSeller"
 
-	if _, status := data.IdentitasSeller.Validating(db); !status {
+	// validasi kredensial seller
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -30,53 +31,64 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 		}
 	}
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		var id_rekening int64
-		if err_check_rekening := tx.Model(&models.RekeningSeller{}).
-			Select("id").
-			Where(models.RekeningSeller{
-				IDSeller:      data.IdentitasSeller.IdSeller,
-				NamaBank:      data.Data.NamaBank,
-				NomorRekening: data.Data.NomorRekening,
-			}).
-			First(&id_rekening).Error; err_check_rekening == nil {
-			return fmt.Errorf("rekening sudah ada")
+	// cek rekening sudah ada
+	var id_rekening int64
+	if err_check_rekening := db.WithContext(ctx).
+		Model(&models.RekeningSeller{}).
+		Select("id").
+		Where(models.RekeningSeller{
+			IDSeller:      data.IdentitasSeller.IdSeller,
+			NamaBank:      data.NamaBank,
+			NomorRekening: data.NomorRekening,
+		}).
+		Limit(1).
+		Scan(&id_rekening).Error; err_check_rekening == nil && id_rekening != 0 {
+		log.Printf("[WARN] Rekening sudah ada untuk seller ID %d: %s - %s",
+			data.IdentitasSeller.IdSeller, data.NamaBank, data.NomorRekening)
+		return &response.ResponseForm{
+			Status:   http.StatusConflict,
+			Services: services,
+			Payload: response_credential_seller.ResponseTambahRekeningSeller{
+				Message: "Data rekening tersebut sudah ada dan tercatat di akun Anda.",
+			},
 		}
+	}
 
-		var hitung int64 = 0
-
-		if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+	// cek apakah seller sudah punya rekening lain (buat tentuin default)
+	var id_data_rekening int64 = 0
+	if err := db.WithContext(ctx).
+		Model(&models.RekeningSeller{}).
+		Select("id").
+		Where(&models.RekeningSeller{
 			IDSeller: data.IdentitasSeller.IdSeller,
-		}).Count(&hitung).Error; err != nil {
-			return err
+		}).
+		Limit(1).
+		Scan(&id_data_rekening).Error; err != nil {
+		log.Printf("[ERROR] Gagal cek rekening seller ID %d: %v", data.IdentitasSeller.IdSeller, err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponseTambahRekeningSeller{
+				Message: "Gagal memproses data rekening.",
+			},
 		}
-		if hitung == 0 {
-			data.Data.IsDefault = true
-		} else {
-			data.Data.IsDefault = false
-		}
+	}
 
-		data.Data.IDSeller = data.IdentitasSeller.IdSeller
+	// set default jika belum ada rekening
+	var IsDefault bool = false
+	if id_data_rekening == 0 {
+		IsDefault = true
+	} else {
+		IsDefault = false
+	}
 
-		if err_masukan := tx.Create(&data.Data).Error; err_masukan != nil {
-			return err_masukan
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		if err.Error() == "rekening sudah ada" {
-			log.Printf("[WARN] Rekening sudah ada untuk seller ID %d: %s - %s", data.Data.IDSeller, data.Data.NamaBank, data.Data.NomorRekening)
-			return &response.ResponseForm{
-				Status:   http.StatusConflict,
-				Services: services,
-				Payload: response_credential_seller.ResponseTambahRekeningSeller{
-					Message: "Data rekening tersebut sudah ada dan tercatat di akun Anda.",
-				},
-			}
-		}
-		log.Printf("[ERROR] Gagal menambah rekening untuk seller ID %d: %v", data.Data.IDSeller, err)
+	// insert rekening baru
+	if err_masukan := db.WithContext(ctx).Create(&models.RekeningSeller{
+		NamaBank:        data.NamaBank,
+		NomorRekening:   data.NomorRekening,
+		PemilikRekening: data.PemilikiRekening,
+		IsDefault:       IsDefault,
+	}).Error; err_masukan != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -86,7 +98,6 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 		}
 	}
 
-	log.Printf("[INFO] Rekening berhasil ditambahkan untuk seller ID %d", data.Data.IDSeller)
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
@@ -97,58 +108,217 @@ func TambahRekeningSeller(data PayloadTambahkanNorekSeller, db *gorm.DB) *respon
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Edit Rekening Seller
+// Berfungsi untuk mengedit rekening seller di database
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *gorm.DB) *response.ResponseForm {
+	services := "EditRekeningSeller"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal Data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_rekening int64 = 0
+	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+		ID:       data.IdRekening,
+		IDSeller: data.IdentitasSeller.IdSeller,
+	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_rekening == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal data rekening tidak valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+		ID:       data.IdRekening,
+		IDSeller: data.IdentitasSeller.IdSeller,
+	}).Updates(&models.RekeningSeller{
+		NamaBank:        data.NamaBank,
+		NomorRekening:   data.NomorRekening,
+		PemilikRekening: data.PemilikiRekening,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_credential_seller.ResponseEditRekeningSeller{
+			Message: "Berhasil",
+		},
+	}
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Fungsi Prosedur Set default rekening seller
+// Berfungsi untuk mengubah rekening default
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func SetDefaultRekeningSeller(ctx context.Context, data PayloadSetDefaultRekeningSeller, db *gorm.DB) *response.ResponseForm {
+	services := "SetDefaultRekeningSeller"
+
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal Data seller tidak valid",
+			},
+		}
+	}
+
+	var id_data_rekening int64 = 0
+	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+		ID:       data.IdRekening,
+		IDSeller: data.IdentitasSeller.IdSeller,
+	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_data_rekening == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_seller.ResponseEditRekeningSeller{
+				Message: "Gagal data rekening tidak valid",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+			IDSeller:  data.IdentitasSeller.IdSeller,
+			IsDefault: true,
+		}).Update("is_default", false).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+			ID:       data.IdRekening,
+			IDSeller: data.IdentitasSeller.IdSeller,
+		}).Update("is_default", true).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponseSetDefaultRekeningSeller{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_credential_seller.ResponseSetDefaultRekeningSeller{
+			Message: "Berhasil",
+		},
+	}
+}
+
+// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Fungsi Prosedur Hapus Rekening Seller
 // Berfungsi untuk Menghapus Data Rekening Seller Yang sudah ada di db
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusRekeningSeller(data PayloadHapusNorekSeller, db *gorm.DB) *response.ResponseForm {
+func HapusRekeningSeller(ctx context.Context, data PayloadHapusNorekSeller, db *gorm.DB) *response.ResponseForm {
 	services := "HapusRekeningSeller"
 
-	if _, status := data.IdentitasSeller.Validating(db); !status {
+	// Validasi kredensial seller
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_credential_seller.ResponseHapusRekeningSeller{
-				Message: "Gagal Kredensial Seller Tidak Valid",
+				Message: "Gagal, kredensial seller tidak valid",
 			},
 		}
 	}
-	err := db.Transaction(func(tx *gorm.DB) error {
-		var id_rekening int64
 
-		if check_rekening := tx.Model(&models.RekeningSeller{}).
-			Select("id").
-			Where(models.RekeningSeller{
-				IDSeller:        data.IdentitasSeller.IdSeller,
-				NamaBank:        data.NamaBank,
-				PemilikRekening: data.PemilikRekening,
-				NomorRekening:   data.NomorRekening,
-			}).
-			First(&id_rekening).Error; check_rekening != nil {
-			return check_rekening
-		}
-
-		if hapus_rekening := tx.Model(&models.RekeningSeller{}).
-			Where(models.RekeningSeller{ID: id_rekening}).
-			Delete(&models.RekeningSeller{}).Error; hapus_rekening != nil {
-			return hapus_rekening
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		log.Printf("[ERROR] Gagal menghapus rekening untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err)
+	// Validasi apakah rekening ada dan milik seller ini
+	var id_data_rekening int64
+	if err := db.WithContext(ctx).
+		Model(&models.RekeningSeller{}).
+		Select("id").
+		Where(&models.RekeningSeller{
+			ID:       data.IdRekening,
+			IDSeller: data.IdentitasSeller.IdSeller,
+		}).
+		Limit(1).
+		Scan(&id_data_rekening).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_credential_seller.ResponseHapusRekeningSeller{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
+				Message: "Gagal, server sedang sibuk coba lagi lain waktu",
 			},
 		}
 	}
 
-	log.Printf("[INFO] Rekening berhasil dihapus untuk seller ID %d", data.IdentitasSeller.IdSeller)
+	if id_data_rekening == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_credential_seller.ResponseHapusRekeningSeller{
+				Message: "Gagal, data rekening tidak valid",
+			},
+		}
+	}
+
+	// Hapus rekening
+	if err := db.WithContext(ctx).
+		Where(&models.RekeningSeller{
+			ID:            id_data_rekening,
+			NomorRekening: data.NomorRekening,
+		}).
+		Delete(&models.RekeningSeller{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_credential_seller.ResponseHapusRekeningSeller{
+				Message: "Gagal, server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	log.Printf("[INFO] Rekening ID %d milik seller ID %d berhasil dihapus", id_data_rekening, data.IdentitasSeller.IdSeller)
+
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
