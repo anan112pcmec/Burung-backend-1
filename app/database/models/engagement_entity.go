@@ -205,21 +205,6 @@ func (Follower) TableName() string {
 	return "follower"
 }
 
-type Diskon struct {
-	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_diskon"`
-	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID"`
-	Deskripsi     string      `gorm:"column:deskripsi;type:text" json:"deskripsi_diskon"`
-	Berlaku       time.Time   `gorm:"column:berlaku;type:date;not null" json:"berlaku_diskon"`
-	Expired       time.Time   `gorm:"column:expired;type:date;not null" json:"expired_diskon"`
-	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-func (Diskon) TableName() string {
-	return "diskon"
-}
-
 type RekeningSeller struct {
 	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_rekening_seller"`
 	IDSeller        int32      `gorm:"column:id_seller;not null;index" json:"id_seller"`
@@ -317,6 +302,45 @@ type BarangKeEtalase struct {
 
 func (BarangKeEtalase) TableName() string {
 	return "barang_ke_etalase"
+}
+
+type DiskonProduk struct {
+	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id_diskon_produk"`
+	SellerId      int32          `gorm:"column:id_seller;not null" json:"id_seller_diskon_produk"`
+	Seller        Seller         `gorm:"foreignKey:SellerId;references:ID" json:"-"`
+	Nama          string         `gorm:"column:nama;type:varchar(100);not null" json:"nama_diskon_produk"`
+	Deskripsi     string         `gorm:"column:deskripsi;type:text" json:"deskripsi_diskon_produk"`
+	DiskonPersen  float64        `gorm:"column:diskon_persen;type:decimal(5,2);not null" json:"diskon_persen_diskon_produk"`
+	BerlakuMulai  time.Time      `gorm:"column:berlaku_mulai;type:date;not null" json:"berlaku_mulai_diskon_produk"`
+	BerlakuSampai time.Time      `gorm:"column:berlaku_sampai;type:date;not null" json:"berlaku_sampai_diskon_produk"`
+	Status        string         `gorm:"column:status;type:varchar(20);default:'Draft';not null" json:"status_diskon_produk"`
+	CreatedAt     time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+}
+
+func (DiskonProduk) TableName() string {
+	return "diskon_produk"
+}
+
+type BarangDiDiskon struct {
+	ID               int64          `gorm:"primaryKey;autoIncrement" json:"id_barang_di_diskon"`
+	SellerId         int32          `gorm:"column:id_seller;not null" json:"id_seller_barang_di_diskon"`
+	Seller           Seller         `gorm:"foreignKey:SellerId;references:ID" json:"-"`
+	IdDiskon         int64          `gorm:"column:id_diskon;not null;constraint:OnDelete:CASCADE" json:"id_diskon_barang_di_diskon"`
+	DiskonProduk     DiskonProduk   `gorm:"foreignKey:IdDiskon;references:ID" json:"-"`
+	IdBarangInduk    int32          `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_barang_di_diskon"`
+	BarangInduk      BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
+	IdKategoriBarang int64          `gorm:"column:id_kategori_barang;not null" json:"id_kategori_barang_barang_di_diskon"`
+	KategoriBarang   KategoriBarang `gorm:"foreignKey:IdKategoriBarang;references:ID" json:"-"`
+	Status           string         `gorm:"column:status;type:status_barang_di_diskon;default:'Waiting';not null" json:"status_barang_di_diskon"`
+	CreatedAt        time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt        time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+}
+
+func (BarangDiDiskon) TableName() string {
+	return "barang_di_diskon"
 }
 
 // ///////////////////////////////////////////////////////////////////////////////////////////

@@ -41,3 +41,14 @@ var (
 	Confirmed = "Confirmed"
 	Declined  = "Declined"
 )
+
+var (
+	Draft   = "Draft"
+	Aktif   = "Aktif"
+	Selesai = "Selesai"
+)
+
+var (
+	Waiting = "Waiting"
+	Applied = "Applied"
+)

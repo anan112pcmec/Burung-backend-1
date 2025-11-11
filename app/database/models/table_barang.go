@@ -46,6 +46,7 @@ type KategoriBarang struct {
 	Warna          string         `gorm:"column:warna;type:varchar(50)" json:"warna_kategori_barang"`
 	Stok           int32          `gorm:"column:stok;type:int4;not null" json:"stok_kategori_barang"`
 	Harga          int32          `gorm:"column:harga;type:int4;not null" json:"harga_kategori_barang"`
+	PotonganDiskon int32          `gorm:"column:diskon;type:int4;default:0" json:"-"`
 	BeratGram      int16          `gorm:"column:berat_gram;type:int2" json:"berat_gram_kategori_barang"`
 	DimensiPanjang int16          `gorm:"column:dimensi_panjang_cm;type:int2" json:"dimensi_panjang_cm_kategori_barang"`
 	DimensiLebar   int16          `gorm:"column:dimensi_lebar_cm;type:int2" json:"dimensi_tinggi_cm_kategori_barang"`

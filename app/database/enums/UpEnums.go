@@ -15,19 +15,21 @@ func UpEnumsEntity(db *gorm.DB) error {
 	}
 
 	enumMap := map[string][]string{
-		"status":                {"Online", "Offline"},
-		"aksi_pengguna":         {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist", "Pencarian"},
-		"aksi_seler":            {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist"},
-		"jenis_seller":          {"Brands", "Distributors", "Personal"},
-		"seller_dedication":     {"Pakaian & Fashion", "Kosmetik & Kecantikan", "Elektronik & Gadget", "Buku & Media", "Makanan & Minuman", "Ibu & Bayi", "Mainan", "Olahraga & Outdoor", "Otomotif & Sparepart", "Rumah Tangga", "Alat Tulis", "Perhiasan & Aksesoris", "Produk Digital", "Bangunan & Perkakas", "Musik & Instrumen", "Film & Broadcasting", "Semua Barang"},
-		"jenis_layanan_kurir":   {"Reguler", "Express", "Ekonomi", "Sameday", "NextDay", "Cargo"},
-		"status_keranjang":      {"Ready", "UnReady"},
-		"nama_bank":             {"BCA", "BRI", "BNI", "MANDIRI", "BTN", "CIMB", "PERMATA"},
-		"status_perizinan":      {"Pending", "Diizinkan", "Dilarang"},
-		"jenis_kendaraan_kurir": {"Motor", "Mobil", "Truk", "Pickup", "Lainnya", "Unknown"},
-		"roda_kendaraan_kurir":  {"2", "3", "4"},
-		"status_kurir_narik":    {"Idle", "OnDelivery", "Off"},
-		"status_jenis_seller":   {"Pending", "Confirmed", "Declined"},
+		"status":                  {"Online", "Offline"},
+		"aksi_pengguna":           {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist", "Pencarian"},
+		"aksi_seler":              {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist"},
+		"jenis_seller":            {"Brands", "Distributors", "Personal"},
+		"seller_dedication":       {"Pakaian & Fashion", "Kosmetik & Kecantikan", "Elektronik & Gadget", "Buku & Media", "Makanan & Minuman", "Ibu & Bayi", "Mainan", "Olahraga & Outdoor", "Otomotif & Sparepart", "Rumah Tangga", "Alat Tulis", "Perhiasan & Aksesoris", "Produk Digital", "Bangunan & Perkakas", "Musik & Instrumen", "Film & Broadcasting", "Semua Barang"},
+		"jenis_layanan_kurir":     {"Reguler", "Express", "Ekonomi", "Sameday", "NextDay", "Cargo"},
+		"status_keranjang":        {"Ready", "UnReady"},
+		"nama_bank":               {"BCA", "BRI", "BNI", "MANDIRI", "BTN", "CIMB", "PERMATA"},
+		"status_perizinan":        {"Pending", "Diizinkan", "Dilarang"},
+		"jenis_kendaraan_kurir":   {"Motor", "Mobil", "Truk", "Pickup", "Lainnya", "Unknown"},
+		"roda_kendaraan_kurir":    {"2", "3", "4"},
+		"status_kurir_narik":      {"Idle", "OnDelivery", "Off"},
+		"status_jenis_seller":     {"Pending", "Confirmed", "Declined"},
+		"status_diskon_produk":    {"Draft", "Aktif", "Selesai"},
+		"status_barang_di_diskon": {"Waiting", "Applied"},
 	}
 
 	for enumName, values := range enumMap {
