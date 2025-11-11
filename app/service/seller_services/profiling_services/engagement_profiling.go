@@ -22,7 +22,7 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 	var hasil_update_username *seller_particular_profiling.ResponseUbahUsername
 	var hasil_update_gmail *seller_particular_profiling.ResponseUbahEmail
 
-	if _, status := data.IdentitasSeller.Validating(db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -32,13 +32,13 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 	if data.Username == "" {
 		log.Println("[INFO] Username kosong, tidak diupdate.")
 	} else {
-		hasil_update_username = seller_particular_profiling.UbahUsernameSeller(data.IdentitasSeller.IdSeller, data.Username, db)
+		hasil_update_username = seller_particular_profiling.UbahUsernameSeller(ctx, data.IdentitasSeller.IdSeller, data.Username, db)
 	}
 
 	if data.Nama == "" {
 		log.Println("[INFO] Nama kosong, tidak diupdate.")
 	} else {
-		hasil_update_nama = seller_particular_profiling.UbahNamaSeller(data.IdentitasSeller.IdSeller, data.Nama, db)
+		hasil_update_nama = seller_particular_profiling.UbahNamaSeller(ctx, data.IdentitasSeller.IdSeller, data.Nama, db)
 	}
 
 	if data.Email == "" {
@@ -62,13 +62,13 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 // Fungsi Prosedur Update Info General Public
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UpdateInfoGeneralPublic(db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *response.ResponseForm {
+func UpdateInfoGeneralPublic(ctx context.Context, db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *response.ResponseForm {
 	services := "UpdatePersonalSeller"
 	var hasil_update_punchline seller_particular_profiling.ResponseUbahPunchline
 	var hasil_update_deskripsi seller_particular_profiling.ResponseUbahDeskripsi
 	var hasil_update_jam_operasional seller_particular_profiling.ResponseUbahJamOperasional
 
-	if _, status := data.IdentitasSeller.Validating(db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -76,19 +76,19 @@ func UpdateInfoGeneralPublic(db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *
 	}
 
 	if data.Deskripsi != "" {
-		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(data.IdentitasSeller.IdSeller, data.IdentitasSeller.Username, data.Deskripsi, db)
+		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(ctx, data.IdentitasSeller.IdSeller, data.Deskripsi, db)
 	} else {
 		log.Println("[INFO] Deskripsi kosong, tidak diupdate.")
 	}
 
 	if data.Punchline != "" {
-		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(data.IdentitasSeller.IdSeller, data.IdentitasSeller.Username, data.Punchline, db)
+		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(ctx, data.IdentitasSeller.IdSeller, data.Punchline, db)
 	} else {
 		log.Println("[INFO] Punchline kosong, tidak diupdate.")
 	}
 
 	if data.JamOperasional != "" {
-		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(data.IdentitasSeller.IdSeller, data.IdentitasSeller.Username, data.JamOperasional, db)
+		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(ctx, data.IdentitasSeller.IdSeller, data.JamOperasional, db)
 	} else {
 		log.Println("[INFO] Jam operasional kosong, tidak diupdate.")
 	}

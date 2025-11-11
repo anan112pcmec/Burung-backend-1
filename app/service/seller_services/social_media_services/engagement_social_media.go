@@ -1,6 +1,7 @@
 package seller_social_media_services
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -15,10 +16,10 @@ import (
 // Fungsi Prosedur Engage Media Social Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EngageSocialMediaSeller(data PayloadEngageSocialMedia, db *gorm.DB) *response.ResponseForm {
+func EngageSocialMediaSeller(ctx context.Context, data PayloadEngageSocialMedia, db *gorm.DB) *response.ResponseForm {
 	services := "EngagementSocialMediaSeller"
 
-	if _, status := data.IdentitasSeller.Validating(db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,

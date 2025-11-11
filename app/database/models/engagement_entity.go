@@ -294,6 +294,31 @@ func (BrandData) TableName() string {
 	return "brand_data"
 }
 
+type Etalase struct {
+	ID           int64  `gorm:"primaryKey;autoIncrement" json:"id_etalase"`
+	SellerID     int64  `gorm:"column:id_seller;not null" json:"id_seller_etalase"`
+	Seller       Seller `gorm:"foreignKey:SellerID;references:ID" json:"-"`
+	Nama         string `gorm:"column:nama;type:varchar(100);not null" json:"nama_etalase"`
+	Deskripsi    string `gorm:"column:deskripsi;type:text" json:"deskripsi_etalase"`
+	JumlahBarang int32  `gorm:"column:jumlah_barang;not null;default:0" json:"jumlah_barang"`
+}
+
+func (Etalase) TableName() string {
+	return "etalase"
+}
+
+type BarangKeEtalase struct {
+	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_barang_ke_etalase"`
+	IdEtalase     int64       `gorm:"column:id_etalase;not null;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"id_etalase_barang_ke_etalase"`
+	Etalase       Etalase     `gorm:"foreignKey:IdEtalase;references:ID" json:"-"`
+	IdBarangInduk int64       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_barang_ke_etalase"`
+	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
+}
+
+func (BarangKeEtalase) TableName() string {
+	return "barang_ke_etalase"
+}
+
 // ///////////////////////////////////////////////////////////////////////////////////////////
 // ENGAGEMENT KURIR
 // ///////////////////////////////////////////////////////////////////////////////////////////

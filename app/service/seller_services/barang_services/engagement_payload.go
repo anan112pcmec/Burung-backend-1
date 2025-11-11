@@ -1,4 +1,4 @@
-package seller_service
+package seller_barang_service
 
 import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"

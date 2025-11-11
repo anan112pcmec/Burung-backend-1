@@ -1,4 +1,4 @@
-package seller_service
+package seller_barang_service
 
 import (
 	"context"

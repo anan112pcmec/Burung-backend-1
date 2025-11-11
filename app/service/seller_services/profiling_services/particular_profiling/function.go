@@ -16,12 +16,12 @@ import (
 // Fungsi Prosedur Particular Ubah Username Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *ResponseUbahUsername {
+func UbahUsernameSeller(ctx context.Context, id_seller int32, username string, db *gorm.DB) *ResponseUbahUsername {
 	var countUsername int64
 	saran := make([]string, 0, 3)
 
-	if err := db.Model(&models.Seller{}).
-		Where("username = ?", username).
+	if err := db.WithContext(ctx).Model(&models.Seller{}).
+		Where(&models.Seller{Username: username}).
 		Count(&countUsername).Error; err != nil {
 		return &ResponseUbahUsername{
 			Message: "Server Bermasalah",
@@ -29,7 +29,7 @@ func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *Response
 	}
 
 	if countUsername == 0 {
-		if err_seller := db.Model(&models.Seller{}).
+		if err_seller := db.WithContext(ctx).Model(&models.Seller{}).
 			Where("id = ?", id_seller).
 			Update("username", username).Error; err_seller == nil {
 			return &ResponseUbahUsername{
@@ -45,7 +45,7 @@ func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *Response
 			usernameBaru := username + helper.GenerateRandomDigits()
 			var tmp int64
 
-			if err := db.Model(&models.Seller{}).
+			if err := db.WithContext(ctx).Model(&models.Seller{}).
 				Where("username = ?", usernameBaru).
 				Count(&tmp).Error; err != nil {
 				continue
@@ -77,9 +77,9 @@ func UbahUsernameSeller(id_seller int32, username string, db *gorm.DB) *Response
 // Fungsi Prosedur Particular Ubah Nama Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahNamaSeller(id_seller int32, nama string, db *gorm.DB) *ResponseUbahNama {
+func UbahNamaSeller(ctx context.Context, id_seller int32, nama string, db *gorm.DB) *ResponseUbahNama {
 
-	if err_db := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("nama", nama).Error; err_db == nil {
+	if err_db := db.WithContext(ctx).Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("nama", nama).Error; err_db == nil {
 		return &ResponseUbahNama{
 			Message: "Berhasil",
 		}
@@ -144,14 +144,14 @@ func UbahSellerDedicationSeller(id_seller int32, seller_dedication string, db *g
 // Fungsi Prosedur Particular Ubah Jam Operasional Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahJamOperasionalSeller(id_seller int32, username string, jam_operasional string, db *gorm.DB) *ResponseUbahJamOperasional {
-	if id_seller == 0 && username == "" {
+func UbahJamOperasionalSeller(ctx context.Context, id_seller int32, jam_operasional string, db *gorm.DB) *ResponseUbahJamOperasional {
+	if id_seller == 0 {
 		return &ResponseUbahJamOperasional{
 			Message: "Gagal Id seller tidak Valid",
 		}
 	}
 
-	if err_ubah := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller, Username: username}).Update("jam_operasional", jam_operasional).Error; err_ubah != nil {
+	if err_ubah := db.WithContext(ctx).Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("jam_operasional", jam_operasional).Error; err_ubah != nil {
 		return &ResponseUbahJamOperasional{
 			Message: "Gagal Server Sedang sibuk, Coba Lagi lain waktu",
 		}
@@ -166,14 +166,14 @@ func UbahJamOperasionalSeller(id_seller int32, username string, jam_operasional 
 // Fungsi Prosedur Particular Ubah Punchline Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahPunchlineSeller(id_seller int32, username string, punchline string, db *gorm.DB) *ResponseUbahPunchline {
-	if id_seller == 0 && username == "" {
+func UbahPunchlineSeller(ctx context.Context, id_seller int32, punchline string, db *gorm.DB) *ResponseUbahPunchline {
+	if id_seller == 0 {
 		return &ResponseUbahPunchline{
 			Message: "Gagal, Seller Tidak Valid",
 		}
 	}
 
-	if err_ubah := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller, Username: username}).Update("punchline", punchline).Error; err_ubah != nil {
+	if err_ubah := db.WithContext(ctx).Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("punchline", punchline).Error; err_ubah != nil {
 		return &ResponseUbahPunchline{
 			Message: "Gagal Mungkin Server Sedang sibuk",
 		}
@@ -188,14 +188,14 @@ func UbahPunchlineSeller(id_seller int32, username string, punchline string, db 
 // Fungsi Prosedur Particular Ubah Deskripsi Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahDeskripsiSeller(id_seller int32, username string, deskripsi string, db *gorm.DB) *ResponseUbahDeskripsi {
-	if id_seller == 0 && username == "" {
+func UbahDeskripsiSeller(ctx context.Context, id_seller int32, deskripsi string, db *gorm.DB) *ResponseUbahDeskripsi {
+	if id_seller == 0 {
 		return &ResponseUbahDeskripsi{
 			Message: "Gagal, Seller kredensial tidak valid",
 		}
 	}
 
-	if err_ubah := db.Model(models.Seller{}).Where(models.Seller{ID: id_seller, Username: username}).Update("deskripsi", deskripsi).Error; err_ubah != nil {
+	if err_ubah := db.WithContext(ctx).Model(models.Seller{}).Where(models.Seller{ID: id_seller}).Update("deskripsi", deskripsi).Error; err_ubah != nil {
 		return &ResponseUbahDeskripsi{
 			Message: "Gagal Server Sedang Sibuk, Coba Lagi Lain Waktu",
 		}
