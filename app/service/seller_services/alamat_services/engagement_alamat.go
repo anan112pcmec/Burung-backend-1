@@ -3,6 +3,7 @@ package seller_alamat_services
 import (
 	"context"
 	"log"
+	"math"
 	"net/http"
 
 	"gorm.io/gorm"
@@ -17,6 +18,43 @@ import (
 // Berfungsi Untuk Menulis Ke table alamat_gudang tentang alamat gudang seller tersebut, tidak ada batasan maksimal
 // gudang yang boleh dilampirkan alamat nya
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func SanitasiKoordinat(Latitude *float64, Longitude *float64) {
+	if Latitude == nil || Longitude == nil {
+		return
+	}
+
+	lat := *Latitude
+	long := *Longitude
+
+	const maxVal = 100.0
+
+	// Normalisasi jika terlalu besar (contoh: 106.82 → 10.682)
+	if math.Abs(long) > maxVal {
+		long = long / 10
+	}
+	if math.Abs(lat) > maxVal {
+		lat = lat / 10
+	}
+
+	// Batasi ke rentang -180..180 (koordinat bumi valid)
+	if long > maxVal {
+		long = maxVal
+	}
+	if long < -maxVal {
+		long = -maxVal
+	}
+	if lat > maxVal {
+		lat = maxVal
+	}
+	if lat < -maxVal {
+		lat = -maxVal
+	}
+
+	// Tulis balik hasil sanitasi ke pointer
+	*Latitude = lat
+	*Longitude = long
+}
 
 func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "TambahAlamatGudang"
@@ -57,6 +95,8 @@ func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db 
 			},
 		}
 	}
+
+	SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
 	if err := db.WithContext(ctx).Create(&models.AlamatGudang{
 		IDSeller:        data.IdentitasSeller.IdSeller,
@@ -132,6 +172,8 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gor
 		}
 	}
 
+	SanitasiKoordinat(&data.Latitude, &data.Longitude)
+
 	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
 		ID: data.IdAlamatGudang,
 	}).Updates(&models.AlamatGudang{
@@ -187,7 +229,7 @@ func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *g
 
 	var id_data_alamat int64 = 0
 
-	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
 		ID:       data.IdGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {

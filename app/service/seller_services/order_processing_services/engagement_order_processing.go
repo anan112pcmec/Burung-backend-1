@@ -1,6 +1,7 @@
 package seller_order_processing_services
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"sync"
@@ -13,14 +14,14 @@ import (
 	response_order_processing_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services/response_order_processing"
 )
 
-func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.ResponseForm {
+func ApproveOrderBarang(ctx context.Context, data PayloadApproveOrder, db *gorm.DB) *response.ResponseForm {
 	services := "ApproveOrderBarang"
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
 	var approveddata []response_order_processing_seller.ApprovedStatus
 
-	seller, status := data.IdentitasSeller.Validating(db)
+	seller, status := data.IdentitasSeller.Validating(ctx, db)
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{
@@ -70,12 +71,12 @@ func ApproveOrderBarang(data PayloadApproveOrder, db *gorm.DB) *response.Respons
 	}
 }
 
-func UnApproveOrderBarang(data PayloadUnApproveOrder, db *gorm.DB) *response.ResponseForm {
+func UnApproveOrderBarang(ctx context.Context, data PayloadUnApproveOrder, db *gorm.DB) *response.ResponseForm {
 	services := "UnApproveOrderBarang"
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	seller, status := data.IdentitasSeller.Validating(db)
+	seller, status := data.IdentitasSeller.Validating(ctx, db)
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
 		return &response.ResponseForm{

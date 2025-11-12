@@ -12,7 +12,6 @@ import (
 	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 	seller_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services"
@@ -30,21 +29,21 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditBarangInduk(db, data)
+		hasil = seller_service.EditBarangInduk(ctx, db, data)
 	case "/seller/edit_kategori_barang":
 		var data seller_service.PayloadEditKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditKategoriBarang(db, data)
+		hasil = seller_service.EditKategoriBarang(ctx, db, data)
 	case "/seller/edit/stok-barang":
-		var data seller_service.PayloadEditStokBarang
+		var data seller_service.PayloadEditStokKategoriBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditStokBarang(db, data)
+		hasil = seller_service.EditStokKategoriBarang(ctx, db, data)
 	case "/seller/profiling/personal-update":
 		var data seller_profiling_services.PayloadUpdateProfilePersonalSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -58,14 +57,14 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_profiling_services.UpdateInfoGeneralPublic(db, data)
+		hasil = seller_profiling_services.UpdateInfoGeneralPublic(ctx, db, data)
 	case "/seller/credential/update-password":
 		var data seller_credential_services.PayloadPreUbahPasswordSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_credential_services.PreUbahPasswordSeller(data, db, rds_engagement)
+		hasil = seller_credential_services.PreUbahPasswordSeller(ctx, data, db, rds_engagement)
 	case "/seller/credential/validate-password-otp":
 		var data seller_credential_services.PayloadValidateUbahPasswordSellerOTP
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -79,84 +78,78 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_order_processing_services.ApproveOrderBarang(data, db)
+		hasil = seller_order_processing_services.ApproveOrderBarang(ctx, data, db)
 	case "/seller/order-processing/unapprove":
 		var data seller_order_processing_services.PayloadUnApproveOrder
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_order_processing_services.UnApproveOrderBarang(data, db)
-	case "/seller/jenis/ajukan-perubahan":
-		var data jenis_seller_services.PayloadAjukanUbahJenisSeller
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = jenis_seller_services.AjukanUbahJenisSeller(data, db)
+		hasil = seller_order_processing_services.UnApproveOrderBarang(ctx, data, db)
+
 	case "/seller/alamat/edit-alamat-gudang":
 		var data seller_alamat_services.PayloadEditAlamatGudang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_alamat_services.EditAlamatGudang(data, db)
+		hasil = seller_alamat_services.EditAlamatGudang(ctx, data, db)
 	case "/seller/barang/edit-alamat-barang-induk":
 		var data seller_service.PayloadEditAlamatBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditAlamatGudangBarangInduk(data, db)
+		hasil = seller_service.EditAlamatGudangBarangInduk(ctx, data, db)
 	case "/seller/barang/edit-alamat-barang-kategori":
 		var data seller_service.PayloadEditAlamatBarangKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditAlamatGudangBarangKategori(data, db)
+		hasil = seller_service.EditAlamatGudangBarangKategori(ctx, data, db)
 	case "/seller/social-media/social-media-engage":
 		var data seller_social_media_services.PayloadEngageSocialMedia
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_social_media_services.EngageSocialMediaSeller(data, db)
+		hasil = seller_social_media_services.EngageSocialMediaSeller(ctx, data, db)
 	case "/seller/barang/down-barang-induk":
 		var data seller_service.PayloadDownBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.DownStokBarangInduk(db, data)
+		hasil = seller_service.DownStokBarangInduk(ctx, db, data)
 	case "/seller/barang/down-kategori-barang":
 		var data seller_service.PayloadDownKategoriBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.DownKategoriBarang(db, data)
+		hasil = seller_service.DownKategoriBarang(ctx, db, data)
 	case "/seller/barang/edit-rekening-barang":
 		var data seller_service.PayloadEditRekeningBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditRekeningBarangInduk(data, db)
+		hasil = seller_service.EditRekeningBarangInduk(ctx, data, db)
 	case "/seller/barang/edit-alamat-barang":
 		var data seller_service.PayloadEditAlamatBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditAlamatGudangBarangInduk(data, db)
+		hasil = seller_service.EditAlamatGudangBarangInduk(ctx, data, db)
 	case "/seller/barang/edit-alamat-kategori":
 		var data seller_service.PayloadEditAlamatBarangKategori
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_service.EditAlamatGudangBarangKategori(data, db)
+		hasil = seller_service.EditAlamatGudangBarangKategori(ctx, data, db)
 	case "/seller/komentar-barang/edit":
 		var data seller_service.PayloadEditKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -178,6 +171,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_credential_services.EditRekeningSeller(ctx, data, db)
+	case "/seller/rekening/set-default-rekening":
+		var data seller_credential_services.PayloadSetDefaultRekeningSeller
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_credential_services.SetDefaultRekeningSeller(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

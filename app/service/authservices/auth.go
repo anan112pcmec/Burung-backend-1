@@ -17,7 +17,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_auth "github.com/anan112pcmec/Burung-backend-1/app/service/authservices/reponse_auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
-
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -572,7 +571,7 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 		Nama:             userData["nama"],
 		Username:         userData["username"],
 		Email:            userData["email"],
-		Jenis:            userData["jenis"],
+		Jenis:            "Personal",
 		SellerDedication: userData["seller_dedication"],
 		Password:         string(hashedPassword),
 	}

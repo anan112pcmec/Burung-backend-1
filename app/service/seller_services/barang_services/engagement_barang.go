@@ -12,6 +12,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_seller_barang_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
+
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -69,7 +70,7 @@ func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBar
 		}
 	}
 
-	if success == false || harga_original <= 0 {
+	if !success || harga_original <= 0 {
 		return &response.ResponseForm{
 			Status:  http.StatusBadRequest,
 			Payload: "Harga original tidak boleh 0",
@@ -793,7 +794,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 	}
 
 	var id_varians []int64
-	if err := db.Model(&models.VarianBarang{}).
+	if err := db.Model(&models.VarianBarang{}).Select("id").
 		Where(&models.VarianBarang{
 			IdBarangInduk: data.IdBarangInduk,
 			IdKategori:    data.IdKategoriBarang,

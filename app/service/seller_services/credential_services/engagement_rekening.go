@@ -32,7 +32,7 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 	}
 
 	// cek rekening sudah ada
-	var id_rekening int64
+	var id_rekening int64 = 0
 	if err_check_rekening := db.WithContext(ctx).
 		Model(&models.RekeningSeller{}).
 		Select("id").
@@ -50,6 +50,16 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 			Services: services,
 			Payload: response_credential_seller.ResponseTambahRekeningSeller{
 				Message: "Data rekening tersebut sudah ada dan tercatat di akun Anda.",
+			},
+		}
+	}
+
+	if id_rekening != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Payload: response_credential_seller.ResponseTambahRekeningSeller{
+				Message: "Gagal kamu sudah memiliki rekening serupa",
 			},
 		}
 	}
@@ -84,6 +94,7 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 
 	// insert rekening baru
 	if err_masukan := db.WithContext(ctx).Create(&models.RekeningSeller{
+		IDSeller:        data.IdentitasSeller.IdSeller,
 		NamaBank:        data.NamaBank,
 		NomorRekening:   data.NomorRekening,
 		PemilikRekening: data.PemilikiRekening,
@@ -150,8 +161,7 @@ func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *gor
 	}
 
 	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
-		ID:       data.IdRekening,
-		IDSeller: data.IdentitasSeller.IdSeller,
+		ID: data.IdRekening,
 	}).Updates(&models.RekeningSeller{
 		NamaBank:        data.NamaBank,
 		NomorRekening:   data.NomorRekening,
