@@ -12,7 +12,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_seller_barang_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
-
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1064,7 +1063,7 @@ func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarang
 	}
 
 	var id_data_rekening int64 = 0
-	if err := db.WithContext(ctx).Select("id").Where(&models.RekeningSeller{
+	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
 		ID:       data.IdRekeningSeller,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
