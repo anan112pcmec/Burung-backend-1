@@ -20,4 +20,5 @@ type ResponseUpdateInfoGeneralSeller struct {
 	UpdatePunchline      seller_particular_profiling.ResponseUbahPunchline      `json:"response_update_punchline_seller"`
 	UpdateDeskripsi      seller_particular_profiling.ResponseUbahDeskripsi      `json:"response_update_deskripsi_seller"`
 	UpdateJamOperasional seller_particular_profiling.ResponseUbahJamOperasional `json:"response_update_jam_operasional_seller"`
+	UpdateDedication     seller_particular_profiling.ResponseUbahDedication
 }

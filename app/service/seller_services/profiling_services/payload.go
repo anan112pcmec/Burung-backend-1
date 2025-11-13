@@ -14,4 +14,5 @@ type PayloadUpdateInfoGeneralSeller struct {
 	JamOperasional  string                         `json:"update_jam_operasional_seller"`
 	Punchline       string                         `json:"update_punchline_seller"`
 	Deskripsi       string                         `json:"update_deskripsi_seller"`
+	Dedication      string                         `json:"update_dedication_seller"`
 }

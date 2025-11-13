@@ -508,7 +508,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		IdBarangInduk: data.IdBarangInduk,
 		IdKategori:    data.IdKategori,
 		Status:        "Ready",
-		Count:         0,
+		Jumlah:        0,
 	}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -600,7 +600,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		Where(&models.Keranjang{
 			ID: data.IdKeranjang,
 		}).
-		Update("count", data.Jumlah).Error; err != nil {
+		Update("jumlah", data.Jumlah).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,

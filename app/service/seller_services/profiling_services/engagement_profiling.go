@@ -18,9 +18,9 @@ import (
 
 func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdateProfilePersonalSeller) *response.ResponseForm {
 	services := "UpdatePersonalSeller"
-	var hasil_update_nama *seller_particular_profiling.ResponseUbahNama
-	var hasil_update_username *seller_particular_profiling.ResponseUbahUsername
-	var hasil_update_gmail *seller_particular_profiling.ResponseUbahEmail
+	var hasil_update_nama seller_particular_profiling.ResponseUbahNama
+	var hasil_update_username seller_particular_profiling.ResponseUbahUsername
+	var hasil_update_gmail seller_particular_profiling.ResponseUbahEmail
 
 	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
 		return &response.ResponseForm{
@@ -29,19 +29,19 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 		}
 	}
 
-	if data.Username == "" {
+	if data.Username == "not" {
 		log.Println("[INFO] Username kosong, tidak diupdate.")
 	} else {
 		hasil_update_username = seller_particular_profiling.UbahUsernameSeller(ctx, data.IdentitasSeller.IdSeller, data.Username, db)
 	}
 
-	if data.Nama == "" {
+	if data.Nama == "not" {
 		log.Println("[INFO] Nama kosong, tidak diupdate.")
 	} else {
 		hasil_update_nama = seller_particular_profiling.UbahNamaSeller(ctx, data.IdentitasSeller.IdSeller, data.Nama, db)
 	}
 
-	if data.Email == "" {
+	if data.Email == "not" {
 		log.Println("[INFO] Email kosong, tidak diupdate.")
 	} else {
 		hasil_update_gmail = seller_particular_profiling.UbahEmailSeller(ctx, data.IdentitasSeller.IdSeller, data.Email, db)
@@ -51,9 +51,9 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 		Status:   http.StatusOK,
 		Services: services,
 		Payload: seller_response_profiling.ResponseUpdateProfileSeller{
-			UpdateNama:     *hasil_update_nama,
-			UpdateUsername: *hasil_update_username,
-			UpdateGmail:    *hasil_update_gmail,
+			UpdateNama:     hasil_update_nama,
+			UpdateUsername: hasil_update_username,
+			UpdateGmail:    hasil_update_gmail,
 		},
 	}
 }
@@ -67,30 +67,38 @@ func UpdateInfoGeneralPublic(ctx context.Context, db *gorm.DB, data PayloadUpdat
 	var hasil_update_punchline seller_particular_profiling.ResponseUbahPunchline
 	var hasil_update_deskripsi seller_particular_profiling.ResponseUbahDeskripsi
 	var hasil_update_jam_operasional seller_particular_profiling.ResponseUbahJamOperasional
+	var hasil_update_dedication seller_particular_profiling.ResponseUbahDedication
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	seller, status := data.IdentitasSeller.Validating(ctx, db)
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
 		}
 	}
 
-	if data.Deskripsi != "" {
-		hasil_update_deskripsi = *seller_particular_profiling.UbahDeskripsiSeller(ctx, data.IdentitasSeller.IdSeller, data.Deskripsi, db)
+	if data.Deskripsi != "not" && data.Deskripsi != "" && data.Deskripsi != seller.Deskripsi {
+		hasil_update_deskripsi = seller_particular_profiling.UbahDeskripsiSeller(ctx, data.IdentitasSeller.IdSeller, data.Deskripsi, db)
 	} else {
-		log.Println("[INFO] Deskripsi kosong, tidak diupdate.")
+		log.Println("[INFO] Deskripsi kosong atau tidak berubah, tidak diupdate.")
 	}
 
-	if data.Punchline != "" {
-		hasil_update_punchline = *seller_particular_profiling.UbahPunchlineSeller(ctx, data.IdentitasSeller.IdSeller, data.Punchline, db)
+	if data.Punchline != "not" && data.Punchline != "" && data.Punchline != seller.Punchline {
+		hasil_update_punchline = seller_particular_profiling.UbahPunchlineSeller(ctx, data.IdentitasSeller.IdSeller, data.Punchline, db)
 	} else {
-		log.Println("[INFO] Punchline kosong, tidak diupdate.")
+		log.Println("[INFO] Punchline kosong atau tidak berubah, tidak diupdate.")
 	}
 
-	if data.JamOperasional != "" {
-		hasil_update_jam_operasional = *seller_particular_profiling.UbahJamOperasionalSeller(ctx, data.IdentitasSeller.IdSeller, data.JamOperasional, db)
+	if data.JamOperasional != "not" && data.JamOperasional != "" && data.JamOperasional != seller.JamOperasional {
+		hasil_update_jam_operasional = seller_particular_profiling.UbahJamOperasionalSeller(ctx, data.IdentitasSeller.IdSeller, data.JamOperasional, db)
 	} else {
-		log.Println("[INFO] Jam operasional kosong, tidak diupdate.")
+		log.Println("[INFO] Jam operasional kosong atau tidak berubah, tidak diupdate.")
+	}
+
+	if data.Dedication != "not" && data.Dedication != "" && data.Dedication != seller.SellerDedication {
+		hasil_update_dedication = seller_particular_profiling.UbahSellerDedication(ctx, data.IdentitasSeller.IdSeller, data.Dedication, db)
+	} else {
+		log.Println("[INFO] Dedication seller kosong atau tidak berubah, tidak diupdate.")
 	}
 
 	return &response.ResponseForm{
@@ -100,6 +108,7 @@ func UpdateInfoGeneralPublic(ctx context.Context, db *gorm.DB, data PayloadUpdat
 			UpdatePunchline:      hasil_update_punchline,
 			UpdateDeskripsi:      hasil_update_deskripsi,
 			UpdateJamOperasional: hasil_update_jam_operasional,
+			UpdateDedication:     hasil_update_dedication,
 		},
 	}
 }

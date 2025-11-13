@@ -43,12 +43,12 @@ func (b *GeraiResponse) Pembayaran() (p models.Pembayaran, s bool) {
 	}
 
 	p = models.Pembayaran{
-		KodeTransaksi:      b.TransactionId,
-		KodeOrderTransaksi: b.OrderId,
-		Provider:           b.PaymentType,
-		Amount:             int32(grossFloat),
-		PaymentType:        b.PaymentType,
-		PaidAt:             b.TransactionTime,
+		KodeTransaksiPG: b.TransactionId,
+		KodeOrderSistem: b.OrderId,
+		Provider:        b.PaymentType,
+		Total:           int32(grossFloat),
+		PaymentType:     b.PaymentType,
+		PaidAt:          b.TransactionTime,
 	}
 	return
 }

@@ -1517,7 +1517,7 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Pengguna",
+		JenisEntity: "Seller",
 	}).Update("komentar", data.Komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

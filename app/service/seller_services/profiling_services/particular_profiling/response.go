@@ -48,3 +48,7 @@ type ResponseUbahPunchline struct {
 type ResponseUbahDeskripsi struct {
 	Message string `json:"pesan_ubah_deskripsi"`
 }
+
+type ResponseUbahDedication struct {
+	Message string `json:"pesan_ubah_dedication"`
+}

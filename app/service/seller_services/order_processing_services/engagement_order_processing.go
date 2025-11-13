@@ -38,13 +38,13 @@ func ApproveOrderBarang(ctx context.Context, data PayloadApproveOrder, db *gorm.
 			defer wg.Done()
 			var approvingstatus response_order_processing_seller.ApprovedStatus
 			if err_approve := db.Model(models.Transaksi{}).Where(models.Transaksi{
-				IdSeller:      seller.ID,
-				IdPengguna:    transaksi.IdPengguna,
-				IdBarangInduk: transaksi.IdBarangInduk,
-				Status:        "Dibayar",
-				Kuantitas:     transaksi.Kuantitas,
-				KodeOrder:     transaksi.KodeOrder,
-				Total:         transaksi.Total,
+				IdSeller:        seller.ID,
+				IdPengguna:      transaksi.IdPengguna,
+				IdBarangInduk:   transaksi.IdBarangInduk,
+				Status:          "Dibayar",
+				KuantitasBarang: transaksi.KuantitasBarang,
+				KodeOrderSistem: transaksi.KodeOrderSistem,
+				Total:           transaksi.Total,
 			}).Update("status", "Diproses").Error; err_approve != nil {
 				log.Printf("[ERROR] Gagal approve transaksi ID %d: %v", transaksi.ID, err_approve)
 				approvingstatus.Status = false
@@ -98,13 +98,13 @@ func UnApproveOrderBarang(ctx context.Context, data PayloadUnApproveOrder, db *g
 				var unapprovingstatus response_order_processing_seller.UnApprovedStatus
 
 				if errUpdate := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
-					IdSeller:      seller.ID,
-					IdPengguna:    transaksi.IdPengguna,
-					IdBarangInduk: transaksi.IdBarangInduk,
-					Status:        "Dibayar",
-					Kuantitas:     transaksi.Kuantitas,
-					KodeOrder:     transaksi.KodeOrder,
-				}).Limit(int(transaksi.Kuantitas)).Update("status", "Dibatalkan").Error; errUpdate != nil {
+					IdSeller:        seller.ID,
+					IdPengguna:      transaksi.IdPengguna,
+					IdBarangInduk:   transaksi.IdBarangInduk,
+					Status:          "Dibayar",
+					KuantitasBarang: transaksi.KuantitasBarang,
+					KodeOrderSistem: transaksi.KodeOrderSistem,
+				}).Limit(int(transaksi.KuantitasBarang)).Update("status", "Dibatalkan").Error; errUpdate != nil {
 					log.Printf("[ERROR] Gagal unapprove transaksi ID %d: %v", transaksi.ID, errUpdate)
 					unapprovingstatus.Status = false
 				} else {

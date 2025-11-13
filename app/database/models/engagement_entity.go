@@ -77,7 +77,7 @@ type Keranjang struct {
 	BarangInduk    BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID"`
 	IdKategori     int64          `gorm:"id_kategori_barang;not null" json:"id_kategori_barang_keranjang"`
 	Kategoribarang KategoriBarang `gorm:"foreignKey:IdKategori;references:ID"`
-	Count          int16          `gorm:"column:count;type:int2;not null" json:"count_keranjang"`
+	Jumlah         int16          `gorm:"column:jumlah;type:int2;not null" json:"jumlah_keranjang"`
 	Status         string         `gorm:"column:status;type:status_keranjang;not null" json:"status_keranjang"`
 	CreatedAt      time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt      time.Time      `gorm:"autoUpdateTime" json:"updated_at"`

@@ -58,12 +58,12 @@ func (b *WalletResponse) Pembayaran() (models.Pembayaran, bool) {
 	fmt.Println("[TRACE] Membuat objek models.Pembayaran...")
 
 	m = models.Pembayaran{
-		KodeTransaksi:      b.TransactionId,
-		KodeOrderTransaksi: b.OrderId,
-		Provider:           "wallet",
-		Amount:             grossInt,
-		PaymentType:        b.PaymentType,
-		PaidAt:             b.TransactionTime,
+		KodeTransaksiPG: b.TransactionId,
+		KodeOrderSistem: b.OrderId,
+		Provider:        "wallet",
+		Total:           grossInt,
+		PaymentType:     b.PaymentType,
+		PaidAt:          b.TransactionTime,
 	}
 
 	fmt.Printf("[TRACE] Pembayaran selesai dibuat: %+v\n", m)

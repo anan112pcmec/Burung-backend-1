@@ -75,7 +75,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 
 		for idx, keranjang := range data.DataCheckout {
 			log.Printf("[%s] [Item-%d] Proses checkout BarangIndukID=%v KategoriID=%v Count=%v",
-				services, idx, keranjang.IdBarangInduk, keranjang.IdKategori, keranjang.Count)
+				services, idx, keranjang.IdBarangInduk, keranjang.IdKategori, keranjang.Jumlah)
 
 			// Hitung stok
 			var jumlahStok int64
@@ -132,11 +132,11 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 				HargaKategori:    kategori.Harga,
 				NamaBarang:       barang.NamaBarang,
 				NamaKategori:     kategori.Nama,
-				Dipesan:          int32(keranjang.Count),
+				Dipesan:          int32(keranjang.Jumlah),
 			}
 
 			// Cek stok cukup
-			if jumlahStok >= int64(keranjang.Count) {
+			if jumlahStok >= int64(keranjang.Jumlah) {
 				var varianIDs []int64
 				if err := tx.Model(&models.VarianBarang{}).
 					Where(&models.VarianBarang{
@@ -144,7 +144,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 						IdKategori:    keranjang.IdKategori,
 						Status:        barang_enums.Ready,
 					}).
-					Limit(int(keranjang.Count)).
+					Limit(int(keranjang.Jumlah)).
 					Pluck("id", &varianIDs).Error; err != nil {
 					log.Printf("[%s] [Item-%d] Gagal ambil varian ID: %v", services, idx, err)
 					resp.Message = "Terjadi kesalahan pada server. Silakan coba lagi nanti."
@@ -153,8 +153,8 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 					return err
 				}
 
-				if len(varianIDs) < int(keranjang.Count) {
-					shortfall := int64(keranjang.Count) - int64(len(varianIDs))
+				if len(varianIDs) < int(keranjang.Jumlah) {
+					shortfall := int64(keranjang.Jumlah) - int64(len(varianIDs))
 					resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
 					resp.Status = false
 					responseData = append(responseData, resp)
@@ -184,16 +184,16 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 					_ = tx.Model(&models.KategoriBarang{}).
 						Where(&models.KategoriBarang{ID: keranjang.IdKategori}).
 						Updates(map[string]interface{}{
-							"stok": int32(stokSaatIni) - int32(keranjang.Count),
+							"stok": int32(stokSaatIni) - int32(keranjang.Jumlah),
 						})
-					log.Printf("[%s] [Item-%d] Stok kategori dikurangi jadi %v", services, idx, int32(stokSaatIni)-int32(keranjang.Count))
+					log.Printf("[%s] [Item-%d] Stok kategori dikurangi jadi %v", services, idx, int32(stokSaatIni)-int32(keranjang.Jumlah))
 				}
 
 				resp.Message = "Barang siap untuk transaksi."
 				resp.Status = true
 				log.Printf("[%s] [Item-%d] Barang siap transaksi (stok mencukupi)", services, idx)
 			} else {
-				shortfall := int64(keranjang.Count) - jumlahStok
+				shortfall := int64(keranjang.Jumlah) - jumlahStok
 				resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
 				resp.Status = false
 				log.Printf("[%s] [Item-%d] Stok tidak mencukupi, kurang %v", services, idx, shortfall)
@@ -729,18 +729,18 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 		fmt.Println("[TRACE] Mengecek kredensial pembayaran di database...")
 
 		if err := tx.Where(&models.Pembayaran{
-			KodeTransaksi:      pembayaran.KodeTransaksi,
-			KodeOrderTransaksi: pembayaran.KodeOrderTransaksi,
-			Provider:           pembayaran.Provider,
-			Amount:             pembayaran.Amount,
-			PaymentType:        pembayaran.PaymentType,
-			PaidAt:             pembayaran.PaidAt,
+			KodeTransaksiPG: pembayaran.KodeTransaksiPG,
+			KodeOrderSistem: pembayaran.KodeOrderSistem,
+			Provider:        pembayaran.Provider,
+			Total:           pembayaran.Total,
+			PaymentType:     pembayaran.PaymentType,
+			PaidAt:          pembayaran.PaidAt,
 		}).First(&pembayaranObj).Error; err != nil {
 			fmt.Printf("[ERROR] Gagal menemukan pembayaran: %v\n", err)
 			return fmt.Errorf("gagal mencari pembayaran di database: %w", err)
 		}
 
-		fmt.Printf("[TRACE] Pembayaran ditemukan: ID=%d, KodeOrder=%s\n", pembayaranObj.ID, pembayaranObj.KodeOrderTransaksi)
+		fmt.Printf("[TRACE] Pembayaran ditemukan: ID=%d, KodeOrder=%s\n", pembayaranObj.ID, pembayaranObj.KodeOrderSistem)
 
 		if pembayaranObj.ID == 0 {
 			fmt.Println("[ERROR] Kredensial pembayaran tidak valid (ID=0)")
@@ -750,15 +750,14 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 		transaksi := models.Transaksi{
 			IdPengguna:       keranjang.IDUser,
 			IdSeller:         keranjang.IDSeller,
-			IdBarangInduk:    keranjang.IdBarangInduk,
+			IdBarangInduk:    int64(keranjang.IdBarangInduk),
 			IdKategoriBarang: keranjang.IdKategoriBarang,
-			IdAlamat:         IdAlamatUser,
+			IdAlamatPengguna: IdAlamatUser,
 			IdPembayaran:     pembayaranObj.ID,
-			KodeOrder:        pembayaranObj.KodeOrderTransaksi,
+			KodeOrderSistem:  pembayaranObj.KodeOrderSistem,
 			Status:           transaksi_enums.Dibayar,
-			Metode:           pembayaranObj.PaymentType,
-			Kuantitas:        int16(keranjang.Dipesan),
-			Total:            keranjang.HargaKategori * keranjang.Dipesan,
+			KuantitasBarang:  int32(keranjang.Dipesan),
+			Total:            int64(keranjang.HargaKategori * keranjang.Dipesan),
 		}
 
 		fmt.Printf("[TRACE] Membuat transaksi baru: %+v\n", transaksi)

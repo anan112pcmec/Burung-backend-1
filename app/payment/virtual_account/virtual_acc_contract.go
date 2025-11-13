@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+
 )
 
 // //////////////////////////////////////////////////////////////////////////////////////////
@@ -44,12 +45,12 @@ func (b *BcaVirtualAccountResponse) Pembayaran() (p models.Pembayaran, s bool) {
 	}
 
 	p = models.Pembayaran{
-		KodeTransaksi:      b.TransactionId,
-		KodeOrderTransaksi: b.OrderId,
-		Provider:           provider,
-		Amount:             int32(grossFloat),
-		PaymentType:        b.PaymentType,
-		PaidAt:             b.TransactionTime,
+		KodeTransaksiPG: b.TransactionId,
+		KodeOrderSistem: b.OrderId,
+		Provider:        provider,
+		Total:           int32(grossFloat),
+		PaymentType:     b.PaymentType,
+		PaidAt:          b.TransactionTime,
 	}
 	return
 }
@@ -76,12 +77,12 @@ func (b *BniVirtualAccountResponse) Pembayaran() (p models.Pembayaran, s bool) {
 	}
 
 	p = models.Pembayaran{
-		KodeTransaksi:      b.TransactionId,
-		KodeOrderTransaksi: b.OrderId,
-		Provider:           provider,
-		Amount:             int32(grossFloat),
-		PaymentType:        b.PaymentType,
-		PaidAt:             b.TransactionTime,
+		KodeTransaksiPG: b.TransactionId,
+		KodeOrderSistem: b.OrderId,
+		Provider:        provider,
+		Total:           int32(grossFloat),
+		PaymentType:     b.PaymentType,
+		PaidAt:          b.TransactionTime,
 	}
 	return
 }
@@ -107,12 +108,12 @@ func (b *BriVirtualAccountResponse) Pembayaran() (p models.Pembayaran, s bool) {
 	}
 
 	p = models.Pembayaran{
-		KodeTransaksi:      b.TransactionId,
-		KodeOrderTransaksi: b.OrderId,
-		Provider:           provider,
-		Amount:             int32(grossFloat),
-		PaymentType:        b.PaymentType,
-		PaidAt:             b.TransactionTime,
+		KodeTransaksiPG: b.TransactionId,
+		KodeOrderSistem: b.OrderId,
+		Provider:        provider,
+		Total:           int32(grossFloat),
+		PaymentType:     b.PaymentType,
+		PaidAt:          b.TransactionTime,
 	}
 	return
 }
@@ -131,12 +132,12 @@ func (b *PermataVirtualAccount) Pembayaran() (p models.Pembayaran, s bool) {
 	}
 
 	p = models.Pembayaran{
-		KodeTransaksi:      b.TransactionId,
-		KodeOrderTransaksi: b.OrderId,
-		Provider:           "permata",
-		Amount:             int32(grossFloat),
-		PaymentType:        b.PaymentType,
-		PaidAt:             b.TransactionTime,
+		KodeTransaksiPG: b.TransactionId,
+		KodeOrderSistem: b.OrderId,
+		Provider:        "permata",
+		Total:           int32(grossFloat),
+		PaymentType:     b.PaymentType,
+		PaidAt:          b.TransactionTime,
 	}
 	return
 }

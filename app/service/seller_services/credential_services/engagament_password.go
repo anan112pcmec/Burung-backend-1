@@ -84,7 +84,7 @@ func PreUbahPasswordSeller(ctx context.Context, data PayloadPreUbahPasswordSelle
 	}
 
 	fields := map[string]interface{}{
-		"id_seller":     data.IdentitasSeller,
+		"id_seller":     data.IdentitasSeller.IdSeller,
 		"username":      data.IdentitasSeller.Username,
 		"password_baru": string(hashedPassword),
 	}
@@ -149,6 +149,12 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 				Message: "OTP tidak valid atau sudah kadaluarsa.",
 			},
 		}
+	}
+
+	if errDel := rds.Del(ctx, key).Err(); errDel != nil {
+		log.Printf("[WARN] Gagal menghapus OTP key dari Redis: %v", errDel)
+	} else {
+		log.Printf("[INFO] OTP key %s berhasil dihapus dari Redis.", key)
 	}
 
 	if err_change_pass := db.Model(models.Seller{}).Where(models.Seller{ID: data.IdentitasSeller.IdSeller}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
