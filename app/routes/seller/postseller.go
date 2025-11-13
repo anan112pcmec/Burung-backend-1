@@ -11,6 +11,9 @@ import (
 	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
+	seller_diskon_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/diskon_services"
+	seller_etalase_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/etalase_services"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 )
 
 func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -68,6 +71,48 @@ func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = seller_alamat_services.TambahAlamatGudang(ctx, data, db)
+	case "/seller/diskon/tambah-diskon":
+		var data seller_diskon_services.PayloadTambahDiskonProduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_diskon_services.TambahDiskonProduk(ctx, data, db)
+	case "/seller/diskon/masukan-barang":
+		var data seller_diskon_services.PayloadTetapkanDiskonPadaBarang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_diskon_services.TetapKanDiskonPadaBarang(ctx, data, db)
+	case "/seller/etalase/tambah-etalase":
+		var data seller_etalase_services.PayloadMenambahEtalase
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_etalase_services.TambahEtalaseSeller(ctx, data, db)
+	case "/seller/etalase/tambah-barang-ke-etalase":
+		var data seller_etalase_services.PayloadTambahkanBarangKeEtalase
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_etalase_services.TambahkanBarangKeEtalase(ctx, data, db)
+	case "/seller/jenis/ajukan-data-distributor":
+		var data jenis_seller_services.PayloadMasukanDataDistributor
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = jenis_seller_services.MasukanDataDistributor(ctx, data, db)
+	case "/seller/jenis/ajukan-data-brand":
+		var data jenis_seller_services.PayloadMasukanDataBrand
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = jenis_seller_services.MasukanDataBrand(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

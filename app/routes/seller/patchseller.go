@@ -12,10 +12,12 @@ import (
 	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
 	seller_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services"
 	seller_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services"
+	seller_diskon_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/diskon_services"
+	seller_etalase_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/etalase_services"
+	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 	seller_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services"
-
 )
 
 func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
@@ -165,6 +167,34 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_credential_services.SetDefaultRekeningSeller(ctx, data, db)
+	case "/seller/diskon/edit-diskon":
+		var data seller_diskon_services.PayloadEditDiskonProduk
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_diskon_services.EditDiskonProduk(ctx, data, db)
+	case "/seller/etalase/edit-etalase":
+		var data seller_etalase_services.PayloadEditEtalase
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_etalase_services.EditEtalaseSeller(ctx, data, db)
+	case "/seller/jenis/edit-data-distributor":
+		var data jenis_seller_services.PayloadEditDataDistributor
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = jenis_seller_services.EditDataDistributor(ctx, data, db)
+	case "/seller/jenis/edit-data-brand":
+		var data jenis_seller_services.PayloadEditDataBrand
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = jenis_seller_services.EditDataBrand(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

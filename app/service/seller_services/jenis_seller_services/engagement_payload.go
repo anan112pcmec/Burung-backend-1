@@ -42,6 +42,7 @@ type PayloadMasukanDataBrand struct {
 	DokumenPerwakilanUrl  string                         `json:"dokumen_perwakilan_url"`
 	NIB                   string                         `json:"kode_nib"`
 	NPWP                  string                         `json:"kode_npwp"`
+	Alasan                string                         `json:"alasan"`
 }
 
 type PayloadEditDataBrand struct {
@@ -55,6 +56,7 @@ type PayloadEditDataBrand struct {
 	DokumenPerwakilanUrl  string                         `json:"dokumen_perwakilan_url"`
 	NIB                   string                         `json:"kode_nib"`
 	NPWP                  string                         `json:"kode_npwp"`
+	Alasan                string                         `json:"alasan"`
 }
 
 type PayloadHapusDataBrand struct {

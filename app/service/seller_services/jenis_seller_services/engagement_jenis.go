@@ -9,7 +9,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services/response_jenis_seller"
-
 )
 
 func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistributor, db *gorm.DB) *response.ResponseForm {
@@ -53,6 +52,7 @@ func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistribu
 		NamaPerusahaan:            data.NamaPerusahaan,
 		NIB:                       data.NIB,
 		NPWP:                      data.NPWP,
+		Alasan:                    data.Alasan,
 		DokumenIzinDistributorUrl: data.DokumenIzinDistributorUrl,
 		Status:                    "Pending",
 	}).Error; err != nil {
@@ -118,6 +118,7 @@ func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, d
 		NamaPerusahaan:            data.NamaPerusahaan,
 		NIB:                       data.NIB,
 		NPWP:                      data.NPWP,
+		Alasan:                    data.Alasan,
 		DokumenIzinDistributorUrl: data.DokumenIzinDistributorUrl,
 	}).Error; err != nil {
 		return &response.ResponseForm{
@@ -243,6 +244,7 @@ func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *gor
 		DokumenPerwakilanUrl:  data.DokumenPerwakilanUrl,
 		NIB:                   data.NIB,
 		NPWP:                  data.NPWP,
+		Alasan:                data.Alasan,
 		Status:                "Pending",
 	}).Error; err != nil {
 		return &response.ResponseForm{
@@ -312,6 +314,7 @@ func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *gorm.DB) 
 		DokumenPerwakilanUrl:  data.DokumenPerwakilanUrl,
 		NIB:                   data.NIB,
 		NPWP:                  data.NPWP,
+		Alasan:                data.Alasan,
 	}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

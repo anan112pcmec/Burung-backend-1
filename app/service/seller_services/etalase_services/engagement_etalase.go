@@ -101,10 +101,10 @@ func EditEtalaseSeller(ctx context.Context, data PayloadEditEtalase, db *gorm.DB
 
 	if id_data_etalase == 0 {
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_etalase_services_seller.ResponseEditEtalase{
-				Message: "Gagal kamu sudah memiliki etalase dengan nama itu",
+				Message: "Gagal etalase tak ditemukan",
 			},
 		}
 	}
@@ -161,17 +161,27 @@ func HapusEtalaseSeller(ctx context.Context, data PayloadHapusEtalase, db *gorm.
 
 	if id_data_etalase == 0 {
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusNotFound,
 			Services: services,
 			Payload: response_etalase_services_seller.ResponseHapusEtalase{
-				Message: "Gagal kamu sudah memiliki etalase dengan nama itu",
+				Message: "Gagal etalase tidak ditemukan",
 			},
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.Etalase{}).Where(&models.Etalase{
-		ID: data.IdEtalase,
-	}).Delete(&models.Etalase{}).Error; err != nil {
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.BarangKeEtalase{}).Where(&models.BarangKeEtalase{
+			IdEtalase: data.IdEtalase,
+		}).Delete(&models.BarangKeEtalase{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&models.Etalase{}).Where(&models.Etalase{
+			ID: data.IdEtalase,
+		}).Delete(&models.Etalase{}).Error; err != nil {
+
+		}
+		return nil
+	}); err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -204,7 +214,7 @@ func TambahkanBarangKeEtalase(ctx context.Context, data PayloadTambahkanBarangKe
 	}
 
 	var id_barang_ke_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Where(&models.BarangKeEtalase{
+	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Select("id").Where(&models.BarangKeEtalase{
 		IdEtalase:     data.IdEtalase,
 		IdBarangInduk: data.IdBarangInduk,
 	}).Limit(1).Scan(&id_barang_ke_etalase).Error; err != nil {
@@ -263,7 +273,7 @@ func HapusBarangDariEtalase(ctx context.Context, data PayloadHapusBarangDiEtalas
 	}
 
 	var id_barang_ke_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Where(&models.BarangKeEtalase{
+	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Select("id").Where(&models.BarangKeEtalase{
 		ID:            data.IdBarangKeEtalase,
 		IdEtalase:     data.IdEtalase,
 		IdBarangInduk: data.IdBarangInduk,

@@ -248,8 +248,8 @@ type DistributorData struct {
 	SellerId                  int32  `gorm:"column:seller_id;not null" json:"id_seller_distributor_data"`
 	Seller                    Seller `gorm:"foreignKey:SellerId;references:ID" json:"-"`
 	NamaPerusahaan            string `gorm:"column:nama_perusahaan;type:text;not null" json:"nama_perusahaan_distributor_data"`
-	NIB                       string `gorm:"column:nib;type:varchar(15);not null" json:"nib_distributor_data"`
-	NPWP                      string `gorm:"column:npwp;type:varchar(18);not null" json:"npwp_distributor_data"`
+	NIB                       string `gorm:"column:nib;type:varchar(20);not null" json:"nib_distributor_data"`
+	NPWP                      string `gorm:"column:npwp;type:varchar(30);not null" json:"npwp_distributor_data"`
 	DokumenIzinDistributorUrl string `gorm:"column:dokumen_izin_distributor;type:text;not null" json:"dokumen_izin_distributor_data"`
 	Alasan                    string `gorm:"column:alasan;type:text" json:"alasan_distributor_data"`
 	Status                    string `gorm:"column:status;type:status_jenis_seller;not null" json:"status_distributor_data"`
@@ -269,8 +269,8 @@ type BrandData struct {
 	NomorPendaftaranMerek string `gorm:"column:nomor_pendaftaran_merek;type:text;not null" json:"nomor_pendaftaran_merek_brand_data"`
 	SertifikatMerekUrl    string `gorm:"column:sertifikat_merek_url;type:text;not null" json:"sertifikat_merek_url_brand_data"`
 	DokumenPerwakilanUrl  string `gorm:"column:dokumen_perwakilan_url;type:text;not null" json:"dokumen_perwakilan_url_brand_data"`
-	NIB                   string `gorm:"column:nib;type:varchar(15);not null" json:"nib_brand_data"`
-	NPWP                  string `gorm:"column:npwp;type:varchar(18);not null" json:"npwp_brand_data"`
+	NIB                   string `gorm:"column:nib;type:varchar(20);not null" json:"nib_brand_data"`
+	NPWP                  string `gorm:"column:npwp;type:varchar(30);not null" json:"npwp_brand_data"`
 	Alasan                string `gorm:"column:alasan;type:text" json:"alasan_brand_data"`
 	Status                string `gorm:"column:status;type:status_jenis_seller;not null" json:"status_brand_data"`
 }

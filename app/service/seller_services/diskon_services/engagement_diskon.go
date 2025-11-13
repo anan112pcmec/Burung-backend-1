@@ -214,9 +214,19 @@ func HapusDiskonProduk(ctx context.Context, data PayloadHapusDiskonProduk, db *g
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.DiskonProduk{}).Where(&models.DiskonProduk{
-		ID: data.IdDiskonProduk,
-	}).Delete(&models.DiskonProduk{}).Error; err != nil {
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.BarangDiDiskon{}).Where(&models.BarangDiDiskon{
+			IdDiskon: data.IdDiskonProduk,
+		}).Delete(&models.BarangDiDiskon{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&models.DiskonProduk{}).Where(&models.DiskonProduk{
+			ID: data.IdDiskonProduk,
+		}).Delete(&models.DiskonProduk{}).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -300,6 +310,7 @@ func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPad
 
 	if err := db.WithContext(ctx).Create(&models.BarangDiDiskon{
 		SellerId:         data.IdentitasSeller.IdSeller,
+		IdDiskon:         data.IdDiskonProduk,
 		IdBarangInduk:    data.IdBarangInduk,
 		IdKategoriBarang: data.IdKategoriBarang,
 		Status:           seller_enum.Waiting,
