@@ -71,3 +71,15 @@ type ResponseEditKeranjangUser struct {
 type ResponseHapusKeranjangUser struct {
 	Message string `json:"pesan_hapus_keranjang_barang"`
 }
+
+type ResponseBerikanReviewBarang struct {
+	Message string `json:"pesan_berikan_review_barang"`
+}
+
+type ResponseLikeReviewBarang struct {
+	Message string `json:"pesan_like_review_barang"`
+}
+
+type ResponseUnlikeReviewBarang struct {
+	Message string `json:"pesan_unlike_review_barang"`
+}

@@ -49,6 +49,7 @@ type Transaksi struct {
 	Catatan             string         `gorm:"column:catatan;type:text" json:"catatan_transaksi"`
 	KuantitasBarang     int32          `gorm:"column:kuantitas_barang;type:int4;not null" json:"kuantitas_barang"`
 	Total               int64          `gorm:"column:total;type:int8;not null" json:"total_transaksi"`
+	Reviewed            bool           `gorm:"column:reviewed;type:bool;not null;default:false" json:"reviewed_transaksi"`
 	CreatedAt           time.Time      `gorm:"autoCreateTime"`
 	UpdatedAt           time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt           gorm.DeletedAt `gorm:"index"`

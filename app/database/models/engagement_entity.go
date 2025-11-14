@@ -135,6 +135,70 @@ func (AlamatPengguna) TableName() string {
 	return "alamat_pengguna"
 }
 
+type Wishlist struct {
+	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_wishlist"`
+	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_wishlist"`
+	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID" json:"-"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_wishlist"`
+	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk:references:ID" json:"-"`
+	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (Wishlist) TableName() string {
+	return "wishlist"
+}
+
+type Review struct {
+	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_review"`
+	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_review"`
+	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID" json:"-"`
+	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_review"`
+	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
+	Rating        float32     `gorm:"column:rating;type:numeric(2,1);not null" json:"rating_review"`
+	Ulasan        string      `gorm:"column:ulasan;type:text" json:"ulasan_review"`
+	Like          int64       `gorm:"column:like;type:int8;default:0" json:"like_review"`
+	Dislike       int64       `gorm:"column:dislike;type:int8;default:0" json:"dislike_review"`
+	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (Review) TableName() string {
+	return "review"
+}
+
+type ReviewLike struct {
+	ID         int64      `gorm:"primaryKey;autoIncrement" json:"id_like_review"`
+	IdPengguna int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_like_wishlist"`
+	Pengguna   Pengguna   `gorm:"foreignKey:IdPengguna;references:ID" json:"-"`
+	IdReview   int64      `gorm:"column:id_review;not null" json:"id_review_like_wishlist"`
+	Review     Review     `gorm:"foreignKey:IdReview;references:ID" json:"-"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (ReviewLike) TableName() string {
+	return "review_like"
+}
+
+type ReviewDislike struct {
+	ID         int64      `gorm:"primaryKey;autoIncrement" json:"id_dislike_review"`
+	IdPengguna int64      `gorm:"column:id_pengguna;not null" json:"id_pengguna_dislike_wishlist"`
+	Pengguna   Pengguna   `gorm:"foreignKey:IdPengguna;references:ID" json:"-"`
+	IdReview   int64      `gorm:"column:id_review;not null" json:"id_review_dislike_wishlist"`
+	Review     Review     `gorm:"foreignKey:IdReview;references:ID" json:"-"`
+	CreatedAt  time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt  time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt  *time.Time `gorm:"index" json:"deleted_at,omitempty"`
+}
+
+func (ReviewDislike) TableName() string {
+	return "review_dislike"
+}
+
 // ///////////////////////////////////////////////////////////////////////////////////////////
 // ENGAGEMENT SELLER
 // ///////////////////////////////////////////////////////////////////////////////////////////

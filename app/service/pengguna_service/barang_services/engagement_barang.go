@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_engagement_barang_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services/response_barang"
@@ -680,5 +681,220 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 		Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
 			Message: "Barang berhasil dihapus dari keranjang.",
 		},
+	}
+}
+
+func BerikanReviewBarang(ctx context.Context, data PayloadBerikanReviewBarang, db *gorm.DB) *response.ResponseForm {
+	services := "BerikanReviewBarang"
+
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
+				Message: "Gagal data pengguna tidak valid",
+			},
+		}
+	}
+
+	var id_transaksi_data_selesai int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Transaksi{}).Select("id").Where(&models.Transaksi{
+		IdBarangInduk: data.IdBarangInduk,
+		IdPengguna:    data.IdentitasPengguna.ID,
+		Status:        transaksi_enums.Selesai,
+		Reviewed:      false,
+	}).Limit(1).Scan(&id_transaksi_data_selesai).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	if id_transaksi_data_selesai == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
+				Message: "Gagal kamu tidak memiliki otoritas itu",
+			},
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&models.Review{
+			IdPengguna:    data.IdentitasPengguna.ID,
+			IdBarangInduk: int32(data.IdBarangInduk),
+			Rating:        data.Rating,
+			Ulasan:        data.Ulasan,
+		}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+			ID: id_transaksi_data_selesai,
+		}).Updates(&models.Transaksi{
+			Reviewed: true,
+		}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
+				Message: "Gagal server sedang sibuk coba lagi lain waktu",
+			},
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
+			Message: "Berhasil",
+		},
+	}
+}
+
+func LikeReviewBarang(ctx context.Context, data PayloadLikeReviewBarang, db *gorm.DB) *response.ResponseForm {
+	services := "LikeReviewBarang"
+
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data pengguna tidak valid",
+		}
+	}
+
+	var id_review_like int64 = 0
+	if err := db.Model(&models.ReviewLike{}).
+		Select("id").
+		Where(&models.ReviewLike{
+			IdPengguna: data.IdentitasPengguna.ID,
+			IdReview:   data.IdReview,
+		}).
+		Limit(1).
+		Scan(&id_review_like).Error; err != nil {
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_review_like != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal kamu sudah like review itu",
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// Insert like
+		if err := tx.Create(&models.ReviewLike{
+			IdPengguna: data.IdentitasPengguna.ID,
+			IdReview:   data.IdReview,
+		}).Error; err != nil {
+			return err
+		}
+
+		// Update kolom "like"
+		if err := tx.Model(&models.Review{}).
+			Where("id = ?", data.IdReview).
+			UpdateColumn(`"like"`, gorm.Expr(`"like" + 1`)).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
+	}
+}
+
+func UnlikeReviewBarang(ctx context.Context, data PayloadUnlikeReviewBarang, db *gorm.DB) *response.ResponseForm {
+	services := "UnlikeReviewBarang"
+
+	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data pengguna tidak valid",
+		}
+	}
+
+	var id_review_like int64 = 0
+	if err := db.WithContext(ctx).Model(&models.ReviewLike{}).
+		Select("id").
+		Where(&models.ReviewLike{
+			IdPengguna: data.IdentitasPengguna.ID,
+			IdReview:   data.IdReview,
+		}).
+		Limit(1).
+		Scan(&id_review_like).Error; err != nil {
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_review_like == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data like tidak ditemukan",
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		// Hapus like
+		if err := tx.Delete(&models.ReviewLike{}, id_review_like).Error; err != nil {
+			return err
+		}
+
+		// Decrement kolom "like", pastikan tidak negatif
+		if err := tx.Model(&models.Review{}).
+			Where("id = ?", data.IdReview).
+			UpdateColumn(`"like"`, gorm.Expr(`CASE WHEN "like" > 0 THEN "like" - 1 ELSE 0 END`)).
+			Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
 	}
 }

@@ -130,3 +130,20 @@ type PayloadHapusDataKeranjangBarang struct {
 	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
 	IdKeranjang       int64                              `json:"id_keranjang"`
 }
+
+type PayloadBerikanReviewBarang struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdBarangInduk     int64                              `json:"id_barang_induk"`
+	Rating            float32                            `json:"rating"`
+	Ulasan            string                             `json:"ulasan"`
+}
+
+type PayloadLikeReviewBarang struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdReview          int64                              `json:"id_review"`
+}
+
+type PayloadUnlikeReviewBarang struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdReview          int64                              `json:"id_review"`
+}
