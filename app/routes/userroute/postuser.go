@@ -14,6 +14,7 @@ import (
 	pengguna_credential_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services"
 	pengguna_social_media_service "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/social_media_services"
 	pengguna_transaction_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services"
+
 )
 
 func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
@@ -21,14 +22,14 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 	ctx := r.Context()
 
 	switch r.URL.Path {
-	case "/user/komentar-barang/tambah":
+	case "/user/barang/komentar-barang/tambah":
 		var data pengguna_service.PayloadMasukanKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.MasukanKomentarBarang(ctx, data, db)
-	case "/user/komentar-child/tambah":
+	case "/user/barang/komentar-child/tambah":
 		var data pengguna_service.PayloadMasukanChildKomentar
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
@@ -36,14 +37,14 @@ func PostUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *r
 		}
 		hasil = pengguna_service.MasukanChildKomentar(ctx, data, db)
 
-	case "/user/komentar-child-mention/tambah":
+	case "/user/barang/komentar-child-mention/tambah":
 		var data pengguna_service.PayloadMentionChildKomentar
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.MentionChildKomentar(ctx, data, db)
-	case "/user/keranjang-barang/tambah":
+	case "/user/barang/keranjang-barang/tambah":
 		var data pengguna_service.PayloadTambahDataKeranjangBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)

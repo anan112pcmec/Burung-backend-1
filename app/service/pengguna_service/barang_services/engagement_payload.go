@@ -26,6 +26,12 @@ type PayloadLikesBarang struct {
 	IDBarangInduk     int32                              `json:"id_barang_induk_likes"`
 }
 
+type PayloadUnlikeBarang struct {
+	IdentitasPengguna identity_pengguna.IdentityPengguna `json:"identitas_pengguna"`
+	IdBarangDisukai   int64                              `json:"id_barang_disukai"`
+	IdBarangInduk     int32                              `json:"id_barang_induk"`
+}
+
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Payload Critical
 // Dibutuhkan Identitas Pengguna untuk kepentingan yang absah

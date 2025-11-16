@@ -89,6 +89,7 @@ func (Keranjang) TableName() string {
 }
 
 type BarangDisukai struct {
+	ID            int64       `gorm:"primaryKey;autoIncrement" json:"id_barang_disukai"`
 	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_barang_disukai"`
 	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID"`
 	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_disukai"`

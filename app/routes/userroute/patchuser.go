@@ -22,28 +22,35 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 	ctx := r.Context()
 
 	switch r.URL.Path {
-	case "/user/likes-barang":
+	case "/user/barang/likes-barang":
 		var data pengguna_service.PayloadLikesBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.LikesBarang(ctx, data, db)
-	case "/user/komentar-barang/edit":
+	case "/user/barang/unlikes-barang":
+		var data pengguna_service.PayloadUnlikeBarang
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_service.UnlikeBarang(ctx, data, db)
+	case "/user/barang/komentar-barang/edit":
 		var data pengguna_service.PayloadEditKomentarBarangInduk
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.EditKomentarBarang(ctx, data, db)
-	case "/user/komentar-child/edit":
+	case "/user/barang/komentar-child/edit":
 		var data pengguna_service.PayloadEditChildKomentar
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = pengguna_service.EditChildKomentar(ctx, data, db)
-	case "/user/keranjang-barang/edit":
+	case "/user/barang/keranjang-barang/edit":
 		var data pengguna_service.PayloadEditDataKeranjangBarang
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)

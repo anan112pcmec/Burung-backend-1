@@ -12,6 +12,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_engagement_barang_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services/response_barang"
+
 )
 
 var fieldBarangViewed = "viewed_barang_induk"
@@ -61,7 +62,7 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *res
 	}
 
 	var id_pengguna_disukai int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).Select("id_pengguna").Where(&models.BarangDisukai{
+	if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).Select("id").Where(&models.BarangDisukai{
 		IdPengguna:    data.IdentitasPengguna.ID,
 		IdBarangInduk: data.IDBarangInduk,
 	}).Limit(1).Scan(&id_pengguna_disukai).Error; err != nil {
@@ -74,51 +75,75 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *res
 		}
 	}
 
-	if id_pengguna_disukai == 0 {
-		if err := db.WithContext(ctx).Create(&models.BarangDisukai{
-			IdPengguna:    data.IdentitasPengguna.ID,
-			IdBarangInduk: data.IDBarangInduk,
-		}).Error; err != nil {
-			fmt.Println("Gagal likes:", err)
-			return &response.ResponseForm{
-				Status:   http.StatusInternalServerError,
-				Services: services,
-				Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-					Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
-				},
-			}
-		}
-
+	if id_pengguna_disukai != 0 {
 		return &response.ResponseForm{
-			Status:   http.StatusOK,
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal kamu sudah menyukai barang itu",
+		}
+	}
+
+	if err := db.WithContext(ctx).Create(&models.BarangDisukai{
+		IdPengguna:    data.IdentitasPengguna.ID,
+		IdBarangInduk: data.IDBarangInduk,
+	}).Error; err != nil {
+		fmt.Println("Gagal likes:", err)
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
 			Services: services,
 			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-				Message: "Disukai",
+				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
 			},
 		}
-	} else {
-		if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).
-			Where(models.BarangDisukai{
-				IdPengguna:    data.IdentitasPengguna.ID,
-				IdBarangInduk: data.IDBarangInduk,
-			}).Delete(&models.BarangDisukai{}).Error; err != nil {
-			fmt.Println("Gagal Hapus Likes:", err)
-			return &response.ResponseForm{
-				Status:   http.StatusInternalServerError,
-				Services: services,
-				Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-					Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
-				},
-			}
-		}
+	}
 
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
+			Message: "Disukai",
+		},
+	}
+}
+
+func UnlikeBarang(ctx context.Context, data PayloadUnlikeBarang, db *gorm.DB) *response.ResponseForm {
+	services := "UnlikeBarang"
+
+	var id_data_barang_disukai int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).Select("id").Where(&models.BarangDisukai{
+		ID:            data.IdBarangDisukai,
+		IdPengguna:    data.IdentitasPengguna.ID,
+		IdBarangInduk: data.IdBarangInduk,
+	}).Limit(1).Scan(&id_data_barang_disukai).Error; err != nil {
 		return &response.ResponseForm{
-			Status:   http.StatusOK,
+			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-				Message: "Tidak Disukai",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
+	}
+
+	if id_data_barang_disukai == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data tidak ditemukan",
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).Where(&models.BarangDisukai{
+		ID: data.IdBarangDisukai,
+	}).Delete(&models.BarangDisukai{}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
 	}
 }
 
