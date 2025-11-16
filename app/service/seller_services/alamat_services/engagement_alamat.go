@@ -3,12 +3,12 @@ package seller_alamat_services
 import (
 	"context"
 	"log"
-	"math"
 	"net/http"
 
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_alamat_services_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services/response_alamat_service_seller"
 )
@@ -18,43 +18,6 @@ import (
 // Berfungsi Untuk Menulis Ke table alamat_gudang tentang alamat gudang seller tersebut, tidak ada batasan maksimal
 // gudang yang boleh dilampirkan alamat nya
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func SanitasiKoordinat(Latitude *float64, Longitude *float64) {
-	if Latitude == nil || Longitude == nil {
-		return
-	}
-
-	lat := *Latitude
-	long := *Longitude
-
-	const maxVal = 100.0
-
-	// Normalisasi jika terlalu besar (contoh: 106.82 → 10.682)
-	if math.Abs(long) > maxVal {
-		long = long / 10
-	}
-	if math.Abs(lat) > maxVal {
-		lat = lat / 10
-	}
-
-	// Batasi ke rentang -180..180 (koordinat bumi valid)
-	if long > maxVal {
-		long = maxVal
-	}
-	if long < -maxVal {
-		long = -maxVal
-	}
-	if lat > maxVal {
-		lat = maxVal
-	}
-	if lat < -maxVal {
-		lat = -maxVal
-	}
-
-	// Tulis balik hasil sanitasi ke pointer
-	*Latitude = lat
-	*Longitude = long
-}
 
 func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db *gorm.DB) *response.ResponseForm {
 	services := "TambahAlamatGudang"
@@ -96,7 +59,7 @@ func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db 
 		}
 	}
 
-	SanitasiKoordinat(&data.Latitude, &data.Longitude)
+	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
 	if err := db.WithContext(ctx).Create(&models.AlamatGudang{
 		IDSeller:        data.IdentitasSeller.IdSeller,
@@ -172,7 +135,7 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gor
 		}
 	}
 
-	SanitasiKoordinat(&data.Latitude, &data.Longitude)
+	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
 	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
 		ID: data.IdAlamatGudang,

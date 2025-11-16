@@ -16,7 +16,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services/response_credential_pengguna"
-)
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Engagement Credential Level Uncritical
@@ -74,75 +73,78 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 				},
 			}
 		}
-		go func() {
-			if data.FaktorKedua == "OTP" {
 
-				otp := helper.GenerateOTP()
-				key := fmt.Sprintf("user_ubah_password_by_otp:%s", otp)
+		if data.FaktorKedua == "OTP" {
 
-				to := []string{user.Email}
-				subject := "Kode Mengubah Password Burung"
-				message := fmt.Sprintf("Kode Anda: %s\nMasa berlaku 3 menit.", otp)
+			otp := helper.GenerateOTP()
+			key := fmt.Sprintf("user_ubah_password_by_otp:%s", otp)
 
-				if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-					log.Printf("[ERROR] Gagal mengirim email OTP: %v", err)
-				} else {
-					log.Println("[INFO] Email OTP berhasil dikirim.")
-				}
+			to := []string{user.Email}
+			subject := "Kode Mengubah Password Burung"
+			message := fmt.Sprintf("Kode Anda: %s\nMasa berlaku 3 menit.", otp)
 
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				fields := map[string]interface{}{
-					"id_user":       user.ID,
-					"username":      user.Username,
-					"password_baru": string(hashedPassword),
-				}
-
-				pipe := rds.TxPipeline()
-				hset := pipe.HSet(ctx, key, fields)
-				exp := pipe.Expire(ctx, key, 3*time.Minute)
-
-				_, err := pipe.Exec(ctx)
-				if err != nil {
-					log.Printf("[ERROR] Gagal menyimpan OTP ke Redis: %v", err)
-				}
-
-				_ = hset
-				_ = exp
+			if err := emailservices.SendMail(to, nil, subject, message); err != nil {
+				log.Printf("[ERROR] Gagal mengirim email OTP: %v", err)
 			} else {
-				key := fmt.Sprintf("user_ubah_password_by_pin:%v", user.ID)
-
-				to := []string{user.Email}
-				subject := "Kode Mengubah Password Burung"
-				message := fmt.Sprintf("Anda mengubah password akun Burung pada %s menggunakan faktor PIN.", time.Now().Format("02-01-2006 15:04:05"))
-
-				if err := emailservices.SendMail(to, nil, subject, message); err != nil {
-					log.Printf("[ERROR] Gagal mengirim notifikasi email PIN: %v", err)
-				} else {
-					log.Println("[INFO] Email notifikasi PIN berhasil dikirim.")
-				}
-
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				fields := map[string]interface{}{
-					"id_user":       user.ID,
-					"username":      user.Username,
-					"password_baru": string(hashedPassword),
-				}
-
-				pipe := rds.TxPipeline()
-				hset := pipe.HSet(ctx, key, fields)
-				exp := pipe.Expire(ctx, key, 3*time.Minute)
-
-				_, err := pipe.Exec(ctx)
-				if err != nil {
-					log.Printf("[ERROR] Gagal menyimpan data PIN ke Redis: %v", err)
-				}
-
-				_ = hset
-				_ = exp
+				log.Println("[INFO] Email OTP berhasil dikirim.")
 			}
-		}()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			fields := map[string]interface{}{
+				"id_user":       user.ID,
+				"username":      user.Username,
+				"password_baru": string(hashedPassword),
+			}
+
+			pipe := rds.TxPipeline()
+			hset := pipe.HSet(ctx, key, fields)
+			exp := pipe.Expire(ctx, key, 3*time.Minute)
+
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				log.Printf("[ERROR] Gagal menyimpan OTP ke Redis: %v", err)
+			}
+
+			_ = hset
+			_ = exp
+		} else {
+			key := fmt.Sprintf("user_ubah_password_by_pin:%v", user.ID)
+
+			to := []string{user.Email}
+			subject := "Kode Mengubah Password Burung"
+			message := fmt.Sprintf("Anda mengubah password akun Burung pada %s menggunakan faktor PIN.", time.Now().Format("02-01-2006 15:04:05"))
+
+			if err := emailservices.SendMail(to, nil, subject, message); err != nil {
+				log.Printf("[ERROR] Gagal mengirim notifikasi email PIN: %v", err)
+			} else {
+				log.Println("[INFO] Email notifikasi PIN berhasil dikirim.")
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			fields := map[string]interface{}{
+				"id_user":       user.ID,
+				"username":      user.Username,
+				"password_baru": string(hashedPassword),
+			}
+
+			if _, err := rds.Del(ctx, key).Result(); err != nil {
+				fmt.Println("gagal hapus", err)
+			}
+
+			pipe := rds.TxPipeline()
+			hset := pipe.HSet(ctx, key, fields)
+			exp := pipe.Expire(ctx, key, 3*time.Minute)
+
+			_, err := pipe.Exec(ctx)
+			if err != nil {
+				log.Printf("[ERROR] Gagal menyimpan data PIN ke Redis: %v", err)
+			}
+
+			_ = hset
+			_ = exp
+		}
 	}
 
 	return &response.ResponseForm{
@@ -201,6 +203,10 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 		}
 	}
 
+	if _, err_del := rds.Del(ctx, key).Result(); err_del != nil {
+		log.Printf("[WARN] Gagal menghapus OTP key: %v", err_del)
+	}
+
 	log.Println("[INFO] Password berhasil diubah via OTP.")
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
@@ -221,7 +227,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 	services := "ValidateUbahPasswordPenggunaViaPin"
 
 	var pin_user string
-	if check_pin := db.Model(models.Pengguna{}).Select("pin_hash").Where(models.Pengguna{ID: data.IDPengguna}).First(&pin_user).Error; check_pin != nil {
+	if check_pin := db.Model(models.Pengguna{}).Select("pin_hash").Where(models.Pengguna{ID: data.IDPengguna}).Limit(1).Scan(&pin_user).Error; check_pin != nil {
 		log.Printf("[WARN] PIN pengguna tidak ditemukan: %v", check_pin)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -254,6 +260,10 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 					Message: "Data perubahan password via PIN tidak ditemukan atau sudah kadaluarsa.",
 				},
 			}
+		}
+
+		if _, err_del := rds.Del(ctx, key).Result(); err_del != nil {
+			log.Printf("[WARN] Gagal menghapus OTP key: %v", err_del)
 		}
 
 		if err_change_pass := db.Model(models.Pengguna{}).Where(models.Pengguna{ID: data.IDPengguna}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {

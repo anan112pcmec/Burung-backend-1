@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -48,9 +47,8 @@ func ViewBarang(data PayloadViewBarang, rds *redis.Client, db *gorm.DB) {
 // :Berfungsi Untuk Menambah Dan Mengurangi Likes Barang induk dan mencatat barangdisukai
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *response.ResponseForm {
 	services := "LikesBarang"
-	var wg sync.WaitGroup
 
 	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
@@ -77,19 +75,6 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB, rds 
 	}
 
 	if id_pengguna_disukai == 0 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err_incr_rds := rds.HIncrBy(
-				ctx,
-				fmt.Sprintf("barang:%d", data.IDBarangInduk),
-				"likes_barang_induk",
-				1,
-			).Err(); err_incr_rds != nil {
-				fmt.Println("Gagal increment likes di Redis:", err_incr_rds)
-			}
-		}()
-
 		if err := db.WithContext(ctx).Create(&models.BarangDisukai{
 			IdPengguna:    data.IdentitasPengguna.ID,
 			IdBarangInduk: data.IDBarangInduk,
@@ -104,8 +89,6 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB, rds 
 			}
 		}
 
-		wg.Wait()
-
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
@@ -114,20 +97,6 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB, rds 
 			},
 		}
 	} else {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			if err_decr_rds := rds.HIncrBy(
-				ctx,
-				fmt.Sprintf("barang:%d", data.IDBarangInduk),
-				"likes_barang_induk",
-				-1,
-			).Err(); err_decr_rds != nil {
-				fmt.Println("Gagal decrement likes di Redis:", err_decr_rds)
-			}
-		}()
-
-		wg.Wait()
 		if err := db.WithContext(ctx).Model(&models.BarangDisukai{}).
 			Where(models.BarangDisukai{
 				IdPengguna:    data.IdentitasPengguna.ID,

@@ -220,25 +220,6 @@ func (Jenis_Seller) TableName() string {
 	return "jenis_seller_validation"
 }
 
-type AlamatSeller struct {
-	ID              int64      `gorm:"primaryKey;autoIncrement" json:"id_alamat_seller"`
-	IDSeller        int32      `gorm:"column:id_seller;not null" json:"id_seller_alamat_seller"`
-	Seller          Seller     `gorm:"foreignKey:IDSeller;references:ID"`
-	PanggilanAlamat string     `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_seller"`
-	NomorTelephone  string     `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_seller"`
-	NamaAlamat      string     `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_seller"`
-	Deskripsi       string     `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_seller"`
-	Longitude       float64    `gorm:"column:longitude;type:decimal(10,8);" json:"longitude_alamat_seller"`
-	Latitude        float64    `gorm:"column:latitude;type:decimal(10,8);" json:"latitude_alamat_seller"`
-	CreatedAt       time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt       time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt       *time.Time `gorm:"index" json:"deleted_at,omitempty"`
-}
-
-func (AlamatSeller) TableName() string {
-	return "alamat_seller"
-}
-
 type BatalTransaksi struct {
 	ID             int64      `gorm:"primaryKey;autoIncrement" json:"id_batal_transaksi"`
 	IdTransaksi    int64      `gorm:"column:id_transaksi;not null" json:"id_transaksi_batal_transaksi"`

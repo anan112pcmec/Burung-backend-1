@@ -2,12 +2,12 @@ package pengguna_alamat_services
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/alamat_services/response_alamat_service_pengguna"
 )
@@ -29,10 +29,10 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		}
 	}
 
-	var id_data_alamat []int64
+	var id_data_alamats []int64
 	if err := db.WithContext(ctx).Select("id").Model(&models.AlamatPengguna{}).
 		Where(models.AlamatPengguna{IDPengguna: data.IdentitasPengguna.ID}).
-		Limit(5).Scan(&id_data_alamat).Error; err != nil {
+		Limit(5).Scan(&id_data_alamats).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -40,7 +40,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		}
 	}
 
-	if len(id_data_alamat) == 5 {
+	if len(id_data_alamats) == 5 {
 		return &response.ResponseForm{
 			Status:   http.StatusForbidden,
 			Services: services,
@@ -50,40 +50,44 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		}
 	}
 
-	var existing models.AlamatPengguna
-	errcheck := db.WithContext(ctx).Where(models.AlamatPengguna{
+	var id_data_alamat int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
 		IDPengguna:      data.IdentitasPengguna.ID,
 		PanggilanAlamat: data.PanggilanAlamat,
-	}).First(&existing).Error
-
-	if errors.Is(errcheck, gorm.ErrRecordNotFound) {
-		if err := db.WithContext(ctx).Create(&models.AlamatPengguna{
-			IDPengguna:      data.IdentitasPengguna.ID,
-			PanggilanAlamat: data.PanggilanAlamat,
-			NamaAlamat:      data.NamaAlamat,
-			Deskripsi:       data.Deskripsi,
-			NomorTelephone:  data.NomorTelephone,
-			Kota:            data.Kota,
-			KodePos:         data.KodePos,
-			KodeNegara:      data.KodeNegara,
-			Longitude:       data.Longitude,
-			Latitude:        data.Latitude,
-		}).Error; err != nil {
-			return &response.ResponseForm{
-				Status:   http.StatusInternalServerError,
-				Services: services,
-				Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
-					Messages: "Terjadi Kesalahan Pada Server. Silakan Coba Beberapa Saat Lagi.",
-				},
-			}
-		}
-	} else {
+	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
-			Status:   http.StatusConflict,
+			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
-				Messages: "Alamat Dengan Panggilan Tersebut Sudah Ada. Silakan Gunakan Panggilan Lain.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_data_alamat != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal kamu sudah memiliki alamat dengan panggilan yang sama",
+		}
+	}
+
+	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
+
+	if err := db.WithContext(ctx).Create(&models.AlamatPengguna{
+		IDPengguna:      data.IdentitasPengguna.ID,
+		PanggilanAlamat: data.PanggilanAlamat,
+		NamaAlamat:      data.NamaAlamat,
+		Deskripsi:       data.Deskripsi,
+		NomorTelephone:  data.NomorTelephone,
+		Kota:            data.Kota,
+		KodePos:         data.KodePos,
+		KodeNegara:      data.KodeNegara,
+		Longitude:       data.Longitude,
+		Latitude:        data.Latitude,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -132,6 +136,8 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 			},
 		}
 	}
+
+	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
 	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Where(&models.AlamatPengguna{
 		ID: data.IdAlamatPengguna,

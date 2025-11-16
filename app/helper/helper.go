@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/big"
 	"math/rand"
 	mrand "math/rand"
@@ -399,4 +400,41 @@ func GenerateOTP() string {
 		otp += fmt.Sprintf("%d", n.Int64())
 	}
 	return otp
+}
+
+func SanitasiKoordinat(Latitude *float64, Longitude *float64) {
+	if Latitude == nil || Longitude == nil {
+		return
+	}
+
+	lat := *Latitude
+	long := *Longitude
+
+	const maxVal = 100.0
+
+	// Normalisasi jika terlalu besar (contoh: 106.82 → 10.682)
+	if math.Abs(long) > maxVal {
+		long = long / 10
+	}
+	if math.Abs(lat) > maxVal {
+		lat = lat / 10
+	}
+
+	// Batasi ke rentang -180..180 (koordinat bumi valid)
+	if long > maxVal {
+		long = maxVal
+	}
+	if long < -maxVal {
+		long = -maxVal
+	}
+	if lat > maxVal {
+		lat = maxVal
+	}
+	if lat < -maxVal {
+		lat = -maxVal
+	}
+
+	// Tulis balik hasil sanitasi ke pointer
+	*Latitude = lat
+	*Longitude = long
 }
