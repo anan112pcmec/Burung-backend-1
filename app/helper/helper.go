@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"math/big"
 	"math/rand"
@@ -16,12 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/midtrans/midtrans-go"
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	open_route_direction "github.com/anan112pcmec/Burung-backend-1/app/open_route_map/direction"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
 func DecodeJSONBody(r *http.Request, dst interface{}) error {
@@ -166,13 +162,13 @@ func GenerateAutoPaymentId(db *gorm.DB) (string, error) {
 
 	final := part1 + "-" + part2 + "-" + part3
 
-	var ada int64 = 0
-	err_kode := db.Model(models.Transaksi{}).Where(models.Transaksi{KodeOrderSistem: final}).Count(&ada).Limit(2).Error
+	var id_data_transaksi []int64
+	err_kode := db.Model(models.Transaksi{}).Select("id").Where(models.Transaksi{KodeOrderSistem: final}).Limit(2).Scan(&id_data_transaksi).Error
 	if err_kode != nil {
 		return final, err_kode
 	}
 
-	if ada != 0 {
+	if len(id_data_transaksi) != 0 {
 		return "", err_kode
 	}
 
@@ -185,189 +181,6 @@ func Hitungtotal(input []int64) int64 {
 		total += biaya
 	}
 	return total
-}
-
-func GenerateItemDetail(
-	data response_transaction_pengguna.ResponseDataCheckout,
-	db *gorm.DB,
-	jenisLayanan string,
-	alamat_pengguna models.AlamatPengguna,
-) ([]midtrans.ItemDetails, int64) {
-
-	var hasil []midtrans.ItemDetails
-	var total int64
-	var pengiriman_count int
-	const biaya_platform = int64(5000)
-	var biayaKendaraan []int64
-
-	// ==== LOOP ITEM BARANG ====
-	for _, item := range data.DataResponse {
-		subtotal := int64(item.HargaKategori) * int64(item.Dipesan)
-
-		var kategori models.KategoriBarang
-		_ = db.Model(&models.KategoriBarang{}).
-			Where(&models.KategoriBarang{ID: item.IdKategoriBarang}).
-			Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm", "id_alamat_gudang").
-			Take(&kategori).Error
-
-		beratTotal := float64(kategori.BeratGram) * float64(item.Dipesan) / 1000
-
-		var layanan string
-		switch {
-		case beratTotal <= 10:
-			layanan = "Motor"
-		case beratTotal <= 20:
-			layanan = "Mobil"
-		case beratTotal <= 30:
-			layanan = "Pickup"
-		default:
-			layanan = "Truk"
-		}
-
-		var biayaJasa int64
-		_ = db.Model(&models.LayananPengirimanKurir{}).
-			Where(&models.LayananPengirimanKurir{NamaLayanan: layanan}).
-			Select("harga_layanan").
-			Scan(&biayaJasa)
-
-		itemDetail := midtrans.ItemDetails{
-			ID:           fmt.Sprintf("%v--%v", item.IdBarangInduk, item.IdKategoriBarang),
-			Price:        int64(item.HargaKategori),
-			Qty:          item.Dipesan,
-			Name:         fmt.Sprintf("%s - %s", item.NamaBarang, item.NamaKategori),
-			MerchantName: item.NamaSeller,
-			Category:     item.JenisBarang,
-		}
-
-		hasil = append(hasil, itemDetail)
-		total += subtotal
-		biayaKendaraan = append(biayaKendaraan, biayaJasa)
-		pengiriman_count++
-	}
-
-	// ==== AMBIL ONGKIR DASAR ====
-	var biayaOngkir int64
-	err := db.Model(&models.Ongkir{}).
-		Where(&models.Ongkir{Nama: strings.ToLower(jenisLayanan)}).
-		Select("value").
-		Scan(&biayaOngkir).Error
-	if err != nil {
-		biayaOngkir = 0
-	}
-
-	// ==== HITUNG HARGA JARAK ====
-	var HargaKirimPerJarakBarang int64
-
-	for i, item := range data.DataResponse {
-		log.Printf("[TRACE] ========== MULAI PROSES ITEM KE-%d ==========", i+1)
-		log.Printf("[TRACE] ID BarangInduk: %v | ID KategoriBarang: %v", item.IdBarangInduk, item.IdKategoriBarang)
-
-		// --- Ambil ID alamat gudang ---
-		var kategori models.KategoriBarang
-		err := db.Model(&models.KategoriBarang{}).
-			Where(&models.KategoriBarang{ID: item.IdKategoriBarang}).
-			Select("id_alamat_gudang").
-			Take(&kategori).Error
-		if err != nil {
-			log.Printf("[TRACE] Gagal ambil KategoriBarang ID %v: %v", item.IdKategoriBarang, err)
-			continue
-		}
-		if kategori.IDAlamat == 0 {
-			log.Printf("[TRACE] ID Alamat Gudang = 0 untuk KategoriBarang ID %v, skip", item.IdKategoriBarang)
-			continue
-		}
-		log.Printf("[TRACE] ID Alamat Gudang ditemukan: %v", kategori.IDAlamat)
-
-		// --- Ambil data alamat gudang ---
-		var alamatGudang models.AlamatGudang
-		err = db.Model(&models.AlamatGudang{}).
-			Where(&models.AlamatGudang{ID: kategori.IDAlamat}).
-			Take(&alamatGudang).Error
-		if err != nil {
-			log.Printf("[TRACE] Gagal ambil AlamatGudang ID %v: %v", kategori.IDAlamat, err)
-			continue
-		}
-		log.Printf("[TRACE] Lokasi Gudang: Lat %.6f | Lon %.6f", alamatGudang.Latitude, alamatGudang.Longitude)
-
-		// --- Tentukan lat/long tujuan ---
-		var latTujuan, longTujuan float64
-		if alamat_pengguna.Latitude != 0 && alamat_pengguna.Longitude != 0 {
-			latTujuan = alamat_pengguna.Latitude
-			longTujuan = alamat_pengguna.Longitude
-			log.Printf("[TRACE] Gunakan koordinat tujuan dari input: Lat %.6f | Lon %.6f", latTujuan, longTujuan)
-		} else {
-			var alamatUser models.AlamatPengguna
-			err = db.Model(&models.AlamatPengguna{}).
-				Where(&models.AlamatPengguna{ID: alamat_pengguna.ID}).
-				Take(&alamatUser).Error
-			if err != nil {
-				log.Printf("[TRACE] Gagal ambil fallback AlamatPengguna ID %v: %v", alamat_pengguna.ID, err)
-				continue
-			}
-			latTujuan = alamatUser.Latitude
-			longTujuan = alamatUser.Longitude
-			log.Printf("[TRACE] Gunakan koordinat fallback dari DB: Lat %.6f | Lon %.6f", latTujuan, longTujuan)
-		}
-
-		// --- Validasi koordinat sebelum request ---
-		if alamatGudang.Latitude == 0 || alamatGudang.Longitude == 0 {
-			log.Printf("[TRACE] Gudang belum punya koordinat lengkap (Lat/Lon = 0), skip")
-			continue
-		}
-		if latTujuan == 0 || longTujuan == 0 {
-			log.Printf("[TRACE] Tujuan belum punya koordinat lengkap (Lat/Lon = 0), skip")
-			continue
-		}
-
-		// --- Hitung jarak dan harga ---
-		log.Printf("[TRACE] Hitung jarak: dari (%.6f, %.6f) ke (%.6f, %.6f)",
-			alamatGudang.Latitude, alamatGudang.Longitude, latTujuan, longTujuan)
-
-		_, hargaJarak, status := open_route_direction.HitungJarakHargaDirection(
-			[2]float64{alamatGudang.Longitude, alamatGudang.Latitude},
-			[2]float64{longTujuan, latTujuan},
-		)
-
-		if !status {
-			log.Printf("[TRACE] Hitung jarak gagal untuk item ID %v | Koordinat Gudang (%.6f, %.6f) | Tujuan (%.6f, %.6f)",
-				item.IdKategoriBarang, alamatGudang.Latitude, alamatGudang.Longitude, latTujuan, longTujuan)
-			continue
-		}
-
-		HargaKirimPerJarakBarang += hargaJarak
-		log.Printf("[TRACE] Harga jarak item ke-%d: %v | Total sementara: %v", i+1, hargaJarak, HargaKirimPerJarakBarang)
-		log.Printf("[TRACE] ========== SELESAI ITEM KE-%d ==========", i+1)
-	}
-
-	// ==== HITUNG TOTAL BIAYA ====
-	totalBiayaKendaraan := Hitungtotal(biayaKendaraan)
-	totalBiayaKurir := biayaOngkir*int64(pengiriman_count) + totalBiayaKendaraan - biaya_platform + HargaKirimPerJarakBarang
-
-	// ==== TAMBAH ITEM BIAYA KURIR ====
-	courierFee := midtrans.ItemDetails{
-		ID:           "fee-courier",
-		Price:        totalBiayaKurir,
-		Qty:          1,
-		Name:         "Biaya Kurir",
-		MerchantName: "Courier",
-		Category:     "fee",
-	}
-	hasil = append(hasil, courierFee)
-	total += totalBiayaKurir
-
-	// ==== TAMBAH ITEM BIAYA APLIKASI ====
-	appFee := midtrans.ItemDetails{
-		ID:           "fee-app",
-		Price:        biaya_platform,
-		Qty:          1,
-		Name:         "Biaya Aplikasi",
-		MerchantName: "Platform",
-		Category:     "fee",
-	}
-	hasil = append(hasil, appFee)
-	total += biaya_platform
-
-	return hasil, total
 }
 
 func UpdateSocialMediaDispatch(data models.EntitySocialMedia) []string {
@@ -410,31 +223,29 @@ func SanitasiKoordinat(Latitude *float64, Longitude *float64) {
 	lat := *Latitude
 	long := *Longitude
 
-	const maxVal = 100.0
-
-	// Normalisasi jika terlalu besar (contoh: 106.82 → 10.682)
-	if math.Abs(long) > maxVal {
-		long = long / 10
-	}
-	if math.Abs(lat) > maxVal {
+	// 🔥 JIKA KELEBIHAN DIGIT (contoh: 106.8299 → 10.68299)
+	if math.Abs(lat) > 90 {
 		lat = lat / 10
 	}
-
-	// Batasi ke rentang -180..180 (koordinat bumi valid)
-	if long > maxVal {
-		long = maxVal
-	}
-	if long < -maxVal {
-		long = -maxVal
-	}
-	if lat > maxVal {
-		lat = maxVal
-	}
-	if lat < -maxVal {
-		lat = -maxVal
+	if math.Abs(long) > 180 {
+		long = long / 10
 	}
 
-	// Tulis balik hasil sanitasi ke pointer
+	// 🔥 PASTIKAN DALAM RANGE VALID BUMI
+	if lat > 90 {
+		lat = 90
+	}
+	if lat < -90 {
+		lat = -90
+	}
+	if long > 180 {
+		long = 180
+	}
+	if long < -180 {
+		long = -180
+	}
+
+	// 🚀 TULIS BALIK HASILNYA
 	*Latitude = lat
 	*Longitude = long
 }

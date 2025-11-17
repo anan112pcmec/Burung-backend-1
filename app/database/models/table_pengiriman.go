@@ -49,8 +49,8 @@ type JejakPengiriman struct {
 	Pengiriman   Pengiriman     `gorm:"foreignKey:IdPengiriman;references:ID"`
 	Lokasi       string         `gorm:"column:lokasi;type:text;" json:"lokasi_jejak_pengiriman"`
 	Keterangan   string         `gorm:"column:keterangan;type:text;not null;" json:"keterangan_jejak_pengiriman"`
-	Latitude     float64        `gorm:"column:latitude;type:numeric(10,8);not null;" json:"latitude_jejak_pengiriman"`
-	Longtitude   float64        `gorm:"column:longtitude;type:numeric(10,8);not null" json:"longtitude_jejak_pengiriman"`
+	Latitude     float64        `gorm:"column:latitude;type:numeric(11,8);not null;" json:"latitude_jejak_pengiriman"`
+	Longtitude   float64        `gorm:"column:longtitude;type:numeric(11,8);not null" json:"longtitude_jejak_pengiriman"`
 	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`

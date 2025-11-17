@@ -7,24 +7,23 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/midtrans/midtrans-go"
 	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
 
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment"
 	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment/gerai"
 	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment/virtual_account"
 	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment/wallet"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
+)
+
 // ////////////////////////////////////////////////////////////////////////////////////
 // Fungsi Critical
 // ////////////////////////////////////////////////////////////////////////////////////
-
 // ////////////////////////////////////////////////////////////////////////////////////
 // Fungsi Prosedur Checkout Barang User
 // Befungsi Untuk membuat checkout Barang Sebelum Akhirnya melakukan transaksi
@@ -284,153 +283,6 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Prosedur Formatting Transaksi
-// Befungsi Untuk membantu snap trnsaksi dalam memformatkan sebuah transaksi
-// ////////////////////////////////////////////////////////////////////////////////////
-
-func FormattingTransaksi(user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod, jenis_layanan string) (*response.ResponseForm, *snap.Request) {
-	services := "ValidateTransaksi"
-	fmt.Println("[TRACE] Start FormattingTransaksi")
-
-	fmt.Println("[TRACE] Generate PaymentCode")
-	var PaymentCode string
-	var err_payment error
-	maxRetry := 10
-	for i := 0; i < maxRetry; i++ {
-		PaymentCode, err_payment = helper.GenerateAutoPaymentId(db)
-		if err_payment == nil {
-			fmt.Printf("[TRACE] PaymentCode berhasil dibuat: %s (percobaan ke-%d)\n", PaymentCode, i+1)
-			break
-		} else {
-			fmt.Printf("[TRACE] Gagal generate PaymentCode (percobaan ke-%d): %v\n", i+1, err_payment)
-		}
-	}
-
-	if err_payment != nil {
-		fmt.Println("[TRACE] Error fatal: gagal generate PaymentCode setelah retry")
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-		}, nil
-	}
-
-	fmt.Println("[TRACE] Siapkan AlamatPengguna")
-	AlamatPengguna := midtrans.CustomerAddress{
-		Address:     alamat.NamaAlamat,
-		City:        alamat.Kota,
-		Postcode:    alamat.KodePos,
-		CountryCode: alamat.KodeNegara,
-	}
-
-	fmt.Println("[TRACE] Generate ItemDetail dan TotalHarga")
-	items, TotalHarga := helper.GenerateItemDetail(data, db, jenis_layanan, alamat)
-	fmt.Printf("[TRACE] TotalHarga: %v\n", TotalHarga)
-
-	var PM []snap.SnapPaymentType
-	fmt.Printf("[TRACE] PaymentMethod: %s\n", PaymentMethod)
-
-	switch PaymentMethod {
-	case "va":
-		PM = []snap.SnapPaymentType{
-			snap.PaymentTypeBCAVA,
-			snap.PaymentTypeBNIVA,
-			snap.PaymentTypeBRIVA,
-			snap.PaymentTypePermataVA,
-		}
-	case "wallet":
-		PM = []snap.SnapPaymentType{
-			snap.PaymentTypeGopay,
-			snap.PaymentTypeShopeepay,
-		}
-	case "gerai":
-		PM = []snap.SnapPaymentType{
-			snap.PaymentTypeIndomaret,
-			snap.PaymentTypeAlfamart,
-		}
-	case "credit":
-		PM = []snap.SnapPaymentType{
-			snap.PaymentTypeAkulaku,
-			snap.PaymentTypeCreditCard,
-		}
-	default:
-		fmt.Println("[TRACE] PaymentMethod tidak dikenali, daftar kosong")
-	}
-
-	fmt.Println("[TRACE] Buat SnapRequest")
-	SnapReqeust := &snap.Request{
-		TransactionDetails: midtrans.TransactionDetails{
-			OrderID:  PaymentCode,
-			GrossAmt: TotalHarga,
-		},
-		CreditCard: &snap.CreditCardDetails{
-			Secure: true,
-		},
-		CustomerDetail: &midtrans.CustomerDetails{
-			FName:    "Username : " + user.Username,
-			LName:    "Nama : " + user.Nama,
-			Email:    user.Email,
-			Phone:    alamat.NomorTelephone,
-			BillAddr: &AlamatPengguna,
-			ShipAddr: &AlamatPengguna,
-		},
-		Items:           &items,
-		EnabledPayments: PM,
-	}
-
-	fmt.Println("[TRACE] Selesai membuat SnapRequest, return response")
-	return &response.ResponseForm{
-		Status:   http.StatusOK,
-		Services: services,
-	}, SnapReqeust
-}
-
-// ////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Prosedur Validating Transaksi
-// Befungsi Untuk membantu snap transaksi untuk membuat sebuah transaksi
-// ////////////////////////////////////////////////////////////////////////////////////
-
-func ValidateTransaksi(snapReq *snap.Request) (*snap.Response, *response.ResponseForm) {
-	services := "ProsesTransaksiDenganSDK"
-	fmt.Println("[TRACE] Start ValidateTransaksi")
-
-	if snapReq == nil {
-		fmt.Println("[TRACE] snapReq nil — request tidak valid")
-		return nil, &response.ResponseForm{
-			Status:   http.StatusBadRequest,
-			Services: services,
-		}
-	}
-
-	fmt.Println("[TRACE] Inisialisasi snap.Client")
-	var s snap.Client
-	s.New("Mid-server-7wpABbBW_WURdLxcxc5bX5eb", midtrans.Sandbox)
-
-	fmt.Println("[TRACE] Membuat transaksi dengan Snap SDK")
-	snapResp, err := s.CreateTransaction(snapReq)
-	if err != nil {
-		fmt.Printf("[TRACE] Gagal membuat transaksi: %v\n", err)
-		return nil, &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-		}
-	}
-
-	fmt.Println("[TRACE] Transaksi berhasil dibuat via Snap SDK")
-	if snapResp != nil {
-		fmt.Printf("[TRACE] OrderID: %s\n", snapResp.Token)
-		fmt.Printf("[TRACE] RedirectURL: %s\n", snapResp.RedirectURL)
-	} else {
-		fmt.Println("[TRACE] Warning: snapResp nil meskipun tidak ada error")
-	}
-
-	fmt.Println("[TRACE] Selesai ValidateTransaksi, return response")
-	return snapResp, &response.ResponseForm{
-		Status:   http.StatusOK,
-		Services: services,
-	}
-}
-
-// ////////////////////////////////////////////////////////////////////////////////////
 // Fungsi Prosedur Snap Transaksi
 // Fungsi yang melayani api pada pengguna dan memanfaaykan Validate Transaksi Dan Formatting transaksi(2 fungsi
 // pendukungnya)
@@ -449,19 +301,19 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 	}
 
-	var count_seller int64 = 0
+	var id_data_seller int64 = 0
 
-	if err := db.Model(&models.Seller{}).Where(&models.Seller{
+	if err := db.WithContext(ctx).Model(&models.Seller{}).Select("id").Where(&models.Seller{
 		ID: data.DataCheckout.DataResponse[0].IDSeller,
-	}).Count(&count_seller).Error; err != nil {
+	}).Limit(1).Scan(&id_data_seller).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload:  "Gagal Seller Tidak Ada",
+			Message:  "Gagal seller tidak ditemukan",
 		}
 	}
 
-	if count_seller == 0 {
+	if id_data_seller == 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -469,19 +321,19 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 	}
 
-	for _, dc := range data.DataCheckout.DataResponse {
+	for i := 0; i < len(data.DataCheckout.DataResponse); i++ {
 		var errcheck bool = false
-		var hitung int64 = 0
-		if err := db.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
-			IdBarangInduk: dc.IdBarangInduk,
-			IdKategori:    dc.IdKategoriBarang,
+		var varianIds []int64 = make([]int64, 0, int(data.DataCheckout.DataResponse[i].Dipesan))
+		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+			IdBarangInduk: data.DataCheckout.DataResponse[i].IdBarangInduk,
+			IdKategori:    data.DataCheckout.DataResponse[i].IdKategoriBarang,
 			Status:        barang_enums.Dipesan,
-			HoldBy:        dc.IDUser,
-		}).Count(&hitung).Error; err != nil {
+			HoldBy:        data.DataCheckout.DataResponse[i].IDUser,
+		}).Limit(int(data.DataCheckout.DataResponse[i].Dipesan)).Scan(&varianIds).Error; err != nil {
 			errcheck = true
 		}
 
-		if hitung != int64(dc.Dipesan) {
+		if len(varianIds) != int(data.DataCheckout.DataResponse[i].Dipesan) {
 			errcheck = true
 		}
 
@@ -493,16 +345,8 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 	}
 
-	if data.AlamatInformation.NamaAlamat == "" && data.AlamatInformation.KodeNegara == "" && data.AlamatInformation.IDPengguna != data.AlamatInformation.ID && data.AlamatInformation.NomorTelephone == "" {
-		fmt.Println("[TRACE] Data alamat tidak valid atau tidak sesuai dengan pengguna")
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-		}
-	}
-
-	fmt.Println("[TRACE] Memulai FormattingTransaksi()")
 	SnapErr, SnapReq := FormattingTransaksi(
+		ctx,
 		model,
 		data.AlamatInformation,
 		data.DataCheckout,
@@ -511,25 +355,22 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		data.DataCheckout.LayananPengiriman.JenisLayananKurir,
 	)
 
-	if SnapErr.Status != http.StatusOK {
-		fmt.Printf("[TRACE] FormattingTransaksi gagal (status: %d)\n", SnapErr.Status)
+	if !SnapErr {
 		return &response.ResponseForm{
-			Status:   SnapErr.Status,
+			Status:   http.StatusInternalServerError,
 			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 	fmt.Println("[TRACE] FormattingTransaksi sukses, lanjut ke ValidateTransaksi()")
 
-	SnapResponse, SnapResponseErr := ValidateTransaksi(SnapReq)
-	if SnapResponseErr.Status != http.StatusOK {
-		fmt.Printf("[TRACE] ValidateTransaksi gagal (status: %d)\n", SnapResponseErr.Status)
+	SnapResponse, SnapStatus := ValidateTransaksi(SnapReq)
+	if !SnapStatus {
 		return &response.ResponseForm{
-			Status:   SnapErr.Status,
+			Status:   http.StatusInternalServerError,
 			Services: services,
 		}
 	}
-
-	fmt.Println("[TRACE] ValidateTransaksi sukses, siapkan payload response akhir")
 
 	if SnapResponse != nil {
 		fmt.Printf("[TRACE] SnapResponse Token: %s\n", SnapResponse.Token)
@@ -540,7 +381,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 
 	fmt.Println("[TRACE] Selesai SnapTransaksi, return response ke client")
 	return &response.ResponseForm{
-		Status:   SnapErr.Status,
+		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_transaction_pengguna.SnapTransaksi{
 			SnapTransaksi: &snap.Response{
@@ -622,31 +463,49 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 // oleh fungsi ini
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func BatalTransaksi(data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
+func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
 	services := "BatalTransaksi"
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for _, keranjang := range data.DataCheckout {
+	var total_varian int64 = 0
+	for i := 0; i < len(data.DataCheckout); i++ {
+		total_varian += int64(data.DataCheckout[i].Dipesan)
+	}
 
-			var varianIDs []int64
+	var varianIds []int64 = make([]int64, 0, total_varian)
+	var idkategori map[int64]int64 = make(map[int64]int64, len(data.DataCheckout))
 
-			if err := tx.Model(&models.VarianBarang{}).
-				Where(models.VarianBarang{IdBarangInduk: keranjang.IdBarangInduk, IdKategori: keranjang.IdKategoriBarang, Status: barang_enums.Dipesan, HoldBy: keranjang.IDUser}).
-				Limit(int(keranjang.Dipesan)).
-				Pluck("id", &varianIDs).Error; err != nil {
-				return err
+	for i := 0; i < len(data.DataCheckout); i++ {
+		idkategori[data.DataCheckout[i].IdKategoriBarang] = int64(data.DataCheckout[i].Dipesan)
+		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+			IdBarangInduk: data.DataCheckout[i].IdBarangInduk,
+			IdKategori:    data.DataCheckout[i].IdKategoriBarang,
+			Status:        barang_enums.Dipesan,
+			HoldBy:        data.DataCheckout[i].IDUser,
+		}).Limit(int(data.DataCheckout[i].Dipesan)).Scan(&varianIds).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Gagal coba hubungi customer service",
 			}
+		}
+	}
 
-			if len(varianIDs) > 0 {
-				if err := tx.Model(&models.VarianBarang{}).
-					Where("id IN ?", varianIDs).
-					Updates(map[string]interface{}{
-						"status":        barang_enums.Ready,
-						"hold_by":       0,
-						"holder_entity": "",
-					}).Error; err != nil {
-					return err
-				}
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.VarianBarang{}).
+			Where("id IN ?", varianIds).
+			Updates(map[string]interface{}{
+				"status":        barang_enums.Ready,
+				"hold_by":       0,
+				"holder_entity": "",
+			}).Error; err != nil {
+			return err
+		}
+
+		for ind, jumlah := range idkategori {
+			if err := tx.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+				ID: ind,
+			}).Update("stok", gorm.Expr("stok + ?", jumlah)).Error; err != nil {
+				return err
 			}
 		}
 		return nil

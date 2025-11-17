@@ -62,7 +62,7 @@ func DeleteUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_transaction_services.BatalTransaksi(data, db)
+		hasil = pengguna_transaction_services.BatalTransaksi(ctx, data, db)
 	case "/user/social-media/unfollow-seller":
 		var data pengguna_social_media_service.PayloadFollowOrUnfollowSeller
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
