@@ -13,6 +13,7 @@ import (
 	pengguna_social_media_service "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/social_media_services"
 	pengguna_transaction_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
+	pengguna_wishlist_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/wishlist_services"
 )
 
 func DeleteUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -69,6 +70,13 @@ func DeleteUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = pengguna_social_media_service.UnfollowSeller(ctx, data, db)
+	case "/user/wishlist/hapus-barang":
+		var data pengguna_wishlist_services.PayloadHapusBarangDariWishlist
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = pengguna_wishlist_services.HapusBarangDariWishlist(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

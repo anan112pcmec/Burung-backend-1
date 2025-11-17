@@ -141,7 +141,7 @@ type Wishlist struct {
 	IdPengguna    int64       `gorm:"column:id_pengguna;not null" json:"id_pengguna_wishlist"`
 	Pengguna      Pengguna    `gorm:"foreignKey:IdPengguna;references:ID" json:"-"`
 	IdBarangInduk int32       `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_wishlist"`
-	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk:references:ID" json:"-"`
+	BarangInduk   BarangInduk `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`
 	CreatedAt     time.Time   `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time   `gorm:"autoUpdateTime" json:"updated_at"`
 	DeletedAt     *time.Time  `gorm:"index" json:"deleted_at,omitempty"`

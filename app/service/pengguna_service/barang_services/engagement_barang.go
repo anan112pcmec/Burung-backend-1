@@ -12,7 +12,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_engagement_barang_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services/response_barang"
-
 )
 
 var fieldBarangViewed = "viewed_barang_induk"
@@ -515,7 +514,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 	}
 
 	return &response.ResponseForm{
-		Status:   http.StatusCreated,
+		Status:   http.StatusOK,
 		Services: services,
 		Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
 			Message: "Berhasil menambahkan barang ke keranjang.",

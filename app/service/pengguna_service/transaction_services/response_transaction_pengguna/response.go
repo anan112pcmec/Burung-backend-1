@@ -35,6 +35,10 @@ type ResponseDataCheckout struct {
 	LayananPengiriman LayananPengiriman `json:"data_layanan_pengiriman_barang"`
 }
 
+type ResponseBatalCheckout struct {
+	Message string `json:"pesan_batal_checkout"`
+}
+
 type ResponseDataValidateTransaksi struct {
 	Message             string       `json:"pesan_validate_transaksi"`
 	DataReqeustMidtrans snap.Request `json:"data_request_midtrans_validate_transaksi"`
