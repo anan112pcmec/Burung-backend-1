@@ -15,7 +15,6 @@ import (
 	seller_diskon_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/diskon_services"
 	seller_etalase_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/etalase_services"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
-	seller_order_processing_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/order_processing_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 	seller_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services"
 )
@@ -75,20 +74,6 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = seller_credential_services.ValidateUbahPasswordSeller(data, db, rds_engagement)
-	case "/seller/order-processing/approve":
-		var data seller_order_processing_services.PayloadApproveOrder
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = seller_order_processing_services.ApproveOrderBarang(ctx, data, db)
-	case "/seller/order-processing/unapprove":
-		var data seller_order_processing_services.PayloadUnApproveOrder
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = seller_order_processing_services.UnApproveOrderBarang(ctx, data, db)
 
 	case "/seller/alamat/edit-alamat-gudang":
 		var data seller_alamat_services.PayloadEditAlamatGudang

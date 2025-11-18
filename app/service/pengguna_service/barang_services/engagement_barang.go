@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -156,7 +157,7 @@ func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBaran
 	if err := db.WithContext(ctx).Create(&models.Komentar{
 		IdBarangInduk: data.IdBarangInduk,
 		IdEntity:      data.IdentitasPengguna.ID,
-		JenisEntity:   "Pengguna",
+		JenisEntity:   entity_enums.Pengguna,
 		Komentar:      data.Komentar,
 		IsSeller:      false,
 	}).Error; err != nil {
@@ -185,7 +186,7 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 	if err := db.WithContext(ctx).Model(&models.Komentar{}).Select("id").Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
-		JenisEntity: "Pengguna",
+		JenisEntity: entity_enums.Pengguna,
 	}).Limit(1).Scan(&id_komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -234,7 +235,7 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInd
 	if err := db.WithContext(ctx).Model(&models.Komentar{}).Select("id").Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
-		JenisEntity: "Pengguna",
+		JenisEntity: entity_enums.Pengguna,
 	}).Limit(1).Scan(&id_komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -282,7 +283,7 @@ func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar,
 	if err := db.WithContext(ctx).Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentarBarang,
 		IdEntity:    data.IdentitasPengguna.ID,
-		JenisEntity: "Pengguna",
+		JenisEntity: entity_enums.Pengguna,
 		IsiKomentar: data.Komentar,
 		IsSeller:    false,
 	}).Error; err != nil {
@@ -310,7 +311,7 @@ func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar,
 	if err := db.WithContext(ctx).Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
-		JenisEntity: "Pengguna",
+		JenisEntity: entity_enums.Pengguna,
 		IsiKomentar: data.Komentar,
 		IsSeller:    false,
 		Mention:     data.UsernameMentioned,
@@ -340,7 +341,7 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 	if err := db.WithContext(ctx).Model(&models.KomentarChild{}).Select("id").Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
-		JenisEntity: "Pengguna",
+		JenisEntity: entity_enums.Pengguna,
 	}).Limit(1).Scan(&id_edit_child_komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -389,7 +390,7 @@ func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db 
 	if err := db.WithContext(ctx).Model(&models.KomentarChild{}).Select("id").Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    data.IdentitasPengguna.ID,
-		JenisEntity: "Pengguna",
+		JenisEntity: entity_enums.Pengguna,
 	}).Limit(1).Scan(&id_edit_child_komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

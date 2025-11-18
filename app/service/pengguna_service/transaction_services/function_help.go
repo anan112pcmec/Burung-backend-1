@@ -34,15 +34,7 @@ func GenerateItemDetail(
 	for i := 0; i < len(data.DataResponse); i++ {
 		subtotal := int64(data.DataResponse[i].HargaKategori) * int64(data.DataResponse[i].Dipesan)
 
-		var kategori models.KategoriBarang
-		if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).
-			Where(&models.KategoriBarang{ID: data.DataResponse[i].IdKategoriBarang}).
-			Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm", "id_alamat_gudang").Limit(1).
-			Take(&kategori).Error; err != nil {
-			return hasil, total, hargajarak, false
-		}
-
-		beratTotal := float64(kategori.BeratGram) * float64(data.DataResponse[i].Dipesan) / 1000
+		beratTotal := float64(data.DataResponse[i].BeratKategori) * float64(data.DataResponse[i].Dipesan) / 1000
 
 		var layanan string
 		switch {
@@ -96,25 +88,10 @@ func GenerateItemDetail(
 		log.Printf("[TRACE] ========== MULAI PROSES ITEM KE-%d ==========", i+1)
 		log.Printf("[TRACE] ID BarangInduk: %v | ID KategoriBarang: %v", data.DataResponse[i].IdBarangInduk, data.DataResponse[i].IdKategoriBarang)
 
-		// --- Ambil ID alamat gudang ---
-		var kategori models.KategoriBarang
-		err := db.Model(&models.KategoriBarang{}).
-			Where(&models.KategoriBarang{ID: data.DataResponse[i].IdKategoriBarang}).
-			Select("id_alamat_gudang").Limit(1).
-			Take(&kategori).Error
-		if err != nil {
-			log.Printf("[TRACE] Gagal ambil KategoriBarang ID %v: %v", data.DataResponse[i].IdKategoriBarang, err)
-			continue
-		}
-		if kategori.IDAlamat == 0 {
-			log.Printf("[TRACE] ID Alamat Gudang = 0 untuk KategoriBarang ID %v, skip", data.DataResponse[i].IdKategoriBarang)
-			continue
-		}
-
 		// --- Ambil data alamat gudang ---
 		var alamatGudang models.AlamatGudang
 		err = db.Model(&models.AlamatGudang{}).
-			Where(&models.AlamatGudang{ID: kategori.IDAlamat}).
+			Where(&models.AlamatGudang{ID: data.DataResponse[i].IdAlamatGudang}).
 			Take(&alamatGudang).Error
 		if err != nil {
 			continue
@@ -149,6 +126,8 @@ func GenerateItemDetail(
 			latTujuan, longTujuan)
 
 		if cached, ok := distanceCache[key]; ok {
+			hargajarak = append(hargajarak, hargajarak[i-1])
+
 			HargaKirimPerJarakBarang += cached
 			log.Printf("[TRACE] ❗ CACHE digunakan untuk item ke-%d = %v", i+1, cached)
 			continue

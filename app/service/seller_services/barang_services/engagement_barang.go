@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
+	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_seller_barang_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
@@ -1333,7 +1334,7 @@ func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBaran
 	if err := db.WithContext(ctx).Create(&models.Komentar{
 		IdBarangInduk: data.IdBarangInduk,
 		IdEntity:      int64(data.IdentitasSeller.IdSeller),
-		JenisEntity:   "Seller",
+		JenisEntity:   entity_enums.Seller,
 		Komentar:      data.Komentar,
 		IsSeller:      is_seller,
 	}).Error; err != nil {
@@ -1372,7 +1373,7 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 	if err := db.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Seller",
+		JenisEntity: entity_enums.Seller,
 	}).Update("komentar", data.Komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -1398,7 +1399,7 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInd
 	if err := db.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Seller",
+		JenisEntity: entity_enums.Seller,
 	}).Delete(&models.Komentar{}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -1441,7 +1442,7 @@ func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar,
 	if err := db.Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentarBarang,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Seller",
+		JenisEntity: entity_enums.Seller,
 		IsiKomentar: data.Komentar,
 		IsSeller:    is_seller,
 	}).Error; err != nil {
@@ -1488,7 +1489,7 @@ func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar,
 	if err := db.Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Seller",
+		JenisEntity: entity_enums.Seller,
 		IsiKomentar: data.Komentar,
 		IsSeller:    is_seller,
 		Mention:     data.UsernameMentioned,
@@ -1517,7 +1518,7 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Seller",
+		JenisEntity: entity_enums.Seller,
 	}).Update("komentar", data.Komentar).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -1542,7 +1543,7 @@ func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db 
 	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
-		JenisEntity: "Seller",
+		JenisEntity: entity_enums.Seller,
 	}).Delete(&models.KomentarChild{}).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

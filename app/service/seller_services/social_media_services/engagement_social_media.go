@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_social_media_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services/response_social_media_services"
@@ -33,7 +34,7 @@ func EngageSocialMediaSeller(ctx context.Context, data PayloadEngageSocialMedia,
 	var id_sosmed_table int64 = 0
 	_ = db.Model(&models.EntitySocialMedia{}).Select("id").Where(&models.EntitySocialMedia{
 		EntityId:   int64(data.IdentitasSeller.IdSeller),
-		EntityType: "Seller",
+		EntityType: entity_enums.Seller,
 	}).Take(&id_sosmed_table)
 
 	if id_sosmed_table == 0 {
@@ -43,7 +44,7 @@ func EngageSocialMediaSeller(ctx context.Context, data PayloadEngageSocialMedia,
 			Facebook:   data.Data.Facebook,
 			TikTok:     data.Data.TikTok,
 			Instagram:  data.Data.Instagram,
-			EntityType: "Seller",
+			EntityType: entity_enums.Seller,
 		}).Error; err_buat_kolom != nil {
 			log.Printf("[ERROR] Gagal menambah data social media untuk seller ID %d: %v", data.IdentitasSeller.IdSeller, err_buat_kolom)
 			return &response.ResponseForm{

@@ -37,6 +37,7 @@ type Transaksi struct {
 	KategoriBarang      KategoriBarang `gorm:"foreignKey:IdKategoriBarang;references:ID" json:"-"`
 	IdAlamatPengguna    int64          `gorm:"column:id_alamat_pengguna;not null" json:"id_alamat_pengguna_transaksi"`
 	AlamatPengguna      AlamatPengguna `gorm:"foreignKey:IdAlamatPengguna;references:ID" json:"-"`
+	IdAlamatGudang      int64          `gorm:"column:id_alamat_gudang;type:int8;not null" json:"id_alamat_gudang_transaksi"`
 	IdPembayaran        int64          `gorm:"column:id_pembayaran;not null" json:"id_pembayaran_transaksi"`
 	Pembayaran          Pembayaran     `gorm:"foreignKey:IdPembayaran;references:ID" json:"-"`
 	IdVoucher           int64          `gorm:"column:id_voucher;type:int8" json:"id_voucher_transaksi"`
@@ -47,6 +48,7 @@ type Transaksi struct {
 	BeratTotalKg        int16          `gorm:"column:berat_total_kg;type:int2;not null" json:"berat_total_kg_pengiriman"`
 	KodeOrderSistem     string         `gorm:"column:kode_order_sistem;type:varchar(100);not null" json:"kode_order_sistem_transaksi"`
 	Status              string         `gorm:"column:status;type:status_transaksi;default:'Dibayar';not null" json:"status_transaksi"`
+	DibatalkanOleh      string         `gorm:"column:dibatalkan_oleh;type:jenis_entity" json:"dibatalkan_oleh_transaksi"`
 	Catatan             string         `gorm:"column:catatan;type:text" json:"catatan_transaksi"`
 	KuantitasBarang     int32          `gorm:"column:kuantitas_barang;type:int4;not null" json:"kuantitas_barang"`
 	Total               int64          `gorm:"column:total;type:int8;not null" json:"total_transaksi"`

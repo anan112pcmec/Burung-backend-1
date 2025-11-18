@@ -28,7 +28,7 @@ type Pengiriman struct {
 	Alamat              AlamatPengguna `gorm:"foreignKey:IdAlamatPengiriman;references:ID" json:"-"`
 	IdKurir             int64          `gorm:"column:id_kurir;not null" json:"id_kurir_pengiriman"`
 	KendaraanRequired   string         `gorm:"column:kendaraan_required;type:jenis_kendaraan_kurir;not null" json:"kendaraan_required_pengiriman"`
-	JenisPengiriman     string         `gorm:"column:jenis_pengiriman;not null;default:'reguler'" json:"jenis_pengiriman_transaksi"`
+	JenisPengiriman     string         `gorm:"column:jenis_pengiriman;not null;type:jenis_layanan_kurir;default:'Reguler'" json:"jenis_pengiriman_transaksi"`
 	Status              string         `gorm:"column:status;type:status_pengiriman;not null" json:"status_pengiriman"`
 	BiayaKirim          int16          `gorm:"column:biaya_kirim;type:int2;not null;default:0" json:"biaya_kirim_pengiriman"`
 	JarakTempuh         string         `gorm:"column:jarak_tempuh;type:varchar(100);not null" json:"jarak_tempuh_pengiriman"`

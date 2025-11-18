@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_social_media_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/social_media_services/response_social_media_services"
@@ -36,7 +37,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 		Select("id").
 		Where(&models.EntitySocialMedia{
 			EntityId:   data.IdentitasPengguna.ID,
-			EntityType: "pengguna",
+			EntityType: entity_enums.Pengguna,
 		}).Take(&id_sosmed_table)
 
 	if id_sosmed_table == 0 {
@@ -46,7 +47,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 			Facebook:   data.Data.Facebook,
 			TikTok:     data.Data.TikTok,
 			Instagram:  data.Data.Instagram,
-			EntityType: "pengguna",
+			EntityType: entity_enums.Pengguna,
 		}).Error; err_buat_kolom != nil {
 			log.Printf("[ERROR] Gagal membuat data social media untuk pengguna ID %d: %v", data.IdentitasPengguna.ID, err_buat_kolom)
 			return &response.ResponseForm{

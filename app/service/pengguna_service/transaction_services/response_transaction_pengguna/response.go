@@ -13,9 +13,11 @@ type CheckoutData struct {
 	JenisBarang      string `json:"jenis_barang_keranjang"`
 	IdBarangInduk    int32  `json:"id_barang_induk_keranjang"`
 	IdKategoriBarang int64  `json:"id_kategori_barang_keranjang"`
+	IdAlamatGudang   int64  `json:"id_alamat_gudang_barang_keranjang"`
 	NamaBarang       string `json:"nama_barang_keranjang"`
 	NamaKategori     string `json:"nama_kategori_barang_keranjang"`
 	HargaKategori    int32  `json:"harga_barang_kategori_keranjang"`
+	BeratKategori    int16  `json:"berat_gram_barang_kategori_keranjang"`
 	Dipesan          int32  `json:"dipesan_barang_keranjang"`
 	Status           bool   `json:"status_barang_keranjang"`
 	Message          string `json:"pesan_data_keranjang"`

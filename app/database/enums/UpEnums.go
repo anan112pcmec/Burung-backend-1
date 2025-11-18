@@ -15,6 +15,7 @@ func UpEnumsEntity(db *gorm.DB) error {
 	}
 
 	enumMap := map[string][]string{
+		"jenis_entity":            {"pengguna", "seller", "kurir"},
 		"status":                  {"Online", "Offline"},
 		"aksi_pengguna":           {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist", "Pencarian"},
 		"aksi_seler":              {"Registrasi", "Login", "Logout", "Pembelian", "Tambah Keranjang", "Hapus Keranjang", "Rating", "Update Profil", "Wishlist"},

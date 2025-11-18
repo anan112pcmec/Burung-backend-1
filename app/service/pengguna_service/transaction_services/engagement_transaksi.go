@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
+	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment"
@@ -81,7 +82,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 
 			// Ambil kategori
 			var kategori models.KategoriBarang
-			if err := tx.Select("nama", "harga", "stok", "id_barang_induk").
+			if err := tx.Select("nama", "harga", "stok", "id_barang_induk", "id_alamat_gudang", "berat_gram").
 				Where(&models.KategoriBarang{ID: data.DataCheckout[i].IdKategori}).First(&kategori).Error; err != nil {
 				return err
 			}
@@ -100,9 +101,11 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 				JenisBarang:      barang.JenisBarang,
 				IdBarangInduk:    data.DataCheckout[i].IdBarangInduk,
 				IdKategoriBarang: data.DataCheckout[i].IdKategori,
+				IdAlamatGudang:   kategori.IDAlamat,
 				HargaKategori:    kategori.Harga,
 				NamaBarang:       barang.NamaBarang,
 				NamaKategori:     kategori.Nama,
+				BeratKategori:    kategori.BeratGram,
 				Dipesan:          int32(data.DataCheckout[i].Jumlah),
 			}
 
@@ -149,7 +152,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 				Updates(&models.VarianBarang{
 					Status:       barang_enums.Dipesan,
 					HoldBy:       data.IdentitasPengguna.ID,
-					HolderEntity: "Pengguna",
+					HolderEntity: entity_enums.Pengguna,
 				}).Error; err != nil {
 				return err
 			}
@@ -566,6 +569,7 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 			IdBarangInduk:    int64(keranjang.IdBarangInduk),
 			IdKategoriBarang: keranjang.IdKategoriBarang,
 			IdAlamatPengguna: IdAlamatUser,
+			IdAlamatGudang:   keranjang.IdAlamatGudang,
 			IdPembayaran:     pembayaranObj.ID,
 			KodeOrderSistem:  pembayaranObj.KodeOrderSistem,
 			Status:           transaksi_enums.Dibayar,
@@ -590,7 +594,7 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 				IdTransaksi:   0,
 				Status:        barang_enums.Dipesan,
 				HoldBy:        keranjang.IDUser,
-				HolderEntity:  "Pengguna",
+				HolderEntity:  entity_enums.Pengguna,
 			}).
 			Updates(&models.VarianBarang{
 				Status:      barang_enums.Diproses,
@@ -748,6 +752,21 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 
 		if err := tx.CreateInBatches(&transaksi_save, len(transaksi_save)).Error; err != nil {
 			return err
+		}
+
+		for i := 0; i < len(data.DataHold); i++ {
+			if err := tx.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
+				IdBarangInduk: data.DataHold[i].IdBarangInduk,
+				IdKategori:    data.DataHold[i].IdKategoriBarang,
+				HoldBy:        data.DataHold[i].IDUser,
+				HolderEntity:  entity_enums.Pengguna,
+				Status:        "Dipesan",
+			}).Updates(&models.VarianBarang{
+				Status:      "Terjual",
+				IdTransaksi: transaksi_save[i].ID,
+			}).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil

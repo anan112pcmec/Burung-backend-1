@@ -9,3 +9,9 @@ var (
 	Online  = "Online"
 	Offline = "Offline"
 )
+
+var (
+	Pengguna = "pengguna"
+	Seller   = "seller"
+	Kurir    = "kurir"
+)
