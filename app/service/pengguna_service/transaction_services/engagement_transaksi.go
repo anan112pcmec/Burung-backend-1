@@ -21,14 +21,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
-// ////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Critical
-// ////////////////////////////////////////////////////////////////////////////////////
-// ////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Prosedur Checkout Barang User
-// Befungsi Untuk membuat checkout Barang Sebelum Akhirnya melakukan transaksi
-// ////////////////////////////////////////////////////////////////////////////////////
-
 func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gorm.DB) *response.ResponseForm {
 	services := "CheckoutBarangUser"
 	log.Printf("[%s] Memulai proses checkout untuk user ID: %v", services, data.IdentitasPengguna.ID)
@@ -345,7 +337,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 	}
 
-	SnapErr, SnapReq := FormattingTransaksi(
+	SnapErr, SnapReq, DataJarak := FormattingTransaksi(
 		ctx,
 		model,
 		data.AlamatInformation,
@@ -390,6 +382,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 				StatusCode:  "Berhasil",
 			},
 			DataCheckout: data.DataCheckout.DataResponse,
+			DataJarak:    DataJarak,
 			DataAlamat:   data.AlamatInformation,
 		},
 	}
@@ -624,8 +617,8 @@ func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transac
 func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.ResponseForm {
 	services := "LockTransaksiVa"
 
-	for _, keranjang := range data.DataHold {
-		if keranjang.IDSeller == 0 || keranjang.IDUser == 0 || keranjang.IdBarangInduk == 0 {
+	for i := 0; i < len(data.DataHold); i++ {
+		if data.DataHold[i].IDSeller == 0 || data.DataHold[i].IDUser == 0 || data.DataHold[i].IdBarangInduk == 0 {
 			return &response.ResponseForm{
 				Status:   http.StatusBadRequest,
 				Services: services,
@@ -636,71 +629,128 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 		}
 	}
 
+	bank, err_p := payment_gateaway.ParseVirtualAccount(data.PaymentResult)
+	if err_p != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	var (
+		resp payment_va.Response
+	)
+
+	d, err_m := json.Marshal(data.PaymentResult)
+	if err_m != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	switch bank {
+	case "bca":
+		var obj payment_va.BcaVirtualAccountResponse
+		if err := json.Unmarshal(d, &obj); err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Server sedang sibuk coba lagi lain waktu",
+			}
+		}
+		resp = &obj
+
+	case "bni":
+		var obj payment_va.BniVirtualAccountResponse
+		if err := json.Unmarshal(d, &obj); err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Server sedang sibuk coba lagi lain waktu",
+			}
+		}
+		resp = &obj
+
+	case "bri":
+		var obj payment_va.BriVirtualAccountResponse
+		if err := json.Unmarshal(d, &obj); err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Server sedang sibuk coba lagi lain waktu",
+			}
+		}
+		resp = &obj
+
+	case "permata":
+		var obj payment_va.PermataVirtualAccount
+		if err := json.Unmarshal(d, &obj); err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Server sedang sibuk coba lagi lain waktu",
+			}
+		}
+		resp = &obj
+
+	default:
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Va Tidak Dikenali",
+		}
+	}
+
+	pembayaran, ok := resp.Pembayaran()
+	if !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Va Tidak Dikenali",
+		}
+	}
+
+	pembayaran.IdPengguna = data.DataHold[0].IDUser
+	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold)+10)
+
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		bank, err_p := payment_gateaway.ParseVirtualAccount(data.PaymentResult)
-		if err_p != nil {
-			return err_p
-		}
-
-		var (
-			resp payment_va.Response
-		)
-
-		d, err_m := json.Marshal(data.PaymentResult)
-		if err_m != nil {
-			return err_m
-		}
-
-		switch bank {
-		case "bca":
-			var obj payment_va.BcaVirtualAccountResponse
-			if err := json.Unmarshal(d, &obj); err != nil {
-				return err
-			}
-			resp = &obj
-
-		case "bni":
-			var obj payment_va.BniVirtualAccountResponse
-			if err := json.Unmarshal(d, &obj); err != nil {
-				return err
-			}
-			resp = &obj
-
-		case "bri":
-			var obj payment_va.BriVirtualAccountResponse
-			if err := json.Unmarshal(d, &obj); err != nil {
-				return err
-			}
-			resp = &obj
-
-		case "permata":
-			var obj payment_va.PermataVirtualAccount
-			if err := json.Unmarshal(d, &obj); err != nil {
-				return err
-			}
-			resp = &obj
-
-		default:
-			return fmt.Errorf("bank tidak dikenali: %v", bank)
-		}
-
-		pembayaran, ok := resp.Pembayaran()
-		if !ok {
-			return fmt.Errorf("gagal membuat pembayaran %s", bank)
-		}
-
-		pembayaran.IdPengguna = data.DataHold[0].IDUser
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
 
-		//
-		// Sanitasi Id Pengguna
-		//
+		for i := 0; i < len(data.DataHold); i++ {
+			var kategori models.KategoriBarang
+			if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+				ID: data.DataHold[i].IdKategoriBarang,
+			}).Limit(1).Take(&kategori).Error; err != nil {
+				return err
+			}
+			transaksi_save = append(transaksi_save, models.Transaksi{
+				IdPengguna:       data.DataHold[i].IDUser,
+				IdSeller:         data.DataHold[i].IDSeller,
+				IdBarangInduk:    int64(data.DataHold[i].IdBarangInduk),
+				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna: data.IdAlamatUser,
+				IdPembayaran:     pembayaran.ID,
+				JenisPengiriman:  data.JenisLayananKurir,
+				JarakTempuh:      data.DataJarak[i].Jarak,
+				OngkosKirim:      int64(data.DataJarak[i].Harga),
+				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
+				KodeOrderSistem:  pembayaran.KodeOrderSistem,
+				Status:           transaksi_enums.Dibayar,
+				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
+				Total:            int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
+			})
+		}
 
-		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
+		if err := tx.CreateInBatches(&transaksi_save, len(transaksi_save)).Error; err != nil {
+			return err
+		}
 
-		return status
+		return nil
 	}); err != nil {
 		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
 		return &response.ResponseForm{

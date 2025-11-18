@@ -62,6 +62,7 @@ type PayloadSnapTransaksiRequest struct {
 
 type PayloadLockTransaksiVa struct {
 	DataHold          []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
+	DataJarak         []response_transaction_pengguna.DataJarak    `json:"data_jarak"`
 	PaymentResult     any                                          `json:"payment_result"`
 	IdAlamatUser      int64                                        `json:"alamat_data_hold"`
 	JenisLayananKurir string                                       `json:"jenis_layanan_kurir_keranjang"`

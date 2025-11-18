@@ -22,13 +22,14 @@ func GenerateItemDetail(
 	db *gorm.DB,
 	jenisLayanan string,
 	alamat_pengguna models.AlamatPengguna,
-) ([]midtrans.ItemDetails, int64, bool) {
+) ([]midtrans.ItemDetails, int64, []response_transaction_pengguna.DataJarak, bool) {
 
 	var hasil []midtrans.ItemDetails = make([]midtrans.ItemDetails, 0, len(data.DataResponse))
 	var total int64
 	var pengiriman_count int
 	const biaya_platform = int64(5000)
 	var biayaKendaraan []int64 = make([]int64, 0, len(data.DataResponse))
+	var hargajarak []response_transaction_pengguna.DataJarak = make([]response_transaction_pengguna.DataJarak, 0, len(data.DataResponse))
 
 	for i := 0; i < len(data.DataResponse); i++ {
 		subtotal := int64(data.DataResponse[i].HargaKategori) * int64(data.DataResponse[i].Dipesan)
@@ -38,7 +39,7 @@ func GenerateItemDetail(
 			Where(&models.KategoriBarang{ID: data.DataResponse[i].IdKategoriBarang}).
 			Select("berat_gram", "dimensi_lebar_cm", "dimensi_panjang_cm", "id_alamat_gudang").Limit(1).
 			Take(&kategori).Error; err != nil {
-			return hasil, total, false
+			return hasil, total, hargajarak, false
 		}
 
 		beratTotal := float64(kategori.BeratGram) * float64(data.DataResponse[i].Dipesan) / 1000
@@ -60,7 +61,7 @@ func GenerateItemDetail(
 			Where(&models.LayananPengirimanKurir{NamaLayanan: layanan}).
 			Select("harga_layanan").Limit(1).
 			Scan(&biayaJasa).Error; err != nil {
-			return hasil, total, false
+			return hasil, total, hargajarak, false
 		}
 
 		itemDetail := midtrans.ItemDetails{
@@ -129,17 +130,17 @@ func GenerateItemDetail(
 				Where(&models.AlamatPengguna{ID: alamat_pengguna.ID}).Limit(1).
 				Take(&alamatUser).Error
 			if err != nil {
-				return hasil, total, false
+				return hasil, total, hargajarak, false
 			}
 			latTujuan = alamatUser.Latitude
 			longTujuan = alamatUser.Longitude
 		}
 
 		if alamatGudang.Latitude == 0 || alamatGudang.Longitude == 0 {
-			return hasil, total, false
+			return hasil, total, hargajarak, false
 		}
 		if latTujuan == 0 || longTujuan == 0 {
-			return hasil, total, false
+			return hasil, total, hargajarak, false
 		}
 
 		// 🚀 =============== OPTIMASI DISINI =================
@@ -154,13 +155,18 @@ func GenerateItemDetail(
 		}
 		// ====================================================
 
-		_, hargaJarak, status := open_route_direction.HitungJarakHargaDirection(
+		Jarak, hargaJarak, status := open_route_direction.HitungJarakHargaDirection(
 			[2]float64{alamatGudang.Longitude, alamatGudang.Latitude},
 			[2]float64{longTujuan, latTujuan},
 		)
 
+		hargajarak = append(hargajarak, response_transaction_pengguna.DataJarak{
+			Jarak: Jarak,
+			Harga: float64(hargaJarak),
+		})
+
 		if !status {
-			return hasil, total, false
+			return hasil, total, hargajarak, false
 		}
 
 		fmt.Println("Ini harga jarak cuy:", hargaJarak)
@@ -201,7 +207,7 @@ func GenerateItemDetail(
 	hasil = append(hasil, appFee)
 	total += biaya_platform
 
-	return hasil, total, true
+	return hasil, total, hargajarak, true
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -209,7 +215,7 @@ func GenerateItemDetail(
 // Befungsi Untuk membantu snap trnsaksi dalam memformatkan sebuah transaksi
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod, jenis_layanan string) (bool, *snap.Request) {
+func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod, jenis_layanan string) (bool, *snap.Request, []response_transaction_pengguna.DataJarak) {
 	fmt.Println("[TRACE] Start FormattingTransaksi")
 
 	fmt.Println("[TRACE] Generate PaymentCode")
@@ -226,11 +232,6 @@ func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat model
 		}
 	}
 
-	if err_payment != nil {
-		fmt.Println("[TRACE] Error fatal: gagal generate PaymentCode setelah retry")
-		return false, nil
-	}
-
 	AlamatPengguna := midtrans.CustomerAddress{
 		Address:     alamat.NamaAlamat,
 		City:        alamat.Kota,
@@ -239,9 +240,14 @@ func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat model
 	}
 
 	fmt.Println("[TRACE] Generate ItemDetail dan TotalHarga")
-	items, TotalHarga, status := GenerateItemDetail(ctx, data, db, jenis_layanan, alamat)
+	items, TotalHarga, dataJarak, status := GenerateItemDetail(ctx, data, db, jenis_layanan, alamat)
 	if !status {
-		return false, nil
+		return false, nil, dataJarak
+	}
+
+	if err_payment != nil {
+		fmt.Println("[TRACE] Error fatal: gagal generate PaymentCode setelah retry")
+		return false, nil, dataJarak
 	}
 
 	var PM []snap.SnapPaymentType
@@ -294,7 +300,7 @@ func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat model
 	}
 
 	fmt.Println("[TRACE] Selesai membuat SnapRequest, return response")
-	return true, SnapReqeust
+	return true, SnapReqeust, dataJarak
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////

@@ -48,9 +48,14 @@ type ResponseDataValidateTransaksi struct {
 // Response Struct SnapTransaksi
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+type DataJarak struct {
+	Jarak string  `json:"jarak_tempuh"`
+	Harga float64 `json:"harga"`
+}
 type SnapTransaksi struct {
 	SnapTransaksi *snap.Response        `json:"snap_response_token"`
 	DataCheckout  []CheckoutData        `json:"checkout_data_hold"`
+	DataJarak     []DataJarak           `json:"data_jarak"`
 	DataAlamat    models.AlamatPengguna `json:"alamat_data_hold"`
 }
 
