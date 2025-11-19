@@ -226,4 +226,20 @@ func NonaktifBidKurir(ctx context.Context, data PayloadNonaktifkanBid, db *gorm.
 	}
 }
 
-func AmbilPengiriman(ctx context.Context)
+func AmbilPengiriman(ctx context.Context, data PayloadAmbilPengiriman, db *gorm.DB) *response.ResponseForm {
+	services := "AmbilPengiriman"
+
+	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data kurir tidak ditemukan",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
+	}
+}

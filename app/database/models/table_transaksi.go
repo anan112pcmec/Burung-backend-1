@@ -44,6 +44,7 @@ type Transaksi struct {
 	KendaraanPengiriman string         `gorm:"column:kendaraan_pengiriman;type:jenis_kendaraan_kurir;default:'Motor';not null" json:"kendaraan_pengiriman_transaksi"`
 	JenisPengiriman     string         `gorm:"column:jenis_pengiriman;type:jenis_layanan_kurir;not null" json:"jenis_pengiriman_transaksi"`
 	JarakTempuh         string         `gorm:"column:jarak_tempuh;not null" json:"jarak_tempuh_transaksi"`
+	SellerPaid          int64          `gorm:"column:seller_paid;type:int8;not null" json:"seller_paid_transaksi"`
 	OngkosKirim         int64          `gorm:"column:ongkos_kirim;type:int4;not null" json:"ongkos_kirim_transaksi"`
 	BeratTotalKg        int16          `gorm:"column:berat_total_kg;type:int2;not null" json:"berat_total_kg_pengiriman"`
 	KodeOrderSistem     string         `gorm:"column:kode_order_sistem;type:varchar(100);not null" json:"kode_order_sistem_transaksi"`

@@ -2,8 +2,8 @@ package pengguna_transaction_services
 
 import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment/gerai"
-	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment/wallet"
+	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment_in/gerai"
+	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment_in/wallet"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )

@@ -14,10 +14,10 @@ import (
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment"
-	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment/gerai"
-	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment/virtual_account"
-	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment/wallet"
+	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment_in"
+	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment_in/gerai"
+	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment_in/virtual_account"
+	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment_in/wallet"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
@@ -741,12 +741,13 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 				IdPembayaran:     pembayaran.ID,
 				JenisPengiriman:  data.JenisLayananKurir,
 				JarakTempuh:      data.DataJarak[i].Jarak,
+				SellerPaid:       int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
 				OngkosKirim:      int64(data.DataJarak[i].Harga),
 				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
 				KodeOrderSistem:  pembayaran.KodeOrderSistem,
 				Status:           transaksi_enums.Dibayar,
 				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
-				Total:            int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
+				Total:            int64(data.DataHold[i].HargaKategori*data.DataHold[i].Dipesan) + int64(data.DataJarak[i].Harga),
 			})
 		}
 

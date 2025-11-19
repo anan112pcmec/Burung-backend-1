@@ -28,4 +28,5 @@ type PayloadNonaktifkanBid struct {
 
 type PayloadAmbilPengiriman struct {
 	IdentitasKurir identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdPengiriman   int64                         `json:"id_pengiriman"`
 }
