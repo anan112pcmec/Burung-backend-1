@@ -60,3 +60,8 @@ var (
 	Ondelivery = "OnDelivery"
 	Off        = "Off"
 )
+
+var (
+	Manual = "manual"
+	Auto   = "auto"
+)

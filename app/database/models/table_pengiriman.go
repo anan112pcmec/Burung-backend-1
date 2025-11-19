@@ -6,18 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-func (p *Pengiriman) BiayaKirimnya(untuk string) int16 {
-	if untuk == "Sistem" {
-		hasil := float64(p.BiayaKirim) / 0.2
-		return int16(hasil)
-	} else if untuk == "Kurir" {
-		hasil := float64(p.BiayaKirim) / 0.8
-		return int16(hasil)
-	}
-
-	return 0
-}
-
 type Pengiriman struct {
 	ID                  int64          `gorm:"primaryKey;autoIncrement" json:"id_pengiriman"`
 	IdTransaksi         int64          `gorm:"column:id_transaksi;not null" json:"id_transaksi_pengiriman"`
@@ -30,7 +18,6 @@ type Pengiriman struct {
 	KendaraanRequired   string         `gorm:"column:kendaraan_required;type:jenis_kendaraan_kurir;not null" json:"kendaraan_required_pengiriman"`
 	JenisPengiriman     string         `gorm:"column:jenis_pengiriman;not null;type:jenis_layanan_kurir;default:'Reguler'" json:"jenis_pengiriman_transaksi"`
 	Status              string         `gorm:"column:status;type:status_pengiriman;not null" json:"status_pengiriman"`
-	BiayaKirim          int16          `gorm:"column:biaya_kirim;type:int2;not null;default:0" json:"biaya_kirim_pengiriman"`
 	JarakTempuh         string         `gorm:"column:jarak_tempuh;type:varchar(100);not null" json:"jarak_tempuh_pengiriman"`
 	KurirPaid           int32          `gorm:"column:kurir_paid;type:int4;not null;default:0" json:"kurir_paid_pengiriman"`
 	BeratTotalKG        int16          `gorm:"column:berat_total_kg;type:int2;not null;default:0" json:"berat_total_kg_pengiriman"`

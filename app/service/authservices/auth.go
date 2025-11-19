@@ -373,8 +373,7 @@ func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, r
 	services := "PreKurirRegistration"
 
 	var kurir models.Kurir
-	err := db.Unscoped().
-		Where(models.Kurir{Email: email}).
+	err := db.Where(models.Kurir{Email: email}).
 		Select("id").
 		First(&kurir).Error
 

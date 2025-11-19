@@ -484,14 +484,26 @@ func (SaldoKurir) TableName() string {
 	return "saldo_kurir"
 }
 
-type InformasiNarik struct {
-	ID        int64      `gorm:"primaryKey;autoIncrement" json:"id_informasi_narik"`
-	IdKurir   int64      `gorm:"column:id_kurir;not null" json:"id_kurir_informasi_narik"`
-	Kurir     Kurir      `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
-	Status    string     `gorm:"column:status;type:status_kurir_narik;not null;default:'Off'" json:"status_informasi_narik"`
-	Longitude float64    `gorm:"column:longitude;type:decimal(11,8);" json:"longitude_alamat_user"`
-	Latitude  float64    `gorm:"column:latitude;type:decimal(11,8);" json:"latitude_alamat_user"`
-	CreatedAt time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt time.Time  `gorm:"autoUpdateTime"`
-	DeletedAt *time.Time `gorm:"index"`
+type BidKurirData struct {
+	ID               int64          `gorm:"primaryKey;autoIncrement" json:"id_bid_kurir_data"`
+	IdKurir          int64          `gorm:"column:id_kurir;not null" json:"id_kurir_bid_kurir_data"`
+	Kurir            Kurir          `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	Mode             string         `gorm:"column:mode;type:mode_bid_kurir;not null" json:"mode_bid_kurir_data"`
+	Alamat           string         `gorm:"column:alamat;type:text" json:"alamat_bid_kurir_data"`
+	Longitude        float64        `gorm:"column:longitude;type:numeric(11,8);not null" json:"longitude_bid_kurir_data"`
+	Latitude         float64        `gorm:"column:latitude;type:numeric(11,8);not null" json:"latitude_bid_kurir_data"`
+	MaxJarak         int16          `gorm:"column:max_jarak;type:smallint;not null" json:"max_jarak_bid_kurir_data"`
+	MaxRadius        int16          `gorm:"column:max_radius;type:smallint" json:"max_radius_bid_kurir_data"` // nullable
+	MaxKg            int16          `gorm:"column:max_kg;type:smallint;not null" json:"max_kg_bid_kurir_data"`
+	BookedPengiriman int32          `gorm:"column:booked_pengiriman;type:int;not null;default:0" json:"booked_pengiriman_bid_kurir_data"`
+	Dimulai          time.Time      `gorm:"column:dimulai;type:time;not null" json:"dimulai_bid_kurir_data"`
+	Selesai          *time.Time     `gorm:"column:selesai;type:time" json:"selesai_bid_kurir_data"`
+	JenisKendaraan   string         `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null" json:"jenis_kendaraan_bid_kurir_data"`
+	CreatedAt        time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt        time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt        gorm.DeletedAt `gorm:"index"`
+}
+
+func (BidKurirData) TableName() string {
+	return "bid_kurir_data"
 }

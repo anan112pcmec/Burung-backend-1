@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 )
 
@@ -31,9 +32,10 @@ func (ik IdentitasKurir) Validating(ctx context.Context, db *gorm.DB) (model mod
 	kurir.ID = 0
 
 	_ = db.WithContext(ctx).Model(models.Kurir{}).Where(models.Kurir{
-		ID:       ik.IdKurir,
-		Username: ik.UsernameKurir,
-		Email:    ik.EmailKurir,
+		ID:          ik.IdKurir,
+		Username:    ik.UsernameKurir,
+		Email:       ik.EmailKurir,
+		StatusKurir: entity_enums.Online,
 	}).Take(&kurir)
 
 	if kurir.ID == 0 {
