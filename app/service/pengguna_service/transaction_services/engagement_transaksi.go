@@ -718,7 +718,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	}
 
 	pembayaran.IdPengguna = data.DataHold[0].IDUser
-	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold)+10)
+	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold))
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&pembayaran).Error; err != nil {
@@ -746,6 +746,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
 				KodeOrderSistem:  pembayaran.KodeOrderSistem,
 				Status:           transaksi_enums.Dibayar,
+				DibatalkanOleh:   nil,
 				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
 				Total:            int64(data.DataHold[i].HargaKategori*data.DataHold[i].Dipesan) + int64(data.DataJarak[i].Harga),
 			})
@@ -971,33 +972,76 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
-
-		pembayaran, ok := data.PaymentResult.Pembayaran()
-		if !ok {
-			return fmt.Errorf("gagal memproses pembayaran wallet")
+	pembayaran, ok := data.PaymentResult.Pembayaran()
+	if !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server terganggu akan dialihkan ke failed_transaksi",
 		}
+	}
 
-		//
-		// Sanitasi Id Pengguna
-		//
-		pembayaran.IdPengguna = data.DataHold[0].IDUser
+	pembayaran.IdPengguna = data.DataHold[0].IDUser
+	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold))
 
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
 
-		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
+		for i := 0; i < len(data.DataHold); i++ {
+			var kategori models.KategoriBarang
+			if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+				ID: data.DataHold[i].IdKategoriBarang,
+			}).Limit(1).Take(&kategori).Error; err != nil {
+				return err
+			}
+			transaksi_save = append(transaksi_save, models.Transaksi{
+				IdPengguna:       data.DataHold[i].IDUser,
+				IdSeller:         data.DataHold[i].IDSeller,
+				IdBarangInduk:    int64(data.DataHold[i].IdBarangInduk),
+				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna: data.IdAlamatUser,
+				IdPembayaran:     pembayaran.ID,
+				JenisPengiriman:  data.JenisLayananKurir,
+				JarakTempuh:      data.DataJarak[i].Jarak,
+				SellerPaid:       int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
+				OngkosKirim:      int64(data.DataJarak[i].Harga),
+				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
+				KodeOrderSistem:  pembayaran.KodeOrderSistem,
+				Status:           transaksi_enums.Dibayar,
+				DibatalkanOleh:   nil,
+				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
+				Total:            int64(data.DataHold[i].HargaKategori*data.DataHold[i].Dipesan) + int64(data.DataJarak[i].Harga),
+			})
+		}
 
-		return status
+		if err := tx.CreateInBatches(&transaksi_save, len(transaksi_save)).Error; err != nil {
+			return err
+		}
+
+		for i := 0; i < len(data.DataHold); i++ {
+			if err := tx.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
+				IdBarangInduk: data.DataHold[i].IdBarangInduk,
+				IdKategori:    data.DataHold[i].IdKategoriBarang,
+				HoldBy:        data.DataHold[i].IDUser,
+				HolderEntity:  entity_enums.Pengguna,
+				Status:        "Dipesan",
+			}).Updates(&models.VarianBarang{
+				Status:      "Terjual",
+				IdTransaksi: transaksi_save[i].ID,
+			}).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}); err != nil {
 		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_transaction_pengguna.ResponseLockTransaksi{
-				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
-			},
+			Message:  "Berhasil",
 		}
 	}
 
@@ -1102,37 +1146,84 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		var (
-			resp payment_gerai.Response
-		)
-		resp = &data.PaymentResult
+	var (
+		resp payment_gerai.Response
+	)
+	resp = &data.PaymentResult
 
-		pembayaran, ok := resp.Pembayaran()
-		if !ok {
-			return fmt.Errorf("gagal memproses pembayaran wallet")
+	pembayaran, ok := resp.Pembayaran()
+	if !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server terganggu akan dialihkan ke pembayaran dan transaksi failed",
 		}
+	}
 
-		//
-		// Sanitasi Id Pengguna
-		//
-		pembayaran.IdPengguna = data.DataHold[0].IDUser
+	//
+	// Sanitasi Id Pengguna
+	//
+	pembayaran.IdPengguna = data.DataHold[0].IDUser
+	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold))
 
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
 
-		status := SimpanTransaksi(&pembayaran, &data.DataHold, data.IdAlamatUser, tx)
+		for i := 0; i < len(data.DataHold); i++ {
+			var kategori models.KategoriBarang
+			if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+				ID: data.DataHold[i].IdKategoriBarang,
+			}).Limit(1).Take(&kategori).Error; err != nil {
+				return err
+			}
+			transaksi_save = append(transaksi_save, models.Transaksi{
+				IdPengguna:       data.DataHold[i].IDUser,
+				IdSeller:         data.DataHold[i].IDSeller,
+				IdBarangInduk:    int64(data.DataHold[i].IdBarangInduk),
+				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna: data.IdAlamatUser,
+				IdPembayaran:     pembayaran.ID,
+				JenisPengiriman:  data.JenisLayananKurir,
+				JarakTempuh:      data.DataJarak[i].Jarak,
+				SellerPaid:       int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
+				OngkosKirim:      int64(data.DataJarak[i].Harga),
+				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
+				KodeOrderSistem:  pembayaran.KodeOrderSistem,
+				Status:           transaksi_enums.Dibayar,
+				DibatalkanOleh:   nil,
+				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
+				Total:            int64(data.DataHold[i].HargaKategori*data.DataHold[i].Dipesan) + int64(data.DataJarak[i].Harga),
+			})
+		}
 
-		return status
+		if err := tx.CreateInBatches(&transaksi_save, len(transaksi_save)).Error; err != nil {
+			return err
+		}
+
+		for i := 0; i < len(data.DataHold); i++ {
+			if err := tx.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
+				IdBarangInduk: data.DataHold[i].IdBarangInduk,
+				IdKategori:    data.DataHold[i].IdKategoriBarang,
+				HoldBy:        data.DataHold[i].IDUser,
+				HolderEntity:  entity_enums.Pengguna,
+				Status:        "Dipesan",
+			}).Updates(&models.VarianBarang{
+				Status:      "Terjual",
+				IdTransaksi: transaksi_save[i].ID,
+			}).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}); err != nil {
 		fmt.Printf("[ERROR] Transaction rollback | Err=%v\n", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_transaction_pengguna.ResponseLockTransaksi{
-				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
-			},
+			Message:  "Berhasil",
 		}
 	}
 

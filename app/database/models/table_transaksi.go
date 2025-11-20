@@ -49,7 +49,7 @@ type Transaksi struct {
 	BeratTotalKg        int16          `gorm:"column:berat_total_kg;type:int2;not null" json:"berat_total_kg_pengiriman"`
 	KodeOrderSistem     string         `gorm:"column:kode_order_sistem;type:varchar(100);not null" json:"kode_order_sistem_transaksi"`
 	Status              string         `gorm:"column:status;type:status_transaksi;default:'Dibayar';not null" json:"status_transaksi"`
-	DibatalkanOleh      string         `gorm:"column:dibatalkan_oleh;type:jenis_entity" json:"dibatalkan_oleh_transaksi"`
+	DibatalkanOleh      *string        `gorm:"column:dibatalkan_oleh;type:jenis_entity" json:"dibatalkan_oleh_transaksi"`
 	Catatan             string         `gorm:"column:catatan;type:text" json:"catatan_transaksi"`
 	KuantitasBarang     int32          `gorm:"column:kuantitas_barang;type:int4;not null" json:"kuantitas_barang"`
 	Total               int64          `gorm:"column:total;type:int8;not null" json:"total_transaksi"`

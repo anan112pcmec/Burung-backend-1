@@ -17,6 +17,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 	seller_profiling_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services"
 	seller_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/social_media_services"
+	seller_transaksi_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/transaksi_services"
 )
 
 func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
@@ -180,6 +181,13 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 			return
 		}
 		hasil = jenis_seller_services.EditDataBrand(ctx, data, db)
+	case "/seller/transaction/approve-order":
+		var data seller_transaksi_services.PayloadApproveOrder
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_transaksi_services.ApproveOrderTransaksi(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

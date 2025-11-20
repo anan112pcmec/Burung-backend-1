@@ -14,6 +14,7 @@ import (
 	seller_diskon_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/diskon_services"
 	seller_etalase_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/etalase_services"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
+	seller_transaksi_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/transaksi_services"
 )
 
 func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -103,6 +104,13 @@ func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = jenis_seller_services.HapusDataBrand(ctx, data, db)
+	case "/seller/transaction/unapprove-order":
+		var data seller_transaksi_services.PayloadUnApproveOrder
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_transaksi_services.UnApproveOrderTransaksi(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,
