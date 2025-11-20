@@ -25,7 +25,7 @@ func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir,
 		}
 	}
 
-	var id_alamat int64
+	var id_alamat int64 = 0
 	if err := db.WithContext(ctx).
 		Model(&models.RekeningKurir{}).
 		Select("id").
@@ -90,7 +90,7 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *g
 		}
 	}
 
-	var id_alamat int64
+	var id_alamat int64 = 0
 	if err := db.WithContext(ctx).
 		Model(&models.RekeningKurir{}).
 		Select("id").
@@ -118,8 +118,7 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *g
 	}
 
 	if err := db.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
-		ID:      data.IdRekening,
-		IdKurir: data.IdentitasKurir.IdKurir,
+		ID: data.IdRekening,
 	}).Updates(&models.RekeningKurir{
 		NamaBank:        data.NamaBank,
 		NomorRekening:   data.NomorRekening,
@@ -157,7 +156,7 @@ func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db 
 		}
 	}
 
-	var id_alamat int64
+	var id_alamat int64 = 0
 	if err := db.WithContext(ctx).
 		Model(&models.RekeningKurir{}).
 		Select("id").

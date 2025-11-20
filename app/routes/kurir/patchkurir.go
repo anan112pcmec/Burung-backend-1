@@ -27,7 +27,7 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_profiling_service.PersonalProfilingKurir(data, db)
+		hasil = kurir_profiling_service.PersonalProfilingKurir(ctx, data, db)
 	case "/kurir/profiling/general-update":
 		var data kurir_profiling_service.PayloadGeneralProfiling
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -49,13 +49,6 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_informasi_services.EditInformasiKurir(ctx, data, db)
-	case "/kurir/credential/validate-ubah-password":
-		var data kurir_credential_services.PayloadValidateUbahPassword
-		if err := helper.DecodeJSONBody(r, &data); err != nil {
-			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		hasil = kurir_credential_services.ValidateUbahPasswordKurir(ctx, data, db, rds)
 	case "/kurir/social-media/social-media-engage":
 		var data kurir_social_media_services.PayloadEngageSocialMedia
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -77,6 +70,21 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_rekening_services.EditRekeningKurir(ctx, data, db)
+
+	case "/kurir/credential/preubah-pass":
+		var data kurir_credential_services.PayloadPreUbahPassword
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_credential_services.PreUbahPasswordKurir(ctx, data, db, rds)
+	case "/kurir/credential/validate-ubah-pass-otp":
+		var data kurir_credential_services.PayloadValidateUbahPassword
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_credential_services.ValidateUbahPasswordKurir(ctx, data, db, rds)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

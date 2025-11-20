@@ -220,23 +220,21 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreUserRegistration"
 	ctx := context.Background()
-	var user models.Pengguna
 
-	if err := db.Where(models.Pengguna{Email: email}).Or(&models.Pengguna{Username: username}).Select("email", "username").First(&user).Error; err == nil {
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_auth.PreRegistrationUserResp{
-				Message: "Gagal Coba Ganti Username atau Gmail",
-			},
-		}
-	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+	var user int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Pengguna{}).Select("id").Where(&models.Pengguna{Email: email}).Or(&models.Pengguna{Username: username}).Limit(1).Scan(&user).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_auth.PreRegistrationUserResp{
-				Message: "Gagal Server Sedang Sibuk",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if user != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal pengguna dengan username atau email tersebut sudah ada",
 		}
 	}
 
@@ -289,31 +287,23 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rd
 func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreSellerRegistration"
 
-	jenis_final := string(jenis)
-	seller_dedic := string(SellerDedication)
-
-	var seller models.Seller
-	err := db.Unscoped().
-		Where(models.Seller{Email: email}).
-		Or(models.Seller{Username: username}).
-		Select("email").
-		First(&seller).Error
-
-	if err == nil {
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_auth.PreRegistrationSellerResp{
-				Message: "Gagal Coba Ganti Username atau Gmail",
-			},
-		}
-	} else if err != gorm.ErrRecordNotFound {
+	var seller int64 = 0
+	if err := db.Model(&models.Seller{}).Select("id").
+		Where(&models.Seller{Email: email}).
+		Or(&models.Seller{Username: username}).
+		Limit(1).Scan(&seller).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_auth.PreRegistrationSellerResp{
-				Message: "Terjadi kesalahan pada server",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if seller != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal username atau gmail tersebut sudah digunakan",
 		}
 	}
 
@@ -339,8 +329,8 @@ func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis stri
 			"nama":              nama,
 			"username":          username,
 			"email":             email,
-			"jenis":             jenis_final,
-			"seller_dedication": seller_dedic,
+			"jenis":             jenis,
+			"seller_dedication": SellerDedication,
 			"password_hash":     password,
 		}
 
@@ -372,26 +362,14 @@ func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis stri
 func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, rds *redis.Client) *response.ResponseForm {
 	services := "PreKurirRegistration"
 
-	var kurir models.Kurir
-	err := db.Where(models.Kurir{Email: email}).
-		Select("id").
-		First(&kurir).Error
-
-	if err == nil {
-		return &response.ResponseForm{
-			Status:   http.StatusConflict,
-			Services: services,
-			Payload: response_auth.PreRegistrationKurirResp{
-				Message: "kurir dengan gmail Itu sudah terdaftar di sistem kami",
-			},
-		}
-	} else if err != gorm.ErrRecordNotFound {
+	var kurir int64 = 0
+	if err := db.Model(&models.Kurir{}).Select("id").Where(&models.Kurir{Email: email}).Or(&models.Kurir{
+		Username: username,
+	}).Limit(1).Scan(&kurir).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_auth.PreRegistrationKurirResp{
-				Message: "Terjadi kesalahan pada server",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 

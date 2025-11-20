@@ -12,14 +12,15 @@ import (
 	response_profiling_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services/response_profiling"
 )
 
-func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *response.ResponseForm {
+func PersonalProfilingKurir(ctx context.Context, data PayloadPersonalProfilingKurir, db *gorm.DB) *response.ResponseForm {
 	var wg sync.WaitGroup
 	services := "GeneralProfilingKurir"
 
-	if data.DataKredensial.IDkurir == 0 && data.DataKredensial.UsernameKurir == "" {
+	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
+			Message:  "Gagal data kurir tidak ditemukan",
 		}
 	}
 
@@ -31,7 +32,7 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			hasilresponsenama = particular_profiling_kurir.UbahNama(data.DataKredensial.IDkurir, data.DataKredensial.UsernameKurir, data.Nama, db)
+			hasilresponsenama = particular_profiling_kurir.UbahNama(data.IdentitasKurir.IdKurir, data.IdentitasKurir.UsernameKurir, data.Nama, db)
 		}()
 	}
 
@@ -39,7 +40,7 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			hasilresponseusername = particular_profiling_kurir.UbahUsernameKurir(db, data.DataKredensial.IDkurir, data.Username)
+			hasilresponseusername = particular_profiling_kurir.UbahUsernameKurir(db, data.IdentitasKurir.IdKurir, data.Username)
 		}()
 	}
 
@@ -47,7 +48,7 @@ func PersonalProfilingKurir(data PayloadPersonalProfilingKurir, db *gorm.DB) *re
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			hasilresponseemail = particular_profiling_kurir.UbahEmail(data.DataKredensial.IDkurir, data.Username, data.Email, db)
+			hasilresponseemail = particular_profiling_kurir.UbahEmail(data.IdentitasKurir.IdKurir, data.Username, data.Email, db)
 		}()
 	}
 

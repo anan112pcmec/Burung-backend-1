@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services/response_alamat_service_kurir"
 )
@@ -26,11 +27,10 @@ func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db 
 		}
 	}
 
-	// Cek apakah nama alamat sudah pernah digunakan
-	var countNamaSama int64
-	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).
-		Where(&models.AlamatKurir{IdKurir: data.IdentitasKurir.IdKurir, NamaAlamat: data.NamaAlamat}).
-		Count(&countNamaSama).Error; err != nil {
+	// Cek apakah alamat sudah ada
+	var id_data_alamat int64 = 0
+	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").
+		Where(&models.AlamatKurir{IdKurir: data.IdentitasKurir.IdKurir}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -41,15 +41,17 @@ func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db 
 		}
 	}
 
-	if countNamaSama != 0 {
+	if id_data_alamat != 0 {
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
 			Payload: response_alamat_service_kurir.ResponseMasukanAlamatKurir{
-				Message: "Gagal: Kamu sudah memiliki alamat dengan nama itu, coba ganti nama lainnya",
+				Message: "Gagal: Kamu sudah memasukan data alamat",
 			},
 		}
 	}
+
+	helper.SanitasiKoordinat(&data.Latitude, &data.Longtitude)
 
 	// Simpan alamat baru
 	if err := db.WithContext(ctx).Create(&models.AlamatKurir{
@@ -104,7 +106,7 @@ func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *gorm.
 	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
 		ID:      data.IDAlamatKurir,
 		IdKurir: data.IdentitasKurir.IdKurir,
-	}).Limit(1).Take(&id_data_alamat).Error; err != nil {
+	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
