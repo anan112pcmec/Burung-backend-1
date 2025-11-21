@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/GianOrtiz/typesense-go v0.3.0 // indirect
+	github.com/adityarizkyramadhan/rajaongkir v0.0.0-20230808053546-8bdea9de5a61 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

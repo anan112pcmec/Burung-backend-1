@@ -13,6 +13,7 @@ type PayloadTambahAlamatGudang struct {
 	PanggilanAlamat string                         `json:"panggilan_alamat"`
 	NomorTelefon    string                         `json:"nomor_telefon"`
 	NamaAlamat      string                         `json:"nama_alamat"`
+	Provinsi        string                         `json:"provinsi"`
 	Kota            string                         `json:"kota"`
 	KodePos         string                         `json:"kode_pos"`
 	KodeNegara      string                         `json:"kode_negara"`
@@ -31,6 +32,7 @@ type PayloadEditAlamatGudang struct {
 	PanggilanAlamat string                         `json:"panggilan_alamat"`
 	NomorTelefon    string                         `json:"nomor_telefon"`
 	NamaAlamat      string                         `json:"nama_alamat"`
+	Provinsi        string                         `json:"provinsi"`
 	Kota            string                         `json:"kota"`
 	KodePos         string                         `json:"kode_pos"`
 	KodeNegara      string                         `json:"kode_negara"`

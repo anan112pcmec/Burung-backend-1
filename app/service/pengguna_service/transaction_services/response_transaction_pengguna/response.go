@@ -51,8 +51,9 @@ type ResponseDataValidateTransaksi struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type DataJarak struct {
-	Jarak string  `json:"jarak_tempuh"`
-	Harga float64 `json:"harga"`
+	Jarak     string  `json:"jarak_tempuh"`
+	Harga     float64 `json:"harga"`
+	Ekspedisi bool    `json:"ekspedisi"`
 }
 type SnapTransaksi struct {
 	SnapTransaksi *snap.Response        `json:"snap_response_token"`

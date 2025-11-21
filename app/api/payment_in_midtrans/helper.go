@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment_in/virtual_account"
+	payment_va "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/virtual_account"
 )
 
 func ParseVirtualAccount(data any) (string, error) {

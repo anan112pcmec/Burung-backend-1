@@ -2,7 +2,6 @@ package pengguna_alamat_services
 
 import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/identity_pengguna"
-
 )
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -14,6 +13,7 @@ type PayloadMasukanAlamatPengguna struct {
 	PanggilanAlamat   string                             `json:"panggilan_alamat"`
 	NomorTelephone    string                             `json:"nomor_telefon"`
 	NamaAlamat        string                             `json:"nama_alamat"`
+	Provinsi          string                             `json:"provinsi"`
 	Kota              string                             `json:"kota"`
 	KodePos           string                             `json:"kode_pos"`
 	KodeNegara        string                             `json:"kode_negara"`
@@ -32,6 +32,7 @@ type PayloadEditAlamatPengguna struct {
 	PanggilanAlamat   string                             `json:"panggilan_alamat"`
 	NomorTelephone    string                             `json:"nomor_telefon"`
 	NamaAlamat        string                             `json:"nama_alamat"`
+	Provinsi          string                             `json:"provinsi"`
 	Kota              string                             `json:"kota"`
 	KodePos           string                             `json:"kode_pos"`
 	KodeNegara        string                             `json:"kode_negara"`

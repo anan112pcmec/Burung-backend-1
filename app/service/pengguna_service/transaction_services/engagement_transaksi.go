@@ -10,14 +10,14 @@ import (
 	"github.com/midtrans/midtrans-go/snap"
 	"gorm.io/gorm"
 
+	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans"
+	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/gerai"
+	payment_va "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/virtual_account"
+	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/wallet"
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
-	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/payment_in"
-	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/payment_in/gerai"
-	payment_va "github.com/anan112pcmec/Burung-backend-1/app/payment_in/virtual_account"
-	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/payment_in/wallet"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
@@ -390,74 +390,6 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		},
 	}
 }
-
-// func PendingTransaksi(ctx context.Context, data PayloadPendingTransaksi, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
-// 	services := "PendingTransaksi"
-
-// 	if _, status := data.IdentitasPengguna.Validating(db); !status {
-// 		return &response.ResponseForm{
-// 			Status:   http.StatusNotFound,
-// 			Services: services,
-// 			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
-// 				Message: "Gagal Kredensial User Tidak Valid",
-// 			},
-// 		}
-// 	}
-
-// 	key := fmt.Sprintf("transaction_pengguna_pending_id:%v:transaction_code:%s",
-// 		data.IdentitasPengguna.ID, data.DataPending.OrderId)
-
-// 	fields := map[string]interface{}{
-// 		"finish_redirect_url": data.DataPending.FinishRedirectUrl,
-// 		"fraud_status":        data.DataPending.FraudStatus,
-// 		"gross_amount":        data.DataPending.GrossAmout,
-// 		"order_id":            data.DataPending.OrderId,
-// 		"payment_type":        data.DataPending.PaymentType,
-// 		"status_code":         data.DataPending.StatusCode,
-// 		"status_message":      data.DataPending.StatusMessage,
-// 		"transaction_id":      data.DataPending.TransactionId,
-// 		"transaction_status":  data.DataPending.TransactionStatus,
-// 		"transaction_time":    data.DataPending.TransactionTime,
-// 	}
-
-// 	if err := rds.HSet(ctx, key, fields).Err(); err != nil {
-// 		fmt.Println("⚠️ Gagal menyimpan ke Redis:", err)
-// 		return &response.ResponseForm{
-// 			Status:   http.StatusInternalServerError,
-// 			Services: services,
-// 			Payload: response_transaction_pengguna.ResponsePendingTransaksi{
-// 				Message: "Gagal, Server sedang sibuk coba lagi lain waktu",
-// 			},
-// 		}
-// 	}
-
-// 	return &response.ResponseForm{
-// 		Status:   http.StatusOK,
-// 		Services: services,
-// 		Payload: response_transaction_pengguna.ResponsePendingTransaksi{
-// 			Message: "Berhasil",
-// 		},
-// 	}
-// }
-
-// func CallPendingTransaksi(data PayloadCallPendingTransaksi, rds *redis.Client) *response.ResponseForm {
-// 	services := "CallPendingTransaksi"
-
-//		return &response.ResponseForm{
-//			Status:   http.StatusOK,
-//			Services: services,
-//		}
-//	}
-//
-// ***** INFO ******
-// Skema Pending Akan Tersedia di saat mendatang untuk saat ini semua transaksi yang tak sengaja di bayar tak masuk pending melainkan akan langsung di batalkan
-
-// ////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Prosedur Batal Transaksi
-// Befungsi Untuk Membatalkan Transaksi Yang Telah Dibuat SnapTransaksi lewat Validating Transaksi
-// Semua yang telah melibatkan payment gateaway yang kemudian tidak melanjutkan pembayaran akan di batalkan
-// oleh fungsi ini
-// ////////////////////////////////////////////////////////////////////////////////////
 
 func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
 	services := "BatalTransaksi"

@@ -121,7 +121,8 @@ type AlamatPengguna struct {
 	PanggilanAlamat string         `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_user"`
 	NomorTelephone  string         `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_user"`
 	NamaAlamat      string         `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_user"`
-	Kota            string         `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_user"`
+	Provinsi        string         `gorm:"column:provinsi;type:nama_provinsi;not null" json:"provinsi_alamat_user"`
+	Kota            string         `gorm:"column:kota;type:nama_kota;not null" json:"kota_alamat_user"`
 	KodePos         string         `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_user"`
 	KodeNegara      string         `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_user"`
 	Deskripsi       string         `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_user"`
@@ -274,7 +275,8 @@ type AlamatGudang struct {
 	PanggilanAlamat string         `gorm:"column:panggilan_alamat;type:varchar(250);not null" json:"panggilan_alamat_gudang"`
 	NomorTelephone  string         `gorm:"column:nomor_telefon;type:varchar(20);not null" json:"nomor_telfon_alamat_gudang"`
 	NamaAlamat      string         `gorm:"column:nama_alamat;type:text;not null" json:"nama_alamat_gudang"`
-	Kota            string         `gorm:"column:kota;type:varchar(100);not null" json:"kota_alamat_gudang"`
+	Provinsi        string         `gorm:"column:provinsi;type:nama_provinsi;not null" json:"provinsi_alamat_gudang"`
+	Kota            string         `gorm:"column:kota;type:nama_kota;not null" json:"kota_alamat_gudang"`
 	KodePos         string         `gorm:"column:kode_pos;type:varchar(40);not null" json:"kode_pos_alamat_gudang"`
 	KodeNegara      string         `gorm:"column:kode_negara;default:'IDN';not null" json:"kode_negara_alamat_gudang"`
 	Deskripsi       string         `gorm:"column:deskripsi;type:text;" json:"deskripsi_alamat_gudang"`
@@ -439,7 +441,8 @@ type AlamatKurir struct {
 	PanggilanAlamat string     `gorm:"column:panggilan_alamat;type:text;not null" json:"panggilan_alamat_kurir"`
 	NomorTelephone  string     `gorm:"column:nomor_telefon;type:varchar(25);not null" json:"nomor_telefon_alamat_kurir"`
 	NamaAlamat      string     `gorm:"column:nama_alamat;type:text" json:"nama_alamat_kurir"`
-	Kota            string     `gorm:"column:kota;type:varchar(100)" json:"kota_alamat_kurir"`
+	Provinsi        string     `gorm:"column:provinsi;type:nama_provinsi;not null" json:"provinsi_alamat_kurir"`
+	Kota            string     `gorm:"column:kota;type:nama_kota;not null" json:"kota_alamat_kurir"`
 	KodeNegara      string     `gorm:"column:kode_negara;type:varchar(10)" json:"kode_negara_alamat_kurir"`
 	KodePos         string     `gorm:"column:kode_pos;type:varchar(10)" json:"kode_pos_alamat_kurir"`
 	Deskripsi       string     `gorm:"column:deskripsi;type:text" json:"deskripsi_alamat_kurir"`

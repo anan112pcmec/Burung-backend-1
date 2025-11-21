@@ -3,6 +3,8 @@ github.com/GianOrtiz/typesense-go v0.3.0 h1:08FT5IR7rP4Vgb5xSTgiTU/6nmPNn0NRKg/1
 github.com/GianOrtiz/typesense-go v0.3.0/go.mod h1:nx6N5CpKn9OQB+fhGUe15xjAJ+dS8d1+tp20ApjPNMo=
 github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5/go.mod h1:lmUJ/7eu/Q8D7ML55dXQrVaamCz2vxCfdQBasLZfHKk=
 github.com/RaveNoX/go-jsoncommentstrip v1.0.0/go.mod h1:78ihd09MekBnJnxpICcwzCMzGrKSKYe4AqU6PDYYpjk=
+github.com/adityarizkyramadhan/rajaongkir v0.0.0-20230808053546-8bdea9de5a61 h1:K8Ul++nurzAEYkpVwO/e1dvw88Mz3SV5Uih0uCTg2xg=
+github.com/adityarizkyramadhan/rajaongkir v0.0.0-20230808053546-8bdea9de5a61/go.mod h1:m2hYA9dxeboasPOFFxOdC+yLpbAlGIITFTKK0ZOmn/A=
 github.com/anan112pcmec/Template v0.0.0-20250716024903-4adc33ee0250 h1:YVksFcKWBwCC7XlKZyRARvX8D897IBo3X+UggbTq7sg=
 github.com/anan112pcmec/Template v0.0.0-20250716024903-4adc33ee0250/go.mod h1:s42xrq9v5Etv8Sxl4zugQQlaP+F7WieEIrywVZwW9iE=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=

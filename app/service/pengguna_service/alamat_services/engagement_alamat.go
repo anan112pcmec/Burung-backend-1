@@ -78,6 +78,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		NamaAlamat:      data.NamaAlamat,
 		Deskripsi:       data.Deskripsi,
 		NomorTelephone:  data.NomorTelephone,
+		Provinsi:        data.Provinsi,
 		Kota:            data.Kota,
 		KodePos:         data.KodePos,
 		KodeNegara:      data.KodeNegara,
@@ -137,6 +138,31 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 		}
 	}
 
+	var idDataTransaksi int64 = 0
+
+	if err := db.WithContext(ctx).
+		Model(&models.Transaksi{}).
+		Select("id").
+		Where("id_alamat_pengguna = ? AND status != ?", data.IdAlamatPengguna, "Selesai").
+		Limit(1).
+		Scan(&idDataTransaksi).Error; err != nil {
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal, server sedang sibuk. Coba lagi lain waktu",
+		}
+	}
+
+	// Jika ada transaksi yang menggunakan alamat ini
+	if idDataTransaksi != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal, alamat sedang digunakan sebagai acuan transaksi",
+		}
+	}
+
 	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
 	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Where(&models.AlamatPengguna{
@@ -146,6 +172,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 		NamaAlamat:      data.NamaAlamat,
 		Deskripsi:       data.Deskripsi,
 		NomorTelephone:  data.NomorTelephone,
+		Provinsi:        data.Provinsi,
 		Kota:            data.Kota,
 		KodePos:         data.KodePos,
 		KodeNegara:      data.KodeNegara,
@@ -208,6 +235,31 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
 				Message: "Gagal Data Alamat Tidak Valid",
 			},
+		}
+	}
+
+	var idDataTransaksi int64 = 0
+
+	if err := db.WithContext(ctx).
+		Model(&models.Transaksi{}).
+		Select("id").
+		Where("id_alamat_pengguna = ? AND status != ?", data.IdAlamatPengguna, "Selesai").
+		Limit(1).
+		Scan(&idDataTransaksi).Error; err != nil {
+
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal, server sedang sibuk. Coba lagi lain waktu",
+		}
+	}
+
+	// Jika ada transaksi yang menggunakan alamat ini
+	if idDataTransaksi != 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal, alamat sedang digunakan sebagai acuan transaksi",
 		}
 	}
 
