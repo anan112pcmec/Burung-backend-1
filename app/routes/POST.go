@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	admin_routes "github.com/anan112pcmec/Burung-backend-1/app/routes/admin"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/seller"
@@ -40,6 +41,9 @@ func PostHandler(db *gorm.DB, rds *redis.Client, rds_engagement *redis.Client) h
 			return
 		}
 
+		if len(r.URL.Path) >= 7 && r.URL.Path[:7] == "/admin/" {
+			admin_routes.P
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
 			"message": "url mu tidak jelas",
