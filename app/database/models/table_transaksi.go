@@ -38,20 +38,23 @@ type Transaksi struct {
 	IdAlamatPengguna    int64          `gorm:"column:id_alamat_pengguna;not null" json:"id_alamat_pengguna_transaksi"`
 	AlamatPengguna      AlamatPengguna `gorm:"foreignKey:IdAlamatPengguna;references:ID" json:"-"`
 	IdAlamatGudang      int64          `gorm:"column:id_alamat_gudang;type:int8;not null" json:"id_alamat_gudang_transaksi"`
+	IdAlamatEkspedisi   int64          `gorm:"column:id_alamat_ekspedisi;type:int8;not null" json:"id_alamat_ekspedisi"`
 	IdPembayaran        int64          `gorm:"column:id_pembayaran;not null" json:"id_pembayaran_transaksi"`
 	Pembayaran          Pembayaran     `gorm:"foreignKey:IdPembayaran;references:ID" json:"-"`
-	IdVoucher           int64          `gorm:"column:id_voucher;type:int8" json:"id_voucher_transaksi"`
 	KendaraanPengiriman string         `gorm:"column:kendaraan_pengiriman;type:jenis_kendaraan_kurir;default:'Motor';not null" json:"kendaraan_pengiriman_transaksi"`
 	JenisPengiriman     string         `gorm:"column:jenis_pengiriman;type:jenis_layanan_kurir;not null" json:"jenis_pengiriman_transaksi"`
 	JarakTempuh         string         `gorm:"column:jarak_tempuh;not null" json:"jarak_tempuh_transaksi"`
-	SellerPaid          int64          `gorm:"column:seller_paid;type:int8;not null" json:"seller_paid_transaksi"`
-	OngkosKirim         int64          `gorm:"column:ongkos_kirim;type:int4;not null" json:"ongkos_kirim_transaksi"`
-	BeratTotalKg        int16          `gorm:"column:berat_total_kg;type:int2;not null" json:"berat_total_kg_pengiriman"`
+	BeratTotalKg        int16          `gorm:"column:berat_total_kg;type:int2;not null" json:"berat_total_kg_pengiriman_transaksi"`
 	KodeOrderSistem     string         `gorm:"column:kode_order_sistem;type:varchar(100);not null" json:"kode_order_sistem_transaksi"`
+	KodeResiEkspedisi   *string        `gorm:"column:kode_resi_ekspedisi;type:varchar(100)" json:"kode_resi_ekspedisi_transaksi"`
 	Status              string         `gorm:"column:status;type:status_transaksi;default:'Dibayar';not null" json:"status_transaksi"`
 	DibatalkanOleh      *string        `gorm:"column:dibatalkan_oleh;type:jenis_entity" json:"dibatalkan_oleh_transaksi"`
 	Catatan             string         `gorm:"column:catatan;type:text" json:"catatan_transaksi"`
 	KuantitasBarang     int32          `gorm:"column:kuantitas_barang;type:int4;not null" json:"kuantitas_barang"`
+	IsEkspedisi         bool           `gorm:"column:is_ekspedisi;not null;default:false" json:"is_ekspedisi_transaksi"`
+	SellerPaid          int64          `gorm:"column:seller_paid;type:int8;not null" json:"seller_paid_transaksi"`
+	KurirPaid           int64          `gorm:"column:kurir_paid;type:int8;not null" json:"kurir_paid_transaksi"`
+	EkspedisiPaid       int64          `gorm:"column:ekspedisi_paid;type:int8;not null" json:"ekspedisi_paid_transaksi"`
 	Total               int64          `gorm:"column:total;type:int8;not null" json:"total_transaksi"`
 	Reviewed            bool           `gorm:"column:reviewed;type:bool;not null;default:false" json:"reviewed_transaksi"`
 	CreatedAt           time.Time      `gorm:"autoCreateTime"`

@@ -42,7 +42,8 @@ func PostHandler(db *gorm.DB, rds *redis.Client, rds_engagement *redis.Client) h
 		}
 
 		if len(r.URL.Path) >= 7 && r.URL.Path[:7] == "/admin/" {
-			admin_routes.P
+			admin_routes.AdminPostHandler(w, r)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{

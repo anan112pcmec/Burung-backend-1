@@ -228,5 +228,43 @@ func UpEngagementEntity(db *gorm.DB) {
 		}
 	}
 
-	log.Println("All migrations completed successfully 🚀")
+	log.Println("All migrations Engagement entity completed successfully 🚀")
+}
+
+func UpSystemData(db *gorm.DB) {
+	var wg sync.WaitGroup
+	errCh := make(chan error, 1)
+
+	modelsToMigrate := []interface{}{
+		&models.AlamatEkspedisi{},
+	}
+
+	wg.Add(len(modelsToMigrate))
+
+	for _, m := range modelsToMigrate {
+		go func(model interface{}) {
+			defer wg.Done()
+			if db.Migrator().HasTable(model) {
+				log.Printf("Table %T sudah ada, skipping migration ⚠️", model)
+				return
+			}
+
+			if err := db.AutoMigrate(model); err != nil {
+				errCh <- err
+				return
+			}
+			log.Printf("Migration success: %T ✅", model)
+		}(m)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		if err != nil {
+			log.Fatalf("Migration failed: %v", err)
+		}
+	}
+
+	log.Println("All migrations System data completed successfully 🚀")
 }

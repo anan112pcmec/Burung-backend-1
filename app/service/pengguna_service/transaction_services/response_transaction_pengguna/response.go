@@ -32,9 +32,7 @@ type LayananPengiriman struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type ResponseDataCheckout struct {
-	Message           string            `json:"pesan_chekout_barang"`
-	DataResponse      []CheckoutData    `json:"data_response_checkout_barang"`
-	LayananPengiriman LayananPengiriman `json:"data_layanan_pengiriman_barang"`
+	DataResponse []CheckoutData `json:"data_response_checkout_barang"`
 }
 
 type ResponseBatalCheckout struct {

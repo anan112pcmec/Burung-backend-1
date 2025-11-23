@@ -30,120 +30,157 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		log.Printf("[%s] Kredensial pengguna tidak valid untuk user ID: %v", services, data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
-			Status:   http.StatusUnauthorized,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_transaction_pengguna.ResponseDataCheckout{
-				Message: "Kredensial pengguna tidak valid.",
-			},
+			Message:  "Gagal identitas pengguna tidak ditemukan",
 		}
 	}
 
-	// Pastikan semua barang dari seller yang sama
-	var firstSellerID int64
-	for i, item := range data.DataCheckout {
-		if i == 0 {
-			firstSellerID = int64(item.IdSeller)
+	totalDipesan := 0
+
+	// Preallocate ukuran slice idKeranjang sesuai jumlah data checkout
+	// AMAN: jangan set lebih besar dari len(data.DataCheckout) supaya loop tidak OOB
+	dataLen := len(data.DataCheckout)
+	idKeranjang := make([]int64, 0, dataLen)
+
+	// Loop menggunakan dataLen agar aman, tidak baca len() berulang
+	for i := 0; i < dataLen; i++ {
+		// tambahan defensive: pastikan index valid sebelum akses
+		if i < 0 || i >= len(data.DataCheckout) {
 			continue
 		}
-		if item.IdSeller != int32(firstSellerID) {
-			return &response.ResponseForm{
-				Status:   http.StatusBadRequest,
-				Services: services,
-				Payload: response_transaction_pengguna.ResponseDataCheckout{
-					Message: "Semua barang harus dari seller yang sama.",
-				},
-			}
+		item := data.DataCheckout[i]
+
+		// Validasi item agar tidak nil atau field kosong (opsional)
+		if item.ID == 0 {
+			log.Printf("[CheckoutBarangUser] ID keranjang tidak valid pada indeks %d", i)
+			continue
 		}
+
+		totalDipesan += int(item.Jumlah)
+		idKeranjang = append(idKeranjang, item.ID)
 	}
 
-	responseData := make([]response_transaction_pengguna.CheckoutData, 0, len(data.DataCheckout))
-	varianUpdates := make([]int64, 0)
-	kategoriUpdates := make(map[int32]int32) // kategoriID => total jumlah dipesan
+	responseData := make([]response_transaction_pengguna.CheckoutData, 0, dataLen)
+	varianUpdates := make([]int64, 0, totalDipesan)
+	kategoriUpdates := make(map[int32]int32, dataLen)
+	BarangInduk := make(map[int64]models.BarangInduk, dataLen)
+	KategoriBarang := make(map[int64]models.KategoriBarang, dataLen)
+	NamaSeller := make(map[int64]string, dataLen)
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for i := 0; i < len(data.DataCheckout); i++ {
-			// Hitung stok
-			var jumlahStok int64
-			if err := tx.Model(&models.VarianBarang{}).
-				Where(&models.VarianBarang{
-					IdBarangInduk: data.DataCheckout[i].IdBarangInduk,
-					IdKategori:    data.DataCheckout[i].IdKategori,
-					Status:        barang_enums.Ready,
-				}).Count(&jumlahStok).Error; err != nil {
-				return err
-			}
-
-			// Ambil detail barang induk
-			var barang models.BarangInduk
-			if err := tx.Select("nama_barang", "id_seller", "jenis_barang").
-				Where(&models.BarangInduk{ID: data.DataCheckout[i].IdBarangInduk}).First(&barang).Error; err != nil {
-				return err
-			}
-
-			// Ambil kategori
-			var kategori models.KategoriBarang
-			if err := tx.Select("nama", "harga", "stok", "id_barang_induk", "id_alamat_gudang", "berat_gram").
-				Where(&models.KategoriBarang{ID: data.DataCheckout[i].IdKategori}).First(&kategori).Error; err != nil {
-				return err
-			}
-
-			// Ambil nama seller
-			var namaSeller string
-			if err := tx.Model(&models.Seller{}).Select("nama").
-				Where(&models.Seller{ID: barang.SellerID}).First(&namaSeller).Error; err != nil {
-				return err
-			}
-
-			resp := response_transaction_pengguna.CheckoutData{
-				IDUser:           data.IdentitasPengguna.ID,
-				IDSeller:         data.DataCheckout[i].IdSeller,
-				NamaSeller:       namaSeller,
-				JenisBarang:      barang.JenisBarang,
-				IdBarangInduk:    data.DataCheckout[i].IdBarangInduk,
-				IdKategoriBarang: data.DataCheckout[i].IdKategori,
-				IdAlamatGudang:   kategori.IDAlamat,
-				HargaKategori:    kategori.Harga,
-				NamaBarang:       barang.NamaBarang,
-				NamaKategori:     kategori.Nama,
-				BeratKategori:    kategori.BeratGram,
-				Dipesan:          int32(data.DataCheckout[i].Jumlah),
-			}
-
-			if jumlahStok >= int64(data.DataCheckout[i].Jumlah) {
-				var varianIDs []int64
-				if err := tx.Model(&models.VarianBarang{}).
-					Where(&models.VarianBarang{
-						IdBarangInduk: kategori.IdBarangInduk,
-						IdKategori:    data.DataCheckout[i].IdKategori,
-						Status:        barang_enums.Ready,
-					}).Limit(int(data.DataCheckout[i].Jumlah)).Pluck("id", &varianIDs).Error; err != nil {
-					resp.Message = "Terjadi kesalahan pada server."
-					resp.Status = false
-					responseData = append(responseData, resp)
-					return err
-				}
-
-				if len(varianIDs) < int(data.DataCheckout[i].Jumlah) {
-					shortfall := int64(data.DataCheckout[i].Jumlah) - int64(len(varianIDs))
-					resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
-					resp.Status = false
-					responseData = append(responseData, resp)
-					continue
-				}
-
-				varianUpdates = append(varianUpdates, varianIDs...)
-				kategoriUpdates[int32(data.DataCheckout[i].IdKategori)] += int32(data.DataCheckout[i].Jumlah)
-
-				resp.Message = "Barang siap untuk transaksi."
-				resp.Status = true
-			} else {
-				shortfall := int64(data.DataCheckout[i].Jumlah) - jumlahStok
-				resp.Message = fmt.Sprintf("Stok kurang %v barang.", shortfall)
-				resp.Status = false
-			}
-
-			responseData = append(responseData, resp)
+	for i := 0; i < len(data.DataCheckout); i++ {
+		if i < 0 || i >= len(data.DataCheckout) {
+			continue
 		}
+
+		jumlahNeeded := int(data.DataCheckout[i].Jumlah)
+		var idsVarianStok []int64 = make([]int64, 0, jumlahNeeded)
+		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+			IdBarangInduk: data.DataCheckout[i].IdBarangInduk,
+			IdKategori:    data.DataCheckout[i].IdKategori,
+			Status:        barang_enums.Ready,
+		}).Limit(jumlahNeeded).Scan(&idsVarianStok).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+			}
+		}
+
+		if len(idsVarianStok) < jumlahNeeded {
+			return &response.ResponseForm{
+				Status:   http.StatusUnauthorized,
+				Services: services,
+				Message:  "Gagal barang lebih sedikit dibanding yang kamu pesan",
+			}
+		}
+
+		varianUpdates = append(varianUpdates, idsVarianStok...)
+
+		if BarangInduk[int64(data.DataCheckout[i].IdBarangInduk)].NamaBarang == "" {
+			barang := models.BarangInduk{}
+
+			if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("nama_barang", "id_seller", "jenis_barang").Where(&models.BarangInduk{
+				ID: int32(data.DataCheckout[i].IdBarangInduk),
+			}).Limit(1).Scan(&barang).Error; err != nil {
+				return &response.ResponseForm{
+					Status:   http.StatusInternalServerError,
+					Services: services,
+					Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+				}
+			}
+
+			BarangInduk[int64(data.DataCheckout[i].IdBarangInduk)] = barang
+		}
+
+		if KategoriBarang[data.DataCheckout[i].IdKategori].Nama == "" {
+			var kategori models.KategoriBarang = models.KategoriBarang{Nama: ""}
+			if err := db.Model(&models.KategoriBarang{}).Select("nama", "harga", "stok", "id_barang_induk", "id_alamat_gudang", "berat_gram").
+				Where(&models.KategoriBarang{ID: data.DataCheckout[i].IdKategori}).Limit(1).Scan(&kategori).Error; err != nil {
+				return &response.ResponseForm{
+					Status:   http.StatusInternalServerError,
+					Services: services,
+					Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+				}
+			}
+
+			if kategori.Nama == "" {
+				return &response.ResponseForm{
+					Status:   http.StatusNotFound,
+					Services: services,
+					Message:  "gagal data kategori tidak ditemukan",
+				}
+			}
+
+			KategoriBarang[data.DataCheckout[i].IdKategori] = kategori
+		}
+
+		kategoriUpdates[int32(data.DataCheckout[i].IdKategori)] += int32(data.DataCheckout[i].Jumlah)
+
+		if NamaSeller[int64(data.DataCheckout[i].IdSeller)] == "" {
+			var namaSeller string = ""
+			if err := db.Model(&models.Seller{}).Select("nama").
+				Where(&models.Seller{ID: data.DataCheckout[i].IdSeller}).
+				Limit(1).Scan(&namaSeller).Error; err != nil {
+				return &response.ResponseForm{
+					Status:   http.StatusInternalServerError,
+					Services: services,
+					Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+				}
+			}
+
+			if namaSeller == "" {
+				return &response.ResponseForm{
+					Status:   http.StatusNotFound,
+					Services: services,
+					Message:  "Gagal seller tidak ditemukan",
+				}
+			}
+
+			NamaSeller[int64(data.DataCheckout[i].IdSeller)] = namaSeller
+		}
+
+		resp := response_transaction_pengguna.CheckoutData{
+			IDUser:           data.IdentitasPengguna.ID,
+			IDSeller:         data.DataCheckout[i].IdSeller,
+			NamaSeller:       NamaSeller[int64(data.DataCheckout[i].IdSeller)],
+			JenisBarang:      BarangInduk[int64(data.DataCheckout[i].IdBarangInduk)].JenisBarang,
+			IdBarangInduk:    data.DataCheckout[i].IdBarangInduk,
+			IdKategoriBarang: data.DataCheckout[i].IdKategori,
+			IdAlamatGudang:   KategoriBarang[data.DataCheckout[i].IdKategori].IDAlamat,
+			HargaKategori:    KategoriBarang[data.DataCheckout[i].IdKategori].Harga,
+			NamaBarang:       BarangInduk[int64(data.DataCheckout[i].IdBarangInduk)].NamaBarang,
+			NamaKategori:     KategoriBarang[data.DataCheckout[i].IdKategori].Nama,
+			BeratKategori:    KategoriBarang[data.DataCheckout[i].IdKategori].BeratGram,
+			Dipesan:          int32(data.DataCheckout[i].Jumlah),
+			Message:          "Siap",
+			Status:           true,
+		}
+
+		responseData = append(responseData, resp)
+	}
+
+	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		// Update status varian sekaligus
 		if len(varianUpdates) > 0 {
@@ -167,12 +204,11 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 			}
 		}
 
-		var idKeranjang []int64
-		for i := 0; i < len(data.DataCheckout); i++ {
-			idKeranjang = append(idKeranjang, data.DataCheckout[i].ID)
-		}
-		if err := db.WithContext(ctx).Model(&models.Keranjang{}).Where("id IN ?", idKeranjang).Delete(&models.Keranjang{}).Error; err != nil {
-			return err
+		// Hapus keranjang menggunakan tx agar konsisten dengan transaksi
+		if len(idKeranjang) > 0 {
+			if err := tx.WithContext(ctx).Model(&models.Keranjang{}).Where("id IN ?", idKeranjang).Delete(&models.Keranjang{}).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -183,9 +219,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_transaction_pengguna.ResponseDataCheckout{
-				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
-			},
+			Message:  "Terjadi Kesalahan pada server, Silahkan coba lagi lain waktu",
 		}
 	}
 
@@ -194,12 +228,9 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
+		Message:  "CheckoutBerhasil",
 		Payload: response_transaction_pengguna.ResponseDataCheckout{
-			Message:      "Checkout berhasil.",
 			DataResponse: responseData,
-			LayananPengiriman: response_transaction_pengguna.LayananPengiriman{
-				JenisLayananKurir: data.JenisLayananKurir,
-			},
 		},
 	}
 }
@@ -262,18 +293,14 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_transaction_pengguna.ResponseDataCheckout{
-				Message: "Terjadi kesalahan pada server. Silakan coba lagi nanti.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_transaction_pengguna.ResponseDataCheckout{
-			Message: "Berhasil membatalkan checkout.",
-		},
+		Message:  "Berhasil data checkout di hapus",
 	}
 }
 
@@ -296,35 +323,27 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 	}
 
-	var id_data_seller int64 = 0
+	lenData := len(data.DataCheckout.DataResponse)
 
-	if err := db.WithContext(ctx).Model(&models.Seller{}).Select("id").Where(&models.Seller{
-		ID: data.DataCheckout.DataResponse[0].IDSeller,
-	}).Limit(1).Scan(&id_data_seller).Error; err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
-			Services: services,
-			Message:  "Gagal seller tidak ditemukan",
-		}
-	}
-
-	if id_data_seller == 0 {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Payload:  "Gagal Seller tidak valid",
-		}
-	}
+	var sellerTransaction map[int32]models.Seller = make(map[int32]models.Seller, lenData)
 
 	for i := 0; i < len(data.DataCheckout.DataResponse); i++ {
 		var errcheck bool = false
+		if sellerTransaction[data.DataCheckout.DataResponse[i].IDSeller].ID == 0 {
+			if err := db.WithContext(ctx).Model(&models.Seller{}).Where(&models.Seller{
+				ID: data.DataCheckout.DataResponse[i].IDSeller,
+			}).Limit(1).Scan(sellerTransaction[data.DataCheckout.DataResponse[i].IDSeller]).Error; err != nil {
+				errcheck = true
+			}
+		}
+
 		var varianIds []int64 = make([]int64, 0, int(data.DataCheckout.DataResponse[i].Dipesan))
 		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
 			IdBarangInduk: data.DataCheckout.DataResponse[i].IdBarangInduk,
 			IdKategori:    data.DataCheckout.DataResponse[i].IdKategoriBarang,
 			Status:        barang_enums.Dipesan,
 			HoldBy:        data.DataCheckout.DataResponse[i].IDUser,
-		}).Limit(int(data.DataCheckout.DataResponse[i].Dipesan)).Scan(&varianIds).Error; err != nil {
+		}).Limit(int(data.DataCheckout.DataResponse[i].Dipesan)).Take(&varianIds).Error; err != nil {
 			errcheck = true
 		}
 
@@ -336,6 +355,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 			return &response.ResponseForm{
 				Status:   http.StatusUnavailableForLegalReasons,
 				Services: services,
+				Message:  "Data Dipesan Tidak Konsisten dengan checkout",
 			}
 		}
 	}
@@ -343,11 +363,12 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 	SnapErr, SnapReq, DataJarak := FormattingTransaksi(
 		ctx,
 		model,
+		sellerTransaction,
 		data.AlamatInformation,
 		data.DataCheckout,
-		db,
 		data.PaymentMethod,
-		data.DataCheckout.LayananPengiriman.JenisLayananKurir,
+		data.LayananPengirimanKurir,
+		db,
 	)
 
 	if !SnapErr {
@@ -674,7 +695,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 				JenisPengiriman:  data.JenisLayananKurir,
 				JarakTempuh:      data.DataJarak[i].Jarak,
 				SellerPaid:       int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
-				OngkosKirim:      int64(data.DataJarak[i].Harga),
+				KurirPaid:        int64(data.DataJarak[i].Harga),
 				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
 				KodeOrderSistem:  pembayaran.KodeOrderSistem,
 				Status:           transaksi_enums.Dibayar,
@@ -938,7 +959,7 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 				JenisPengiriman:  data.JenisLayananKurir,
 				JarakTempuh:      data.DataJarak[i].Jarak,
 				SellerPaid:       int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
-				OngkosKirim:      int64(data.DataJarak[i].Harga),
+				KurirPaid:        int64(data.DataJarak[i].Harga),
 				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
 				KodeOrderSistem:  pembayaran.KodeOrderSistem,
 				Status:           transaksi_enums.Dibayar,
@@ -1120,7 +1141,7 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 				JenisPengiriman:  data.JenisLayananKurir,
 				JarakTempuh:      data.DataJarak[i].Jarak,
 				SellerPaid:       int64(data.DataHold[i].HargaKategori * data.DataHold[i].Dipesan),
-				OngkosKirim:      int64(data.DataJarak[i].Harga),
+				KurirPaid:        int64(data.DataJarak[i].Harga),
 				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
 				KodeOrderSistem:  pembayaran.KodeOrderSistem,
 				Status:           transaksi_enums.Dibayar,

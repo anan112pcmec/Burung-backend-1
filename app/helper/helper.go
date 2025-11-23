@@ -249,3 +249,38 @@ func SanitasiKoordinat(Latitude *float64, Longitude *float64) {
 	*Latitude = lat
 	*Longitude = long
 }
+
+func ParseCoordinates(koordinatMentah string) (float64, float64, error) {
+	parts := strings.Split(strings.TrimSpace(koordinatMentah), ",")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("format koordinat salah: %s", koordinatMentah)
+	}
+
+	lat, err := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("gagal parse latitude: %v", err)
+	}
+
+	lng, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+	if err != nil {
+		return 0, 0, fmt.Errorf("gagal parse longitude: %v", err)
+	}
+
+	// Validasi range
+	if lat < -90 || lat > 90 {
+		return 0, 0, fmt.Errorf("latitude tidak valid: %f", lat)
+	}
+	if lng < -180 || lng > 180 {
+		return 0, 0, fmt.Errorf("longitude tidak valid: %f", lng)
+	}
+
+	// Fungsi bulatkan maksimal 6 desimal
+	round6 := func(f float64) float64 {
+		return math.Round(f*1_000_000) / 1_000_000
+	}
+
+	lat = round6(lat)
+	lng = round6(lng)
+
+	return lat, lng, nil
+}

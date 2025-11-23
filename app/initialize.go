@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	routes "github.com/anan112pcmec/Burung-backend-1/app/Routes"
+	maintain_cache "github.com/anan112pcmec/Burung-backend-1/app/cache/maintain"
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/enums"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/migrate"
@@ -82,6 +83,12 @@ func Run() {
 	migrate.UpBarang(database)
 	migrate.UpTransaksi(database)
 	migrate.UpEngagementEntity(database)
+	migrate.UpSystemData(database)
+
+	// Caching data
+	maintain_cache.DataAlamatEkspedisiUp(database)
+	maintain_cache.DataOperasionalPengirimanUp()
+	//
 
 	// Setup routes
 	Router.Methods(http.MethodOptions).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

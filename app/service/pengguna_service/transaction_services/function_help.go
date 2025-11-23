@@ -21,6 +21,7 @@ import (
 func GenerateItemDetail(
 	ctx context.Context,
 	data response_transaction_pengguna.ResponseDataCheckout,
+	sellersData map[int32]models.Seller,
 	db *gorm.DB,
 	jenisLayanan string,
 	alamat_pengguna models.AlamatPengguna,
@@ -189,7 +190,7 @@ func GenerateItemDetail(
 // Befungsi Untuk membantu snap trnsaksi dalam memformatkan sebuah transaksi
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB, PaymentMethod, jenis_layanan string) (bool, *snap.Request, []response_transaction_pengguna.DataJarak) {
+func FormattingTransaksi(ctx context.Context, user models.Pengguna, sellers map[int32]models.Seller, alamat models.AlamatPengguna, data response_transaction_pengguna.ResponseDataCheckout, PaymentMethod, jenis_layanan string, db *gorm.DB) (bool, *snap.Request, []response_transaction_pengguna.DataJarak) {
 	fmt.Println("[TRACE] Start FormattingTransaksi")
 
 	fmt.Println("[TRACE] Generate PaymentCode")
@@ -209,12 +210,13 @@ func FormattingTransaksi(ctx context.Context, user models.Pengguna, alamat model
 	AlamatPengguna := midtrans.CustomerAddress{
 		Address:     alamat.NamaAlamat,
 		City:        alamat.Kota,
+		Phone:       alamat.NomorTelephone,
 		Postcode:    alamat.KodePos,
 		CountryCode: alamat.KodeNegara,
 	}
 
 	fmt.Println("[TRACE] Generate ItemDetail dan TotalHarga")
-	items, TotalHarga, dataJarak, status := GenerateItemDetail(ctx, data, db, jenis_layanan, alamat)
+	items, TotalHarga, dataJarak, status := GenerateItemDetail(ctx, data, sellers, db, jenis_layanan, alamat)
 	if !status {
 		return false, nil, dataJarak
 	}

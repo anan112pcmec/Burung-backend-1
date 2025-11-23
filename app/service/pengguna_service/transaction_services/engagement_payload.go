@@ -36,10 +36,11 @@ type PayloadCheckoutBarang struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadSnapTransaksiRequest struct {
-	IdentitasPengguna identity_pengguna.IdentityPengguna                 `json:"identitas_pengguna"`
-	AlamatInformation models.AlamatPengguna                              `json:"data_alamat_transaksi"`
-	DataCheckout      response_transaction_pengguna.ResponseDataCheckout `json:"data_transaksi_item"`
-	PaymentMethod     string                                             `json:"pilihan_pembayaran"`
+	IdentitasPengguna      identity_pengguna.IdentityPengguna                 `json:"identitas_pengguna"`
+	AlamatInformation      models.AlamatPengguna                              `json:"data_alamat_transaksi"`
+	DataCheckout           response_transaction_pengguna.ResponseDataCheckout `json:"data_transaksi_item"`
+	PaymentMethod          string                                             `json:"pilihan_pembayaran"`
+	LayananPengirimanKurir string                                             `json:"layanan_pengiriman_kurir"`
 }
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

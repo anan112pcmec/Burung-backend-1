@@ -60,7 +60,7 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrder, db *go
 			KendaraanRequired:   data_transaksi.KendaraanPengiriman,
 			JenisPengiriman:     data_transaksi.JenisPengiriman,
 			JarakTempuh:         data_transaksi.JarakTempuh,
-			KurirPaid:           int32(data_transaksi.OngkosKirim),
+			KurirPaid:           int32(data_transaksi.KurirPaid),
 			Status:              "Packaging",
 		}).Error; err != nil {
 			return err
