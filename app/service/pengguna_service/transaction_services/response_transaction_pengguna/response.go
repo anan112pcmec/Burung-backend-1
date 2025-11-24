@@ -49,14 +49,15 @@ type ResponseDataValidateTransaksi struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type DataTransaksi struct {
-	HargaBarang    int64   `json:"harga_barang"`    // total harga barang (HargaKategori * Dipesan)
-	HargaBerat     int64   `json:"harga_berat"`     // biaya berdasarkan berat barang (TarifKurirPerKg * berat)
-	HargaJarak     int64   `json:"harga_jarak"`     // biaya berdasarkan jarak pengiriman
-	HargaEkspedisi int64   `json:"harga_ekspedisi"` // biaya tambahan ekspedisi antar kota/provinsi
-	LayananKurir   string  `json:"layanan_kurir"`   // layanan kurir yang dipilih (reguler, fast, instant)
-	Jarak          float64 `json:"jarak_km"`        // jarak pengiriman
-	IsEkspedisi    bool    `json:"is_ekspedisi"`    // true jika pengiriman antar provinsi/kota
-	TotalTagihan   int64   `json:"total_tagihan"`   // total semua biaya
+	IdAlamatEkspedisi int64   `json:"id_alamat_ekspedisi"`
+	HargaBarang       int64   `json:"harga_barang"`    // total harga barang (HargaKategori * Dipesan)
+	HargaBerat        int64   `json:"harga_berat"`     // biaya berdasarkan berat barang (TarifKurirPerKg * berat)
+	HargaJarak        int64   `json:"harga_jarak"`     // biaya berdasarkan jarak pengiriman
+	HargaEkspedisi    int64   `json:"harga_ekspedisi"` // biaya tambahan ekspedisi antar kota/provinsi
+	LayananKurir      string  `json:"layanan_kurir"`   // layanan kurir yang dipilih (reguler, fast, instant)
+	Jarak             float64 `json:"jarak_km"`        // jarak pengiriman
+	IsEkspedisi       bool    `json:"is_ekspedisi"`    // true jika pengiriman antar provinsi/kota
+	TotalTagihan      int64   `json:"total_tagihan"`   // total semua biaya
 }
 
 type SnapTransaksi struct {

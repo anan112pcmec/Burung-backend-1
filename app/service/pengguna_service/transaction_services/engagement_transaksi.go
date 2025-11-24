@@ -589,6 +589,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 			TitikTujuanLong float64
 		}
 
+		var IdAlamatEkspedisi int64 = 0
 		if isEkspedisi {
 			var id_alamat_eks int64 = 0
 			if err := db.WithContext(ctx).Model(&models.AlamatEkspedisi{}).Select("id").Where("kota = ?", data.AlamatInformation.Kota).Order("id DESC").Limit(1).Scan(&id_alamat_eks).Error; err != nil {
@@ -633,6 +634,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 			key.TitikTujuanLong = data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks].Longitude
 			key.TitikTujuanLat = data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks].Latitude
 
+			IdAlamatEkspedisi = data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks].ID
 		} else {
 			key.TitikMulaiLong = AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Longitude
 			key.TitikMulaiLat = AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Latitude
@@ -761,13 +763,14 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 
 		dataTransaksiIterasi := response_transaction_pengguna.DataTransaksi{
-			HargaBarang:    int64(totalHargapembelian),
-			HargaBerat:     totalHargaBerat,
-			HargaJarak:     hargaJarak,
-			HargaEkspedisi: hargaEkspedisi,
-			IsEkspedisi:    isEkspedisi,
-			Jarak:          Jarak,
-			TotalTagihan:   int64(totalHargapembelian) + totalHargaBerat + hargaJarak + hargaEkspedisi,
+			IdAlamatEkspedisi: IdAlamatEkspedisi,
+			HargaBarang:       int64(totalHargapembelian),
+			HargaBerat:        totalHargaBerat,
+			HargaJarak:        hargaJarak,
+			HargaEkspedisi:    hargaEkspedisi,
+			IsEkspedisi:       isEkspedisi,
+			Jarak:             Jarak,
+			TotalTagihan:      int64(totalHargapembelian) + totalHargaBerat + hargaJarak + hargaEkspedisi,
 		}
 		dataTransaksi = append(dataTransaksi, dataTransaksiIterasi)
 	}
@@ -1159,22 +1162,26 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 				return err
 			}
 			transaksi_save = append(transaksi_save, models.Transaksi{
-				IdPengguna:       data.DataHold[i].IDUser,
-				IdSeller:         data.DataHold[i].IDSeller,
-				IdBarangInduk:    int64(data.DataHold[i].IdBarangInduk),
-				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
-				IdAlamatPengguna: data.IdAlamatUser,
-				IdPembayaran:     pembayaran.ID,
-				JenisPengiriman:  data.JenisLayananKurir,
-				JarakTempuh:      strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				SellerPaid:       data.DataTransaksi[i].HargaBarang,
-				KurirPaid:        data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaEkspedisi + data.DataTransaksi[i].HargaJarak,
-				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
-				KodeOrderSistem:  pembayaran.KodeOrderSistem,
-				Status:           transaksi_enums.Dibayar,
-				DibatalkanOleh:   nil,
-				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
-				Total:            data.DataTransaksi[i].TotalTagihan,
+				IdPengguna:        data.DataHold[i].IDUser,
+				IdSeller:          data.DataHold[i].IDSeller,
+				IdBarangInduk:     int64(data.DataHold[i].IdBarangInduk),
+				IdAlamatGudang:    data.DataHold[i].IdAlamatGudang,
+				IdAlamatEkspedisi: data.DataTransaksi[i].IdAlamatEkspedisi,
+				IdKategoriBarang:  data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna:  data.IdAlamatUser,
+				IdPembayaran:      pembayaran.ID,
+				JenisPengiriman:   data.JenisLayananKurir,
+				JarakTempuh:       strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
+				BeratTotalKg:      kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
+				KodeOrderSistem:   pembayaran.KodeOrderSistem,
+				Status:            transaksi_enums.Dibayar,
+				DibatalkanOleh:    nil,
+				KuantitasBarang:   int32(data.DataHold[i].Dipesan),
+				IsEkspedisi:       data.DataTransaksi[i].IsEkspedisi,
+				SellerPaid:        data.DataTransaksi[i].HargaBarang,
+				KurirPaid:         data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
+				EkspedisiPaid:     data.DataTransaksi[i].HargaEkspedisi,
+				Total:             data.DataTransaksi[i].TotalTagihan,
 			})
 		}
 
