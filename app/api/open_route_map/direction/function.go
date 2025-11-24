@@ -20,11 +20,11 @@ func Getenvi(key, fallback string) string {
 
 var ApiKey = Getenvi("eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMxNTVhOTVhZmQ0NDQ4M2M5OTg4ODEyYmZkMjY4ODUyIiwiaCI6Im11cm11cjY0In0=", "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImMxNTVhOTVhZmQ0NDQ4M2M5OTg4ODEyYmZkMjY4ODUyIiwiaCI6Im11cm11cjY0In0=")
 
-func HitungJarakHargaDirection(TitikMulai [2]float64, TitikSelesai [2]float64) (string, int64, bool) {
+func HitungJarakHargaDirection(TitikMulai [2]float64, TitikSelesai [2]float64) (float64, int64, bool) {
 	var (
-		Jarak  string = ""
-		Harga  int64  = 0
-		Status bool   = false
+		Jarak  float64 = 0
+		Harga  int64   = 0
+		Status bool    = false
 	)
 
 	TitikMulai[0] = math.Round(TitikMulai[0]*1e4) / 1e4
@@ -104,7 +104,7 @@ func HitungJarakHargaDirection(TitikMulai [2]float64, TitikSelesai [2]float64) (
 		jarakKm := distanceMeter / 1000
 		durasiMenit := durationSecond / 60
 
-		Jarak = fmt.Sprintf("%.2f km", jarakKm)
+		Jarak = jarakKm
 		Harga = int64(jarakKm * 1000) // Rp 1000/km
 		Status = true
 

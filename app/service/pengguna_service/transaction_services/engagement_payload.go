@@ -62,11 +62,11 @@ type PayloadSnapTransaksiRequest struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadLockTransaksiVa struct {
-	DataHold          []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
-	PaymentResult     any                                          `json:"payment_result"`
-	DataJarak         []response_transaction_pengguna.DataJarak    `json:"data_jarak"`
-	IdAlamatUser      int64                                        `json:"alamat_data_hold"`
-	JenisLayananKurir string                                       `json:"jenis_layanan_kurir_keranjang"`
+	DataHold          []response_transaction_pengguna.CheckoutData  `json:"checkout_data_hold"`
+	PaymentResult     any                                           `json:"payment_result"`
+	DataTransaksi     []response_transaction_pengguna.DataTransaksi `json:"data_jarak"`
+	IdAlamatUser      int64                                         `json:"alamat_data_hold"`
+	JenisLayananKurir string                                        `json:"jenis_layanan_kurir_keranjang"`
 }
 
 type PayloadPaidFailedTransaksiVa struct {
@@ -81,11 +81,11 @@ type PayloadPaidFailedTransaksiVa struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadLockTransaksiWallet struct {
-	DataHold          []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
-	PaymentResult     payment_wallet.WalletResponse                `json:"payment_result"`
-	DataJarak         []response_transaction_pengguna.DataJarak    `json:"data_jarak"`
-	IdAlamatUser      int64                                        `json:"alamat_data_hold"`
-	JenisLayananKurir string                                       `json:"jenis_layanan_kurir_keranjang"`
+	DataHold          []response_transaction_pengguna.CheckoutData  `json:"checkout_data_hold"`
+	PaymentResult     payment_wallet.WalletResponse                 `json:"payment_result"`
+	DataTransaksi     []response_transaction_pengguna.DataTransaksi `json:"data_jarak"`
+	IdAlamatUser      int64                                         `json:"alamat_data_hold"`
+	JenisLayananKurir string                                        `json:"jenis_layanan_kurir_keranjang"`
 }
 
 type PayloadPaidFailedTransaksiWallet struct {
@@ -99,19 +99,19 @@ type PayloadPaidFailedTransaksiWallet struct {
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 type PayloadLockTransaksiGerai struct {
-	DataHold          []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
-	PaymentResult     payment_gerai.GeraiResponse                  `json:"payment_result"`
-	DataJarak         []response_transaction_pengguna.DataJarak    `json:"data_jarak"`
-	IdAlamatUser      int64                                        `json:"alamat_data_hold"`
-	JenisLayananKurir string                                       `json:"jenis_layanan_kurir_keranjang"`
+	DataHold          []response_transaction_pengguna.CheckoutData  `json:"checkout_data_hold"`
+	PaymentResult     payment_gerai.GeraiResponse                   `json:"payment_result"`
+	DataTransaksi     []response_transaction_pengguna.DataTransaksi `json:"data_jarak"`
+	IdAlamatUser      int64                                         `json:"alamat_data_hold"`
+	JenisLayananKurir string                                        `json:"jenis_layanan_kurir_keranjang"`
 }
 
 type PayloadPaidFailedTransaksiGerai struct {
-	DataHold          []response_transaction_pengguna.CheckoutData `json:"checkout_data_hold"`
-	PaymentResult     payment_gerai.GeraiResponse                  `json:"payment_result"`
-	DataJarak         []response_transaction_pengguna.DataJarak    `json:"data_jarak"`
-	IdAlamatUser      int64                                        `json:"alamat_data_hold"`
-	JenisLayananKurir string                                       `json:"jenis_layanan_kurir_keranjang"`
+	DataHold          []response_transaction_pengguna.CheckoutData  `json:"checkout_data_hold"`
+	PaymentResult     payment_gerai.GeraiResponse                   `json:"payment_result"`
+	DataTransaksi     []response_transaction_pengguna.DataTransaksi `json:"data_jarak"`
+	IdAlamatUser      int64                                         `json:"alamat_data_hold"`
+	JenisLayananKurir string                                        `json:"jenis_layanan_kurir_keranjang"`
 }
 
 type PayloadMemberikanUlasan struct {

@@ -10,6 +10,7 @@ type JenisPengiriman struct {
 	Rules        string `json:"rules"`
 	MaxJarakKm   int64  `json:"max_jarak_km"`
 	EstimasiHari int8   `json:"estimasi_hari"`
+	Harga        int64  `json:"harga"`
 }
 
 var OperationalPengirimanData struct {
