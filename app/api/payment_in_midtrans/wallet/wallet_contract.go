@@ -19,7 +19,6 @@ import (
 type Response interface {
 	Pembayaran() (models.Pembayaran, bool)
 	Pending(rds *redis.Client, id_user int64) bool
-	StandardResponse() (models.PembayaranFailed, bool)
 }
 
 // //////////////////////////////////////////////////////////////////////////////////////////
@@ -60,9 +59,9 @@ func (b *WalletResponse) Pembayaran() (models.Pembayaran, bool) {
 	m = models.Pembayaran{
 		KodeTransaksiPG: b.TransactionId,
 		KodeOrderSistem: b.OrderId,
-		Provider:        "wallet",
+		Provider:        b.PaymentType,
 		Total:           grossInt,
-		PaymentType:     b.PaymentType,
+		PaymentType:     "wallet",
 		PaidAt:          b.TransactionTime,
 	}
 
@@ -101,22 +100,4 @@ func (b *WalletResponse) Pending(rds *redis.Client, id_user int64) bool {
 	}
 
 	return status
-}
-
-func (b *WalletResponse) StandardResponse() (models.PembayaranFailed, bool) {
-	var status bool = true
-	pf := models.PembayaranFailed{
-		FinishRedirectUrl: b.FinishRedirect,
-		FraudStatus:       b.FraudStatus,
-		GrossAmount:       b.GrossAmount,
-		OrderId:           b.OrderId,
-		PaymentType:       b.PaymentType,
-		StatusCode:        b.Status,
-		StatusMessage:     b.Statusmessages,
-		TransactionId:     b.TransactionId,
-		TransactionStatus: b.TransactionStatus,
-		TransactionTime:   b.TransactionTime,
-	}
-
-	return pf, status
 }

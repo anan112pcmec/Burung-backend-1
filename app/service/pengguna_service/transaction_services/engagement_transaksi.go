@@ -517,7 +517,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 	}
 
 	var biaya_platform = data_cache.OperationalPengirimanData.CommittedOperationalData.DataTarifPengiriman.TarifSistem
-	var AlamatGudang map[int64]models.AlamatGudang = make(map[int64]models.AlamatGudang)
+	var AlamatGudang map[int64]models.AlamatGudang = make(map[int64]models.AlamatGudang, lenData)
 	var dataTransaksi []response_transaction_pengguna.DataTransaksi = make([]response_transaction_pengguna.DataTransaksi, 0, lenData)
 
 	fmt.Println("Berhasil Mengambil biaya platform:", biaya_platform)
@@ -559,7 +559,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 			var alamat models.AlamatGudang
 			if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
 				ID: data.DataCheckout.DataResponse[i].IdAlamatGudang,
-			}).Limit(1).First(&alamat).Error; err != nil {
+			}).Limit(1).Take(&alamat).Error; err != nil {
 				_ = BatalCheckoutUser(data.DataCheckout, db)
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return &response.ResponseForm{
@@ -592,7 +592,9 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		var IdAlamatEkspedisi int64 = 0
 		if isEkspedisi {
 			var id_alamat_eks int64 = 0
-			if err := db.WithContext(ctx).Model(&models.AlamatEkspedisi{}).Select("id").Where("kota = ?", data.AlamatInformation.Kota).Order("id DESC").Limit(1).Scan(&id_alamat_eks).Error; err != nil {
+			if err := db.WithContext(ctx).Model(&models.AlamatEkspedisi{}).Select("id").Where(&models.AlamatEkspedisi{
+				Kota: AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota,
+			}).Order("id DESC").Limit(1).Scan(&id_alamat_eks).Error; err != nil {
 				_ = BatalCheckoutUser(data.DataCheckout, db)
 				return &response.ResponseForm{
 					Status:   http.StatusInternalServerError,
@@ -611,7 +613,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 			}
 
 			// Defensive: Validate ekspedisi data exists
-			if _, cityExists := data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota]; !cityExists {
+			if _, cityExists := data_cache.DataAlamatEkspedisi[AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota]; !cityExists {
 				_ = BatalCheckoutUser(data.DataCheckout, db)
 				return &response.ResponseForm{
 					Status:   http.StatusNotFound,
@@ -620,7 +622,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 				}
 			}
 
-			if _, addrExists := data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks]; !addrExists {
+			if _, addrExists := data_cache.DataAlamatEkspedisi[AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota][id_alamat_eks]; !addrExists {
 				_ = BatalCheckoutUser(data.DataCheckout, db)
 				return &response.ResponseForm{
 					Status:   http.StatusNotFound,
@@ -631,10 +633,10 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 
 			key.TitikMulaiLong = AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Longitude
 			key.TitikMulaiLat = AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Latitude
-			key.TitikTujuanLong = data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks].Longitude
-			key.TitikTujuanLat = data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks].Latitude
+			key.TitikTujuanLong = data_cache.DataAlamatEkspedisi[AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota][id_alamat_eks].Longitude
+			key.TitikTujuanLat = data_cache.DataAlamatEkspedisi[AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota][id_alamat_eks].Latitude
 
-			IdAlamatEkspedisi = data_cache.DataAlamatEkspedisi[data.AlamatInformation.Kota][id_alamat_eks].ID
+			IdAlamatEkspedisi = data_cache.DataAlamatEkspedisi[AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota][id_alamat_eks].ID
 		} else {
 			key.TitikMulaiLong = AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Longitude
 			key.TitikMulaiLat = AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Latitude
@@ -784,7 +786,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		ID:           "fee-courier",
 		Price:        harga_kirim,
 		Qty:          1,
-		Name:         "Biaya Kurir",
+		Name:         fmt.Sprintf("Biaya Kurir - %s", data_cache.DataTarifJenisPengiriman[data.LayananPengirimanKurir].Nama),
 		MerchantName: "Courier",
 		Category:     "fee",
 	})
@@ -953,91 +955,6 @@ func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.Snap
 			Message: "Transaksi berhasil dibatalkan.",
 		},
 	}
-}
-
-// ////////////////////////////////////////////////////////////////////////////////////
-// Fungsi Prosedur Simpan Transaksi
-// Befungsi Untuk Menyimpan Data Transaksi yang nantinya fungsi ini akan di paggil di fungsi LockTransaksi
-// ////////////////////////////////////////////////////////////////////////////////////
-
-func SimpanTransaksi(pembayaran *models.Pembayaran, DataHold *[]response_transaction_pengguna.CheckoutData, IdAlamatUser int64, tx *gorm.DB) error {
-	fmt.Println("=== [TRACE] Mulai SimpanTransaksi ===")
-	fmt.Printf("Pembayaran Info: %+v\n", pembayaran)
-	fmt.Printf("Jumlah DataHold: %d\n", len(*DataHold))
-	fmt.Printf("IdAlamatUser: %d\n", IdAlamatUser)
-
-	for i, keranjang := range *DataHold {
-		fmt.Printf("\n[TRACE] Memproses keranjang ke-%d\n", i+1)
-		fmt.Printf("Data Keranjang: %+v\n", keranjang)
-
-		var pembayaranObj models.Pembayaran
-		fmt.Println("[TRACE] Mengecek kredensial pembayaran di database...")
-
-		if err := tx.Where(&models.Pembayaran{
-			KodeTransaksiPG: pembayaran.KodeTransaksiPG,
-			KodeOrderSistem: pembayaran.KodeOrderSistem,
-			Provider:        pembayaran.Provider,
-			Total:           pembayaran.Total,
-			PaymentType:     pembayaran.PaymentType,
-			PaidAt:          pembayaran.PaidAt,
-		}).First(&pembayaranObj).Error; err != nil {
-			fmt.Printf("[ERROR] Gagal menemukan pembayaran: %v\n", err)
-			return fmt.Errorf("gagal mencari pembayaran di database: %w", err)
-		}
-
-		fmt.Printf("[TRACE] Pembayaran ditemukan: ID=%d, KodeOrder=%s\n", pembayaranObj.ID, pembayaranObj.KodeOrderSistem)
-
-		if pembayaranObj.ID == 0 {
-			fmt.Println("[ERROR] Kredensial pembayaran tidak valid (ID=0)")
-			return fmt.Errorf("kredensial pembayaran tidak valid")
-		}
-
-		transaksi := models.Transaksi{
-			IdPengguna:       keranjang.IDUser,
-			IdSeller:         keranjang.IDSeller,
-			IdBarangInduk:    int64(keranjang.IdBarangInduk),
-			IdKategoriBarang: keranjang.IdKategoriBarang,
-			IdAlamatPengguna: IdAlamatUser,
-			IdAlamatGudang:   keranjang.IdAlamatGudang,
-			IdPembayaran:     pembayaranObj.ID,
-			KodeOrderSistem:  pembayaranObj.KodeOrderSistem,
-			Status:           transaksi_enums.Dibayar,
-			KuantitasBarang:  int32(keranjang.Dipesan),
-			Total:            int64(keranjang.HargaKategori * keranjang.Dipesan),
-		}
-
-		fmt.Printf("[TRACE] Membuat transaksi baru: %+v\n", transaksi)
-
-		if err := tx.Create(&transaksi).Error; err != nil {
-			fmt.Printf("[ERROR] Gagal membuat transaksi: %v\n", err)
-			return fmt.Errorf("gagal membuat transaksi: %w", err)
-		}
-		fmt.Printf("[TRACE] Transaksi berhasil dibuat dengan ID=%d\n", transaksi.ID)
-
-		fmt.Println("[TRACE] Mengupdate varian barang terkait menjadi status 'Diproses'...")
-
-		if err := tx.Model(&models.VarianBarang{}).
-			Where(&models.VarianBarang{
-				IdBarangInduk: keranjang.IdBarangInduk,
-				IdKategori:    keranjang.IdKategoriBarang,
-				IdTransaksi:   0,
-				Status:        barang_enums.Dipesan,
-				HoldBy:        keranjang.IDUser,
-				HolderEntity:  entity_enums.Pengguna,
-			}).
-			Updates(&models.VarianBarang{
-				Status:      barang_enums.Diproses,
-				IdTransaksi: transaksi.ID,
-			}).Error; err != nil {
-			fmt.Printf("[ERROR] Gagal update varian barang: %v\n", err)
-			return fmt.Errorf("gagal update varian barang: %w", err)
-		}
-
-		fmt.Println("[TRACE] Varian barang berhasil diperbarui menjadi 'Diproses'")
-	}
-
-	fmt.Println("\n=== [TRACE] Selesai SimpanTransaksi tanpa error ===")
-	return nil
 }
 
 // ////////////////////////////////////////////////////////////////////////////////////
@@ -1309,7 +1226,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		}
 	}
 
-	standard_response, ok := resp.StandardResponse()
+	standard_response, ok := resp.Pembayaran()
 	if !ok {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -1328,32 +1245,22 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
 		}
 
-		var pf int64 = 0
-		if err := tx.Model(&models.PembayaranFailed{}).
-			Select("id").Where(&models.PembayaranFailed{
-			IdPengguna:    data.DataHold[0].IDUser,
-			OrderId:       standard_response.OrderId,
-			TransactionId: standard_response.TransactionId,
-		}).Limit(1).Take(&pf).Error; err != nil {
-			return fmt.Errorf("gagal mengambil id PaidFailed: %w", err)
-		}
-
-		if pf == 0 {
+		if standard_response.ID == 0 {
 			return fmt.Errorf("id PaidFailed tidak ditemukan")
 		}
 
-		for i, d := range data.DataHold {
+		for i := range data.DataHold {
 			tf := models.TransaksiFailed{
-				IdPembayaranFailed: pf,
-				IdPengguna:         d.IDUser,
-				IdSeller:           d.IDSeller,
-				IdBarangInduk:      d.IdBarangInduk,
-				IdKategoriBarang:   d.IdKategoriBarang,
-				IdAlamat:           data.IdAlamatUser,
-				Catatan:            d.Message,
-				Kuantitas:          int16(d.Dipesan),
-				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
-				JenisPengiriman:    data.JenisLayananKurir,
+				IdPembayaran:     standard_response.ID,
+				IdPengguna:       data.DataHold[i].IDUser,
+				IdSeller:         data.DataHold[i].IDSeller,
+				IdBarangInduk:    data.DataHold[i].IdBarangInduk,
+				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna: data.IdAlamatUser,
+				Catatan:          data.DataHold[i].Message,
+				KuantitasBarang:  data.DataHold[i].Dipesan,
+				Total:            int64(data.DataHold[i].Dipesan) * int64(data.DataHold[i].HargaKategori),
+				JenisPengiriman:  data.JenisLayananKurir,
 			}
 
 			if err := tx.Create(&tf).Error; err != nil {
@@ -1430,22 +1337,26 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 				return err
 			}
 			transaksi_save = append(transaksi_save, models.Transaksi{
-				IdPengguna:       data.DataHold[i].IDUser,
-				IdSeller:         data.DataHold[i].IDSeller,
-				IdBarangInduk:    int64(data.DataHold[i].IdBarangInduk),
-				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
-				IdAlamatPengguna: data.IdAlamatUser,
-				IdPembayaran:     pembayaran.ID,
-				JenisPengiriman:  data.JenisLayananKurir,
-				JarakTempuh:      strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				SellerPaid:       data.DataTransaksi[i].HargaBarang,
-				KurirPaid:        data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaEkspedisi + data.DataTransaksi[i].HargaJarak,
-				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
-				KodeOrderSistem:  pembayaran.KodeOrderSistem,
-				Status:           transaksi_enums.Dibayar,
-				DibatalkanOleh:   nil,
-				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
-				Total:            data.DataTransaksi[i].TotalTagihan,
+				IdPengguna:        data.DataHold[i].IDUser,
+				IdSeller:          data.DataHold[i].IDSeller,
+				IdBarangInduk:     int64(data.DataHold[i].IdBarangInduk),
+				IdAlamatGudang:    data.DataHold[i].IdAlamatGudang,
+				IdAlamatEkspedisi: data.DataTransaksi[i].IdAlamatEkspedisi,
+				IdKategoriBarang:  data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna:  data.IdAlamatUser,
+				IdPembayaran:      pembayaran.ID,
+				JenisPengiriman:   data.JenisLayananKurir,
+				JarakTempuh:       strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
+				BeratTotalKg:      kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
+				KodeOrderSistem:   pembayaran.KodeOrderSistem,
+				Status:            transaksi_enums.Dibayar,
+				DibatalkanOleh:    nil,
+				KuantitasBarang:   int32(data.DataHold[i].Dipesan),
+				IsEkspedisi:       data.DataTransaksi[i].IsEkspedisi,
+				SellerPaid:        data.DataTransaksi[i].HargaBarang,
+				KurirPaid:         data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
+				EkspedisiPaid:     data.DataTransaksi[i].HargaEkspedisi,
+				Total:             data.DataTransaksi[i].TotalTagihan,
 			})
 		}
 
@@ -1491,9 +1402,10 @@ func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.D
 	services := "PaidFailedTransaksiWallet"
 
 	var resp payment_wallet.Response = &data.PaymentResult
-	standard_response, _ := resp.StandardResponse()
+	standard_response, _ := resp.Pembayaran()
 
 	standard_response.IdPengguna = data.DataHold[0].IDUser
+	var TransaksiGagalBatch []models.TransaksiFailed = make([]models.TransaksiFailed, 0, len(data.DataHold))
 	// --- Jalankan transaksi database ---
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// Simpan ke PaidFailed
@@ -1501,38 +1413,27 @@ func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.D
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
 		}
 
-		// Ambil ID PaidFailed
-		var pf int64 = 0
-		if err := tx.Model(&models.PembayaranFailed{}).
-			Select("id").Where(&models.PembayaranFailed{
-			IdPengguna:    data.DataHold[0].IDUser,
-			OrderId:       standard_response.OrderId,
-			TransactionId: standard_response.TransactionId,
-		}).Limit(1).Take(&pf).Error; err != nil {
-			return fmt.Errorf("gagal mengambil id PaidFailed: %w", err)
-		}
-
-		if pf == 0 {
+		if standard_response.ID == 0 {
 			return fmt.Errorf("id PaidFailed tidak ditemukan")
 		}
 
 		// Simpan TransaksiFailed per item
-		for i, d := range data.DataHold {
-			tf := models.TransaksiFailed{
-				IdPembayaranFailed: pf,
-				IdPengguna:         d.IDUser,
-				IdSeller:           d.IDSeller,
-				IdBarangInduk:      d.IdBarangInduk,
-				IdKategoriBarang:   d.IdKategoriBarang,
-				IdAlamat:           data.IdAlamatUser,
-				Catatan:            d.Message,
-				Kuantitas:          int16(d.Dipesan),
-				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
-			}
+		for i := range data.DataHold {
+			TransaksiGagalBatch = append(TransaksiGagalBatch, models.TransaksiFailed{
+				IdPembayaran:     standard_response.ID,
+				IdPengguna:       data.DataHold[i].IDUser,
+				IdSeller:         data.DataHold[i].IDSeller,
+				IdBarangInduk:    data.DataHold[i].IdBarangInduk,
+				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna: data.IdAlamatUser,
+				Catatan:          data.DataHold[i].Message,
+				KuantitasBarang:  data.DataHold[i].Dipesan,
+				Total:            int64(data.DataHold[i].Dipesan) * int64(data.DataHold[i].HargaKategori),
+			})
+		}
 
-			if err := tx.Create(&tf).Error; err != nil {
-				return fmt.Errorf("gagal menyimpan transaksi ke-%d: %w", i+1, err)
-			}
+		if err := tx.CreateInBatches(&TransaksiGagalBatch, len(TransaksiGagalBatch)).Error; err != nil {
+			return fmt.Errorf("gagal menyimpan transaksi")
 		}
 
 		return nil
@@ -1612,22 +1513,26 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 				return err
 			}
 			transaksi_save = append(transaksi_save, models.Transaksi{
-				IdPengguna:       data.DataHold[i].IDUser,
-				IdSeller:         data.DataHold[i].IDSeller,
-				IdBarangInduk:    int64(data.DataHold[i].IdBarangInduk),
-				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
-				IdAlamatPengguna: data.IdAlamatUser,
-				IdPembayaran:     pembayaran.ID,
-				JenisPengiriman:  data.JenisLayananKurir,
-				JarakTempuh:      strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				SellerPaid:       data.DataTransaksi[i].HargaBarang,
-				KurirPaid:        data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaEkspedisi + data.DataTransaksi[i].HargaJarak,
-				BeratTotalKg:     kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
-				KodeOrderSistem:  pembayaran.KodeOrderSistem,
-				Status:           transaksi_enums.Dibayar,
-				DibatalkanOleh:   nil,
-				KuantitasBarang:  int32(data.DataHold[i].Dipesan),
-				Total:            data.DataTransaksi[i].TotalTagihan,
+				IdPengguna:        data.DataHold[i].IDUser,
+				IdSeller:          data.DataHold[i].IDSeller,
+				IdBarangInduk:     int64(data.DataHold[i].IdBarangInduk),
+				IdAlamatGudang:    data.DataHold[i].IdAlamatGudang,
+				IdAlamatEkspedisi: data.DataTransaksi[i].IdAlamatEkspedisi,
+				IdKategoriBarang:  data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna:  data.IdAlamatUser,
+				IdPembayaran:      pembayaran.ID,
+				JenisPengiriman:   data.JenisLayananKurir,
+				JarakTempuh:       strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
+				BeratTotalKg:      kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
+				KodeOrderSistem:   pembayaran.KodeOrderSistem,
+				Status:            transaksi_enums.Dibayar,
+				DibatalkanOleh:    nil,
+				KuantitasBarang:   int32(data.DataHold[i].Dipesan),
+				IsEkspedisi:       data.DataTransaksi[i].IsEkspedisi,
+				SellerPaid:        data.DataTransaksi[i].HargaBarang,
+				KurirPaid:         data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
+				EkspedisiPaid:     data.DataTransaksi[i].HargaEkspedisi,
+				Total:             data.DataTransaksi[i].TotalTagihan,
 			})
 		}
 
@@ -1673,7 +1578,7 @@ func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB)
 	services := "PaidFailedTransaksiGerai"
 
 	var resp payment_gerai.Response = &data.PaymentResult
-	standard_response, _ := resp.StandardResponse()
+	standard_response, _ := resp.Pembayaran()
 
 	standard_response.IdPengguna = data.DataHold[0].IDUser
 
@@ -1684,33 +1589,22 @@ func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB)
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
 		}
 
-		// Ambil ID PaidFailed
-		var pf int64 = 0
-		if err := tx.Model(&models.PembayaranFailed{}).
-			Select("id").Where(&models.PembayaranFailed{
-			IdPengguna:    data.DataHold[0].IDUser,
-			OrderId:       standard_response.OrderId,
-			TransactionId: standard_response.TransactionId,
-		}).Limit(1).Take(&pf).Error; err != nil {
-			return fmt.Errorf("gagal mengambil id PaidFailed: %w", err)
-		}
-
-		if pf == 0 {
+		if standard_response.ID == 0 {
 			return fmt.Errorf("id PaidFailed tidak ditemukan")
 		}
 
 		// Simpan TransaksiFailed per item
-		for i, d := range data.DataHold {
+		for i := range data.DataHold {
 			tf := models.TransaksiFailed{
-				IdPembayaranFailed: pf,
-				IdPengguna:         d.IDUser,
-				IdSeller:           d.IDSeller,
-				IdBarangInduk:      d.IdBarangInduk,
-				IdKategoriBarang:   d.IdKategoriBarang,
-				IdAlamat:           data.IdAlamatUser,
-				Catatan:            d.Message,
-				Kuantitas:          int16(d.Dipesan),
-				Total:              int64(d.Dipesan) * int64(d.HargaKategori),
+				IdPembayaran:     standard_response.ID,
+				IdPengguna:       data.DataHold[i].IDUser,
+				IdSeller:         data.DataHold[i].IDSeller,
+				IdBarangInduk:    data.DataHold[i].IdBarangInduk,
+				IdKategoriBarang: data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna: data.IdAlamatUser,
+				Catatan:          data.DataHold[i].Message,
+				KuantitasBarang:  data.DataHold[i].Dipesan,
+				Total:            int64(data.DataHold[i].Dipesan) * int64(data.DataHold[i].HargaKategori),
 			}
 
 			if err := tx.Create(&tf).Error; err != nil {

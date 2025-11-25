@@ -97,47 +97,12 @@ func UpTransaksi(db *gorm.DB) {
 		log.Println("Berhasil Membuat Table Pembayaran ✅")
 	}
 
-	layanankurir := [4]models.LayananPengirimanKurir{
-		{
-			NamaLayanan:  "Motor",
-			HargaLayanan: 7000,
-		},
-		{
-			NamaLayanan:  "Mobil",
-			HargaLayanan: 11000,
-		},
-		{
-			NamaLayanan:  "Pickup",
-			HargaLayanan: 15000,
-		},
-		{
-			NamaLayanan:  "Truk",
-			HargaLayanan: 19000,
-		},
-	}
-
-	if db.Migrator().HasTable(&models.LayananPengirimanKurir{}) {
-		log.Println("Table Pembayaran sudah ada, skipping migration ⚠️")
-	} else if err := db.AutoMigrate(&models.LayananPengirimanKurir{}); err != nil {
-		log.Fatalf("Gagal Membuat Table Pembayaran: %v", err)
-	} else {
-		log.Println("Berhasil Membuat Table Pembayaran ✅")
-		_ = db.Create(layanankurir).Error
-	}
 	if db.Migrator().HasTable(&models.Transaksi{}) {
 		log.Println("Table Transaksi sudah ada, skipping migration ⚠️")
 	} else if err := db.AutoMigrate(&models.Transaksi{}); err != nil {
 		log.Fatalf("Gagal Migrasi Table Transaksi: %v", err)
 	} else {
 		log.Println("Berhasil membuat Table Transaksi ✅")
-	}
-
-	if db.Migrator().HasTable(&models.PembayaranFailed{}) {
-		log.Println("Table Paid Failed sudah ada, skipping migration ⚠️")
-	} else if err := db.AutoMigrate(&models.PembayaranFailed{}); err != nil {
-		log.Fatalf("Gagal Migrasi Table Paid Failed: %v", err)
-	} else {
-		log.Println("Berhasil membuat Table Paid Failed ✅")
 	}
 
 	if db.Migrator().HasTable(&models.TransaksiFailed{}) {
@@ -164,6 +129,23 @@ func UpTransaksi(db *gorm.DB) {
 		log.Fatalf("Gagal Membuat Table JejakPengiriman: %v", err)
 	} else {
 		log.Println("Berhasil Membuat Table Jejak Pengiriman ✅")
+	}
+
+	if db.Migrator().HasTable(&models.PengirimanEkspedisi{}) {
+		log.Println("Table Pengiriman Ekspedisi sudah ada, skipping migration ⚠️")
+	} else if err := db.AutoMigrate(&models.PengirimanEkspedisi{}); err != nil {
+		log.Fatalf("Gagal Membuat Table Pengiriman Ekspedisi: %v", err)
+	} else {
+		log.Println("Berhasil Membuat Table Pengiriman Ekspedisi ✅")
+	}
+
+	// JejakPengiriman
+	if db.Migrator().HasTable(&models.JejakPengirimanEkspedisi{}) {
+		log.Println("Table JejakPengiriman Ekspedisi sudah ada, skipping migration ⚠️")
+	} else if err := db.AutoMigrate(&models.JejakPengirimanEkspedisi{}); err != nil {
+		log.Fatalf("Gagal Membuat Table JejakPengiriman Ekspedisi: %v", err)
+	} else {
+		log.Println("Berhasil Membuat Table Jejak Pengiriman Ekspedisi ✅")
 	}
 }
 

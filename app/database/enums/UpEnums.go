@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
-
-	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 )
 
 func UpEnumsEntity(db *gorm.DB) error {
@@ -222,6 +220,8 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		// Segala hal tak terduga seperti barang tidak sesuai, masalah di jalan, atau kerusakan barang
 		// akan masuk ke status "Trouble". Namun untuk saat ini, kita berasumsi semua berjalan lancar.
 
+		"status_pengiriman_ekspedisi": {"Picked Up", "Dikirim", "Sampai Agent", "Masuk Gateaway", "Sampai Agent Tujuan", "Dikirim Agent", "Sampai"},
+
 		"status_paid_failed": {"Ditinjau", "Pending", "Batal", "Lanjut"},
 		// "Ditinjau" berarti sistem sedang melakukan pemeriksaan terhadap transaksi gagal.
 		// Kegagalan umumnya disebabkan oleh kesalahan foreign key, sehingga sistem akan melakukan self-healing data.
@@ -248,31 +248,6 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 				return err
 			}
 		}
-	}
-
-	enumOngkir := []models.Ongkir{
-		{13000, "fast"},
-		{17000, "express"},
-		{10000, "reguler"},
-		{31000, "sameday"},
-		{25000, "instant"},
-		{7000, "ekonomi"},
-	}
-
-	dropSQL := `DROP TABLE IF EXISTS ongkir;`
-	if err := tx.Exec(dropSQL).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.AutoMigrate(&models.Ongkir{}); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.Create(&enumOngkir).Error; err != nil {
-		tx.Rollback()
-		return err
 	}
 
 	return tx.Commit().Error
