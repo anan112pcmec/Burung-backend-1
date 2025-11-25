@@ -12,7 +12,6 @@ import (
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	response_engagement_barang_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/barang_services/response_barang"
 )
 
 var fieldBarangViewed = "viewed_barang_induk"
@@ -53,11 +52,9 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *res
 
 	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
 		return &response.ResponseForm{
-			Status:   http.StatusOK,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-				Message: "Gagal Menghapus Alamat, Identitas Mu Tidak Sesuai.",
-			},
+			Message:  "Gagal data Pengguna tidak ditemukan",
 		}
 	}
 
@@ -69,9 +66,7 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *res
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -91,18 +86,14 @@ func LikesBarang(ctx context.Context, data PayloadLikesBarang, db *gorm.DB) *res
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-				Message: "Gagal, server sedang sibuk. Coba lagi lain waktu.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseLikesBarangUser{
-			Message: "Disukai",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -164,18 +155,14 @@ func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseMasukanKomentarBarangUser{
-				Message: "Gagal Memposting Komentar",
-			},
+			Message:  "Gagal memposting komentar",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseMasukanKomentarBarangUser{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -191,19 +178,15 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	if id_komentar == 0 {
 		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal Data Komentar Tidak Ditemukan",
-			},
+			Message:  "Gagal komentar tidak ditemukan",
 		}
 	}
 
@@ -213,18 +196,14 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal Mengedit Komentar",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -240,19 +219,15 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInd
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	if id_komentar == 0 {
 		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKomentarBarangUser{
-				Message: "Gagal Data Komentar Tidak Ditemukan",
-			},
+			Message:  "Gagal komentar tidak ditemukan",
 		}
 	}
 
@@ -262,18 +237,14 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInd
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
-				Message: "Gagal Menghapus Komentar",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseHapusKomentarBarangUser{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -290,18 +261,14 @@ func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar,
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseMasukanChildKomentar{
-				Message: "Gagal Mengunggah Komentar",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseMasukanChildKomentar{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -319,18 +286,14 @@ func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar,
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseMentionChildKomentar{
-				Message: "Gagal Membalas Komentar",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseMentionChildKomentar{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -346,9 +309,7 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -356,9 +317,7 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
-				Message: "Gagal Data Komentar Tidak Valid",
-			},
+			Message:  "Gagal komentar tidak ditemukan",
 		}
 	}
 
@@ -368,18 +327,14 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
-				Message: "Gagal Mengedit Komentar",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseEditChildKomentar{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -395,9 +350,7 @@ func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -405,9 +358,7 @@ func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db 
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
-				Message: "Gagal Data Komentar Tidak Valid",
-			},
+			Message:  "Gagal komentar tidak ditemukan",
 		}
 	}
 	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
@@ -416,17 +367,13 @@ func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
-				Message: "Gagal Menghapus Komentar",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseHapusChildKomentar{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -442,9 +389,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Gagal: Data kamu tidak valid.",
-			},
+			Message:  "Gagal data pengguna tidak ditemukan",
 		}
 	}
 
@@ -455,9 +400,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Terjadi kesalahan saat cek jumlah keranjang.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -465,9 +408,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: fmt.Sprintf("Maksimal barang dalam keranjang adalah %v.", LIMITKERANJANG),
-			},
+			Message:  fmt.Sprintf("Gagal keranjang sudah penuh max sebanyak %v barang", LIMITKERANJANG),
 		}
 	}
 
@@ -481,9 +422,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -491,9 +430,7 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Gagal Kamu sudah memiliki itu di keranjang mu",
-			},
+			Message:  "Gagal kamu sudah memiliki barang itu di keranjang mu",
 		}
 	}
 
@@ -508,18 +445,14 @@ func TambahKeranjangBarang(ctx context.Context, data PayloadTambahDataKeranjangB
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-				Message: "Gagal menambahkan barang ke keranjang.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseTambahKeranjangUser{
-			Message: "Berhasil menambahkan barang ke keranjang.",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -535,9 +468,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Gagal: Data kamu tidak valid.",
-			},
+			Message:  "Gagal data pengguna tidak ditemukan",
 		}
 	}
 
@@ -549,9 +480,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -559,9 +488,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Gagal Data Keranjang Tidak Ditemukan",
-			},
+			Message:  "Gagal data keranjang tidak ditemukan",
 		}
 	}
 
@@ -574,9 +501,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Terjadi kesalahan saat cek stok.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -584,9 +509,7 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Jumlah melebihi stok tersedia.",
-			},
+			Message:  "Gagal barang melebihi stok yang tersedia",
 		}
 	}
 
@@ -599,18 +522,14 @@ func EditKeranjangBarang(ctx context.Context, data PayloadEditDataKeranjangBaran
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-				Message: "Gagal memperbarui jumlah barang.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseEditKeranjangUser{
-			Message: "Jumlah barang berhasil diperbarui.",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -626,9 +545,7 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
-				Message: "Gagal: Data kamu tidak valid.",
-			},
+			Message:  "Gagal data pengguna tidak ditemukan",
 		}
 	}
 
@@ -640,19 +557,15 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
-				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	if id_data_keranjang == 0 {
 		return &response.ResponseForm{
-			Status:   http.StatusInternalServerError,
+			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
-				Message: "Gagal Data Keranjang Tidak Ditemukan",
-			},
+			Message:  "Gagal data keranjang tidak ditemukan",
 		}
 	}
 
@@ -663,18 +576,14 @@ func HapusKeranjangBarang(ctx context.Context, data PayloadHapusDataKeranjangBar
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
-				Message: "Gagal menghapus barang keranjang, coba lagi nanti.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseHapusKeranjangUser{
-			Message: "Barang berhasil dihapus dari keranjang.",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -685,9 +594,7 @@ func BerikanReviewBarang(ctx context.Context, data PayloadBerikanReviewBarang, d
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
-				Message: "Gagal data pengguna tidak valid",
-			},
+			Message:  "Gagal data pengguna tidak valid",
 		}
 	}
 
@@ -701,9 +608,7 @@ func BerikanReviewBarang(ctx context.Context, data PayloadBerikanReviewBarang, d
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -711,9 +616,7 @@ func BerikanReviewBarang(ctx context.Context, data PayloadBerikanReviewBarang, d
 		return &response.ResponseForm{
 			Status:   http.StatusNotAcceptable,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
-				Message: "Gagal kamu tidak memiliki otoritas itu",
-			},
+			Message:  "Gagal data transaksi tidak ditemukan",
 		}
 	}
 
@@ -740,18 +643,14 @@ func BerikanReviewBarang(ctx context.Context, data PayloadBerikanReviewBarang, d
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_engagement_barang_pengguna.ResponseBerikanReviewBarang{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 

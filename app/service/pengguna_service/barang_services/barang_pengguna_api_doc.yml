@@ -1,0 +1,559 @@
+openapi: 3.0.3
+info:
+  title: Barang Services Pengguna API
+  version: 1.0.0
+  description: >
+    Dokumentasi API untuk fitur likes, unlikes, komentar barang induk, dan komentar child.
+    Semua response menggunakan `ResponseForm`.
+
+servers:
+  - url: http://localhost:8080
+    description: Development Server
+
+components:
+  schemas:
+
+    # ====================================================
+    # IDENTITAS PENGGUNA (UPDATE)
+    # ====================================================
+    IdentityPengguna:
+      type: object
+      properties:
+        id_pengguna:
+          type: integer
+          example: 001
+        username_pengguna:
+          type: string
+          example: "username_burung"
+        email_pengguna:
+          type: string
+          example: "burungapp@gmail.com"
+      required:
+        - id_pengguna
+        - username_pengguna
+        - email_pengguna
+
+    # ====================================================
+    # UNIVERSAL RESPONSE WRAPPER
+    # ====================================================
+    ResponseForm:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        service:
+          type: string
+          example: "barang_pengguna"
+        pesan:
+          type: string
+          example: "Berhasil"
+        response_payload:
+          type: object
+          nullable: true
+
+    # ====================================================
+    # PAYLOAD 1 - Likes Barang
+    # ====================================================
+    PayloadLikesBarang:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_barang_induk_likes:
+          type: integer
+          example: 12
+      required:
+        - identitas_pengguna
+        - id_barang_induk_likes
+
+    # ====================================================
+    # PAYLOAD 2 - Unlike Barang
+    # ====================================================
+    PayloadUnlikeBarang:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_barang_disukai:
+          type: integer
+          format: int64
+          example: 88
+        id_barang_induk:
+          type: integer
+          example: 12
+      required:
+        - identitas_pengguna
+        - id_barang_disukai
+        - id_barang_induk
+
+    # ====================================================
+    # PAYLOAD 3 - Tambah Komentar Barang Induk
+    # ====================================================
+    PayloadMasukanKomentarBarangInduk:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_barang_induk_masukan_komentar:
+          type: integer
+          example: 12
+        komentar_masukan_komentar:
+          type: string
+          example: "Barangnya bagus sekali!"
+      required:
+        - identitas_pengguna
+        - id_barang_induk_masukan_komentar
+        - komentar_masukan_komentar
+
+    # ====================================================
+    # PAYLOAD 4 - Edit Komentar Barang Induk
+    # ====================================================
+    PayloadEditKomentarBarangInduk:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_komentar_edit_komentar:
+          type: integer
+          format: int64
+          example: 100
+        komentar_edit_komentar:
+          type: string
+          example: "Update komentar: barang sangat memuaskan."
+      required:
+        - identitas_pengguna
+        - id_komentar_edit_komentar
+        - komentar_edit_komentar
+
+    # ====================================================
+    # PAYLOAD 5 - Hapus Komentar Barang Induk
+    # ====================================================
+    PayloadHapusKomentarBarangInduk:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_komentar_hapus_komentar:
+          type: integer
+          format: int64
+          example: 100
+      required:
+        - identitas_pengguna
+        - id_komentar_hapus_komentar
+
+    # ====================================================
+    # PAYLOAD 6 - Tambah Child Komentar
+    # ====================================================
+    PayloadMasukanChildKomentar:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_komentar_masukan_komentar:
+          type: integer
+          format: int64
+          example: 100
+        komentar_masukan_komentar:
+          type: string
+          example: "Saya setuju dengan komentar ini!"
+      required:
+        - identitas_pengguna
+        - id_komentar_masukan_komentar
+        - komentar_masukan_komentar
+
+    # ====================================================
+    # PAYLOAD 7 - Mention Child Komentar
+    # ====================================================
+    PayloadMentionChildKomentar:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_komentar_child_komentar:
+          type: integer
+          format: int64
+          example: 150
+        username_mention_komentar:
+          type: string
+          example: "username_burung"
+        komentar_mention_komentar:
+          type: string
+          example: "@username_burung Terima kasih atas masukannya!"
+      required:
+        - identitas_pengguna
+        - id_komentar_child_komentar
+        - username_mention_komentar
+        - komentar_mention_komentar
+
+    # ====================================================
+    # PAYLOAD 8 - Edit Child Komentar
+    # ====================================================
+    PayloadEditChildKomentar:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_child_komentar:
+          type: integer
+          format: int64
+          example: 150
+        komentar_child_komentar:
+          type: string
+          example: "Update: Sangat membantu informasinya!"
+      required:
+        - identitas_pengguna
+        - id_child_komentar
+        - komentar_child_komentar
+
+    # ====================================================
+    # PAYLOAD 9 - Hapus Child Komentar
+    # ====================================================
+    PayloadHapusChildKomentar:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_child_komentar:
+          type: integer
+          format: int64
+          example: 150
+      required:
+        - identitas_pengguna
+        - id_child_komentar
+
+    # ====================================================
+    # PAYLOAD 10 - Tambah Keranjang Barang
+    # ====================================================
+    PayloadTambahDataKeranjangBarang:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_seller:
+          type: integer
+          example: 5
+        id_barang_induk:
+          type: integer
+          example: 12
+        id_kategori_barang:
+          type: integer
+          format: int64
+          example: 20
+      required:
+        - identitas_pengguna
+        - id_seller
+        - id_barang_induk
+        - id_kategori_barang
+
+    # ====================================================
+    # PAYLOAD 11 - Edit Keranjang Barang
+    # ====================================================
+    PayloadEditDataKeranjangBarang:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_keranjang:
+          type: integer
+          format: int64
+          example: 200
+        id_barang_induk:
+          type: integer
+          example: 12
+        id_kategori_barang:
+          type: integer
+          format: int64
+          example: 20
+        jumlah_di_keranjang:
+          type: integer
+          format: int64
+          example: 3
+      required:
+        - identitas_pengguna
+        - id_keranjang
+        - id_barang_induk
+        - id_kategori_barang
+        - jumlah_di_keranjang
+
+    # ====================================================
+    # PAYLOAD 12 - Hapus Keranjang Barang
+    # ====================================================
+    PayloadHapusDataKeranjangBarang:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_keranjang:
+          type: integer
+          format: int64
+          example: 200
+      required:
+        - identitas_pengguna
+        - id_keranjang
+
+paths:
+
+  # =====================================================
+  # 1. Likes Barang
+  # =====================================================
+  /user/barang/likes-barang:
+    patch:
+      summary: Memberi like pada barang induk
+      tags:
+        - Barang Pengguna - Likes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadLikesBarang"
+      responses:
+        "200":
+          description: Berhasil like barang
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 2. Unlike Barang
+  # =====================================================
+  /user/barang/unlikes-barang:
+    patch:
+      summary: Menghapus like dari barang induk
+      tags:
+        - Barang Pengguna - Likes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadUnlikeBarang"
+      responses:
+        "200":
+          description: Berhasil unlikes barang
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 3. Tambah Komentar Barang Induk
+  # =====================================================
+  /user/barang/komentar-barang/tambah:
+    post:
+      summary: Menambahkan komentar pada barang induk
+      tags:
+        - Barang Pengguna - Komentar Induk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadMasukanKomentarBarangInduk"
+      responses:
+        "200":
+          description: Berhasil menambahkan komentar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 4. Edit Komentar Barang Induk
+  # =====================================================
+  /user/barang/komentar-barang/edit:
+    patch:
+      summary: Mengedit komentar pada barang induk
+      tags:
+        - Barang Pengguna - Komentar Induk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadEditKomentarBarangInduk"
+      responses:
+        "200":
+          description: Berhasil mengedit komentar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 5. Hapus Komentar Barang Induk
+  # =====================================================
+  /user/barang/komentar-barang/hapus:
+    delete:
+      summary: Menghapus komentar pada barang induk
+      tags:
+        - Barang Pengguna - Komentar Induk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadHapusKomentarBarangInduk"
+      responses:
+        "200":
+          description: Berhasil menghapus komentar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 6. Tambah Child Komentar
+  # =====================================================
+  /user/barang/komentar-child/tambah:
+    post:
+      summary: Menambahkan balasan (child) komentar
+      tags:
+        - Barang Pengguna - Komentar Child
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadMasukanChildKomentar"
+      responses:
+        "200":
+          description: Berhasil menambahkan child komentar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 7. Tambah Child Komentar dengan Mention
+  # =====================================================
+  /user/barang/komentar-child-mention/tambah:
+    post:
+      summary: Menambahkan balasan (child) komentar dengan mention pengguna
+      tags:
+        - Barang Pengguna - Komentar Child
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadMentionChildKomentar"
+      responses:
+        "200":
+          description: Berhasil menambahkan child komentar dengan mention
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 8. Edit Child Komentar
+  # =====================================================
+  /user/barang/komentar-child/edit:
+    patch:
+      summary: Mengedit balasan (child) komentar
+      tags:
+        - Barang Pengguna - Komentar Child
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadEditChildKomentar"
+      responses:
+        "200":
+          description: Berhasil mengedit child komentar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 9. Hapus Child Komentar
+  # =====================================================
+  /user/barang/komentar-child/hapus:
+    delete:
+      summary: Menghapus balasan (child) komentar
+      tags:
+        - Barang Pengguna - Komentar Child
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadHapusChildKomentar"
+      responses:
+        "200":
+          description: Berhasil menghapus child komentar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 10. Tambah Keranjang Barang
+  # =====================================================
+  /user/barang/keranjang-barang/tambah:
+    post:
+      summary: Menambahkan barang ke keranjang
+      tags:
+        - Barang Pengguna - Keranjang
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadTambahDataKeranjangBarang"
+      responses:
+        "200":
+          description: Berhasil menambahkan barang ke keranjang
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 11. Edit Keranjang Barang
+  # =====================================================
+  /user/barang/keranjang-barang/edit:
+    patch:
+      summary: Mengedit data barang di keranjang
+      tags:
+        - Barang Pengguna - Keranjang
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadEditDataKeranjangBarang"
+      responses:
+        "200":
+          description: Berhasil mengedit data keranjang
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # 12. Hapus Keranjang Barang
+  # =====================================================
+  /user/barang/keranjang-barang/hapus:
+    delete:
+      summary: Menghapus barang dari keranjang
+      tags:
+        - Barang Pengguna - Keranjang
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadHapusDataKeranjangBarang"
+      responses:
+        "200":
+          description: Berhasil menghapus barang dari keranjang
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"

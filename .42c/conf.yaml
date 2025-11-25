@@ -1,0 +1,3 @@
+apis:
+  app/service/pengguna_service/alamat_services/alamat_pengguna_api_doc.yml:
+    alias: alamat-pengguna-services-api

@@ -8,7 +8,6 @@ import (
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/wishlist_services/response_wishlist_services_pengguna"
 )
 
 func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishlist, db *gorm.DB) *response.ResponseForm {
@@ -18,9 +17,7 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseTambahBarangKeWishlist{
-				Message: "Gagal data seller tidak valid",
-			},
+			Message:  "Gagal data seller tidak valid",
 		}
 	}
 
@@ -32,9 +29,7 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseTambahBarangKeWishlist{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -42,9 +37,7 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseTambahBarangKeWishlist{
-				Message: "Gagal kamu sudah memasukan barang itu ke dalam wishlist",
-			},
+			Message:  "Gagal kamu sudah memasukan barang itu ke dalam wishlist",
 		}
 	}
 
@@ -55,18 +48,14 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseTambahBarangKeWishlist{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_wishlist_services_pengguna.ResponseTambahBarangKeWishlist{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -77,9 +66,7 @@ func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWis
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseHapusBarangDariWishlist{
-				Message: "Gagal data seller tidak valid",
-			},
+			Message:  "Gagal data seller tidak valid",
 		}
 	}
 
@@ -91,9 +78,7 @@ func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWis
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseHapusBarangDariWishlist{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -101,9 +86,7 @@ func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWis
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseHapusBarangDariWishlist{
-				Message: "Gagal data wishlist tidak ditemukan",
-			},
+			Message:  "Gagal data wishlist tidak ditemukan",
 		}
 	}
 
@@ -113,17 +96,13 @@ func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWis
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_wishlist_services_pengguna.ResponseHapusBarangDariWishlist{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_wishlist_services_pengguna.ResponseHapusBarangDariWishlist{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }

@@ -15,8 +15,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/credential_services/response_credential_pengguna"
-
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,9 +35,7 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 		return &response.ResponseForm{
 			Status:   http.StatusBadRequest,
 			Services: services,
-			Payload: response_credential_pengguna.ResponsePreUbahPassword{
-				Message: "Faktor kedua tidak valid. Gunakan OTP atau PIN.",
-			},
+			Message:  "Gagal faktor kedua tidak valid",
 		}
 	}
 
@@ -48,9 +44,7 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_credential_pengguna.ResponsePreUbahPassword{
-				Message: "Gagal identitas mu tidak valid.",
-			},
+			Message:  "Gagal data pengguna tidak ditemukan",
 		}
 	}
 
@@ -59,9 +53,7 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_credential_pengguna.ResponsePreUbahPassword{
-				Message: "Password lama tidak sesuai.",
-			},
+			Message:  "Gagal Password lama tidak sesuai",
 		}
 	} else {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.PasswordBaru), bcrypt.DefaultCost)
@@ -70,9 +62,7 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
-				Payload: response_credential_pengguna.ResponsePreUbahPassword{
-					Message: "Terjadi kesalahan pada server saat mengenkripsi password.",
-				},
+				Message:  "Gagal terjadi kesalahan pada server coba lagi nanti",
 			}
 		}
 
@@ -152,9 +142,7 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_credential_pengguna.ResponsePreUbahPassword{
-			Message: fmt.Sprintf("Berhasil, silakan masukkan kredensial berikutnya: %s.", data.FaktorKedua),
-		},
+		Message:  fmt.Sprintf("Berhasil, silakan masukkan kredensial berikutnya: %s.", data.FaktorKedua),
 	}
 }
 
@@ -172,9 +160,7 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseValidatePassword{
-				Message: "Pengguna tidak ditemukan.",
-			},
+			Message:  "Pengguna tidak ditemukan.",
 		}
 	}
 
@@ -188,9 +174,7 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseValidatePassword{
-				Message: "OTP tidak valid atau sudah kadaluarsa.",
-			},
+			Message:  "OTP tidak valid atau sudah kadaluarsa.",
 		}
 	}
 
@@ -199,9 +183,7 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseValidatePassword{
-				Message: "Terjadi kesalahan pada server saat mengubah password.",
-			},
+			Message:  "Terjadi kesalahan pada server saat mengubah password.",
 		}
 	}
 
@@ -213,9 +195,7 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_credential_pengguna.ResponseValidatePassword{
-			Message: "Password berhasil diubah.",
-		},
+		Message:  "Password berhasil diubah.",
 	}
 
 }
@@ -234,9 +214,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseValidatePassword{
-				Message: "PIN pengguna tidak ditemukan.",
-			},
+			Message:  "PIN pengguna tidak ditemukan.",
 		}
 	}
 
@@ -245,9 +223,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseValidatePassword{
-				Message: "PIN yang dimasukkan salah.",
-			},
+			Message:  "PIN yang dimasukkan salah.",
 		}
 	} else {
 		ctx := context.Background()
@@ -258,9 +234,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 			return &response.ResponseForm{
 				Status:   http.StatusUnauthorized,
 				Services: services,
-				Payload: response_credential_pengguna.ResponseValidatePassword{
-					Message: "Data perubahan password via PIN tidak ditemukan atau sudah kadaluarsa.",
-				},
+				Message:  "Data perubahan password via PIN tidak ditemukan atau sudah kadaluarsa.",
 			}
 		}
 
@@ -273,9 +247,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
-				Payload: response_credential_pengguna.ResponseValidatePassword{
-					Message: "Terjadi kesalahan pada server saat mengubah password.",
-				},
+				Message:  "Terjadi kesalahan pada server saat mengubah password.",
 			}
 		}
 	}
@@ -284,9 +256,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_credential_pengguna.ResponseValidatePassword{
-			Message: "Password berhasil diubah.",
-		},
+		Message:  "Password berhasil diubah.",
 	}
 }
 
@@ -304,9 +274,7 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseMembuatPin{
-				Message: "Data kredensial tidak valid.",
-			},
+			Message:  "Data kredensial tidak valid.",
 		}
 	}
 
@@ -315,9 +283,7 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseMembuatPin{
-				Message: "Password yang dimasukkan salah.",
-			},
+			Message:  "Password yang dimasukkan salah.",
 		}
 	}
 
@@ -327,9 +293,7 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseMembuatPin{
-				Message: "Terjadi kesalahan pada server saat membuat PIN.",
-			},
+			Message:  "Terjadi kesalahan pada server saat membuat PIN.",
 		}
 	}
 
@@ -341,9 +305,7 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseMembuatPin{
-				Message: "Terjadi kesalahan pada server saat menyimpan PIN.",
-			},
+			Message:  "Terjadi kesalahan pada server saat menyimpan PIN.",
 		}
 	}
 
@@ -351,9 +313,7 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_credential_pengguna.ResponseMembuatPin{
-			Message: "PIN berhasil dibuat.",
-		},
+		Message:  "PIN berhasil dibuat.",
 	}
 }
 
@@ -371,9 +331,7 @@ func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseUpdatePin{
-				Message: "Data kredensial tidak valid.",
-			},
+			Message:  "Data kredensial tidak valid.",
 		}
 	}
 
@@ -382,9 +340,7 @@ func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseUpdatePin{
-				Message: "PIN lama yang dimasukkan salah.",
-			},
+			Message:  "PIN lama yang dimasukkan salah.",
 		}
 	}
 
@@ -394,9 +350,7 @@ func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseUpdatePin{
-				Message: "Terjadi kesalahan pada server saat membuat PIN baru.",
-			},
+			Message:  "Terjadi kesalahan pada server saat membuat PIN baru.",
 		}
 	}
 
@@ -407,9 +361,7 @@ func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna,
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_credential_pengguna.ResponseUpdatePin{
-				Message: "Terjadi kesalahan pada server saat menyimpan PIN baru.",
-			},
+			Message:  "Terjadi kesalahan pada server saat menyimpan PIN baru.",
 		}
 	}
 
@@ -417,8 +369,6 @@ func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna,
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_credential_pengguna.ResponseUpdatePin{
-			Message: "PIN berhasil diubah.",
-		},
+		Message:  "PIN berhasil diubah.",
 	}
 }

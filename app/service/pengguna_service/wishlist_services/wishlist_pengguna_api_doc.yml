@@ -1,0 +1,163 @@
+openapi: 3.0.3
+info:
+  title: Wishlist Services Pengguna API
+  version: 1.0.0
+  description: >
+    Dokumentasi API untuk fitur wishlist pengguna seperti menambah dan menghapus barang dari wishlist.
+    Semua response menggunakan `ResponseForm`.
+
+servers:
+  - url: http://localhost:8080
+    description: Development Server
+
+components:
+  schemas:
+
+    # ====================================================
+    # IDENTITAS PENGGUNA
+    # ====================================================
+    IdentityPengguna:
+      type: object
+      properties:
+        id_pengguna:
+          type: integer
+          example: 001
+        username_pengguna:
+          type: string
+          example: "username_burung"
+        email_pengguna:
+          type: string
+          example: "burungapp@gmail.com"
+      required:
+        - id_pengguna
+        - username_pengguna
+        - email_pengguna
+
+    # ====================================================
+    # UNIVERSAL RESPONSE WRAPPER
+    # ====================================================
+    ResponseForm:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        service:
+          type: string
+          example: "wishlist_pengguna"
+        pesan:
+          type: string
+          example: "Berhasil"
+        response_payload:
+          type: object
+          nullable: true
+
+    # ====================================================
+    # PAYLOAD 1 - Tambah Barang ke Wishlist
+    # ====================================================
+    PayloadTambahBarangKeWishlist:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_barang_induk:
+          type: integer
+          example: 12
+      required:
+        - identitas_pengguna
+        - id_barang_induk
+
+    # ====================================================
+    # PAYLOAD 2 - Hapus Barang dari Wishlist
+    # ====================================================
+    PayloadHapusBarangDariWishlist:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_wishlist:
+          type: integer
+          format: int64
+          example: 100
+        id_barang_induk:
+          type: integer
+          example: 12
+      required:
+        - identitas_pengguna
+        - id_wishlist
+        - id_barang_induk
+
+paths:
+
+  # =====================================================
+  # 1. Tambah Barang ke Wishlist
+  # =====================================================
+  /user/wishlist/tambah-barang:
+    post:
+      summary: Menambahkan barang ke wishlist pengguna
+      description: >
+        Endpoint untuk menambahkan barang induk ke dalam wishlist pengguna.
+        Barang yang ditambahkan akan disimpan untuk referensi di kemudian hari.
+      tags:
+        - Wishlist Pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadTambahBarangKeWishlist"
+            example:
+              identitas_pengguna:
+                id_pengguna: 001
+                username_pengguna: "username_burung"
+                email_pengguna: "burungapp@gmail.com"
+              id_barang_induk: 12
+      responses:
+        "200":
+          description: Berhasil menambahkan barang ke wishlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+              example:
+                status: 200
+                service: "wishlist_pengguna"
+                pesan: "Berhasil menambahkan barang ke wishlist"
+                response_payload: null
+
+  # =====================================================
+  # 2. Hapus Barang dari Wishlist
+  # =====================================================
+  /user/wishlist/hapus-barang:
+    delete:
+      summary: Menghapus barang dari wishlist pengguna
+      description: >
+        Endpoint untuk menghapus barang dari wishlist pengguna.
+        Memerlukan ID wishlist dan ID barang induk untuk menghapus item yang spesifik.
+      tags:
+        - Wishlist Pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadHapusBarangDariWishlist"
+            example:
+              identitas_pengguna:
+                id_pengguna: 001
+                username_pengguna: "username_burung"
+                email_pengguna: "burungapp@gmail.com"
+              id_wishlist: 100
+              id_barang_induk: 12
+      responses:
+        "200":
+          description: Berhasil menghapus barang dari wishlist
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+              example:
+                status: 200
+                service: "wishlist_pengguna"
+                pesan: "Berhasil menghapus barang dari wishlist"
+                response_payload: null

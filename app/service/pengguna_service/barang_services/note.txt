@@ -1,4 +1,0 @@
-Pr:
-
-masih banyak pemborosan resource di engagement topik keranjang yakni saat edit dan delete seharusnya bisa menggunakan 
-Id dari table nya namun saat ini table Keranjang belum memiliki id primary key next patch tambahkan

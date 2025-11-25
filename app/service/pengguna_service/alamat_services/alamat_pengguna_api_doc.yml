@@ -1,0 +1,225 @@
+openapi: 3.0.3
+info:
+  title: Alamat Pengguna Services API
+  version: 1.0.0
+  description: >
+    API Documentation untuk layanan manajemen alamat pengguna.
+    Semua response menggunakan struktur `ResponseForm`.
+
+servers:
+  - url: http://localhost:8080
+    description: Development Server
+
+components:
+  schemas:
+
+    # ============================
+    # UNIVERSAL RESPONSE WRAPPER
+    # ============================
+    ResponseForm:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 200
+        service:
+          type: string
+          example: "alamat_pengguna"
+        pesan:
+          type: string
+          example: "Berhasil membuat alamat pengguna"
+        response_payload:
+          type: object
+          nullable: true
+
+    # ============================
+    # IDENTITAS PENGGUNA
+    # ============================
+    IdentityPengguna:
+      type: object
+      properties:
+        id_pengguna:
+          type: integer
+          example: 001
+        username_pengguna:
+          type: string
+          example: "username_burung"
+        email_pengguna:
+          type: string
+          example: "burungapp@gmail.com"
+      required:
+        - id_pengguna
+        - username_pengguna
+        - email_pengguna 
+
+    # ============================
+    # PAYLOAD MASUKAN ALAMAT
+    # ============================
+    PayloadMasukanAlamatPengguna:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        panggilan_alamat:
+          type: string
+          example: "Rumah"
+        nomor_telefon:
+          type: string
+          example: "081212345678"
+        nama_alamat:
+          type: string
+          example: "Jl. Merdeka No. 20"
+        provinsi:
+          type: string
+          example: "Jawa Barat"
+        kota:
+          type: string
+          example: "Bandung"
+        kode_pos:
+          type: string
+          example: "40123"
+        kode_negara:
+          type: string
+          example: "ID"
+        deskripsi:
+          type: string
+          example: "Rumah warna hijau dekat masjid"
+        longitude:
+          type: number
+          example: 107.618622
+        latitude:
+          type: number
+          example: -6.90389
+      required:
+        - identitas_pengguna
+        - panggilan_alamat
+        - nomor_telefon
+        - nama_alamat
+
+    # ============================
+    # PAYLOAD EDIT ALAMAT
+    # ============================
+    PayloadEditAlamatPengguna:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_alamat_pengguna:
+          type: integer
+          example: 55
+        panggilan_alamat:
+          type: string
+          example: "Kantor"
+        nomor_telefon:
+          type: string
+          example: "08567891234"
+        nama_alamat:
+          type: string
+          example: "Jl. Asia Afrika No. 12"
+        provinsi:
+          type: string
+          example: "Jawa Barat"
+        kota:
+          type: string
+          example: "Bandung"
+        kode_pos:
+          type: string
+          example: "40111"
+        kode_negara:
+          type: string
+          example: "ID"
+        deskripsi:
+          type: string
+          example: "Lantai 2 dekat lift"
+        longitude:
+          type: number
+          example: 107.60981
+        latitude:
+          type: number
+          example: -6.914744
+      required:
+        - identitas_pengguna
+        - id_alamat_pengguna
+
+    # ============================
+    # PAYLOAD HAPUS ALAMAT
+    # ============================
+    PayloadHapusAlamatPengguna:
+      type: object
+      properties:
+        identitas_pengguna:
+          $ref: "#/components/schemas/IdentityPengguna"
+        id_alamat_hapus_alamat:
+          type: integer
+          example: 55
+      required:
+        - identitas_pengguna
+        - id_alamat_hapus_alamat
+
+paths:
+
+  # =====================================================
+  # MASUKAN ALAMAT (POST)
+  # =====================================================
+  /user/alamat/membuat-alamat:
+    post:
+      summary: Menambahkan alamat baru pengguna
+      tags:
+        - Alamat Pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadMasukanAlamatPengguna"
+      responses:
+        "200":
+          description: Alamat berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # EDIT ALAMAT (PATCH)
+  # =====================================================
+  /user/alamat/edit-alamat:
+    patch:
+      summary: Mengedit alamat pengguna
+      tags:
+        - Alamat Pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadEditAlamatPengguna"
+      responses:
+        "200":
+          description: Berhasil mengedit alamat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+  # =====================================================
+  # HAPUS ALAMAT (DELETE)
+  # =====================================================
+  /user/alamat/hapus-alamat:
+    delete:
+      summary: Menghapus alamat pengguna
+      tags:
+        - Alamat Pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadHapusAlamatPengguna"
+      responses:
+        "200":
+          description: Alamat berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"

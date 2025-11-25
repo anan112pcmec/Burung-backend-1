@@ -5,13 +5,13 @@ import (
 	"net/http"
 
 	"gorm.io/gorm"
-func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrder, db *gorm.DB
 
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	pengiriman_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/pengiriman"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
+)
 
 func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrder, db *gorm.DB) *response.ResponseForm {
 	services := "ApproveOrderTransaksi"

@@ -9,7 +9,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/alamat_services/response_alamat_service_pengguna"
 )
 
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23,9 +22,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
-				Messages: "Gagal Identitas Kamu Tidak Selaras Dengan Target.",
-			},
+			Message:  "Gagal Data Pengguna Tidak Valid",
 		}
 	}
 
@@ -36,7 +33,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload:  "Coba Lagi Nanti Server Sedang Sibuk",
+			Message:  "Gagal Server sedang sibuk coba lagi waktu",
 		}
 	}
 
@@ -44,9 +41,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 		return &response.ResponseForm{
 			Status:   http.StatusForbidden,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
-				Messages: "Batas Maksimum Penyimpanan Alamat Tercapai (Maksimal 5 Alamat).",
-			},
+			Message:  "Gagal batas alamat hanya 5",
 		}
 	}
 
@@ -95,9 +90,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
-			Messages: "Alamat Berhasil Ditambahkan.",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -108,9 +101,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseMembuatAlamatPengguna{
-				Messages: "Gagal Identitas Kamu Tidak Selaras Dengan Target.",
-			},
+			Message:  "Gagal data Pengguna tidak ditemukan",
 		}
 	}
 
@@ -122,9 +113,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
-				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -132,9 +121,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
-				Message: "Gagal Data Alamat Tidak Valid",
-			},
+			Message:  "Gagal data alamat tidak ditemukan",
 		}
 	}
 
@@ -182,18 +169,14 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
-				Message: "Gagal server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_alamat_service_pengguna.ResponseEditAlamatPengguna{
-			Message: "Berhasil",
-		},
+		Message:  "Berhasil",
 	}
 }
 
@@ -208,9 +191,7 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
-				Message: "Gagal Menghapus Alamat, Identitas Mu Tidak Sesuai.",
-			},
+			Message:  "Gagal data pengguna tidak ditemukan",
 		}
 	}
 
@@ -222,9 +203,7 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
-				Message: "Gagal Server sedang sibuk coba lagi lain waktu",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
@@ -232,9 +211,7 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
-				Message: "Gagal Data Alamat Tidak Valid",
-			},
+			Message:  "Gagal data alamat tidak ditemukan",
 		}
 	}
 
@@ -269,17 +246,13 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
-			Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
-				Message: "Terjadi Kesalahan Pada Server Saat Menghapus Alamat. Silakan Coba Beberapa Saat Lagi.",
-			},
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 		}
 	}
 
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
-		Payload: response_alamat_service_pengguna.ResponseHapusAlamatPengguna{
-			Message: "Alamat Berhasil Dihapus.",
-		},
+		Message:  "Berhasil",
 	}
 }

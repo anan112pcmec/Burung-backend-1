@@ -1,0 +1,236 @@
+{
+    "version": "2.0.0",
+    "runtimeConfiguration": {
+        "environment": "default",
+        "laxTestingModeEnabled": false,
+        "apiConnectivityCheck": true,
+        "logLevel": "error",
+        "logDestination": "stdout+platform",
+        "logMaxFileSize": 2147483648,
+        "requestHeaderNameRequestId": "x-scan-request-id",
+        "requestHeaderNameScenarioId": "x-scan-scenario-id",
+        "requestHeaderNameRequestType": "x-scan-request-type",
+        "requestFlowrate": 100,
+        "requestTimeout": 30,
+        "requestTlsInsecureSkipVerify": true,
+        "responseFollowRedirection": false,
+        "responseMaxBodySizeScan": 10485760,
+        "happyPathOnly": false,
+        "maxRequestRetryAttempts": 5,
+        "maxScanDuration": 1800,
+        "memoryLimit": 2147483648,
+        "memoryTimeSpan": 10,
+        "reportMaxRequestSizeHappyPath": 8092,
+        "reportMaxRequestSizeTest": 8092,
+        "reportIncludeRequestBody": true,
+        "reportIncludeResponseBody": true,
+        "reportMaxHttpResponseSizeHappyPath": 8092,
+        "reportMaxBodySizeHappyPath": 8092,
+        "reportMaxHttpResponseSizeTest": 8092,
+        "reportMaxBodySizeTest": 8092,
+        "reportIssuesOnly": false,
+        "reportMaxIssues": 1000,
+        "reportMaxSize": 20971520,
+        "reportGenerateCurlCommand": true,
+        "normalizeServerUrls": true
+    },
+    "customizations": {
+        "happyPaths": {
+            "retry": 1,
+            "responsePolicy": {
+                "httpStatusExpected": true,
+                "mustBeConformant": true
+            },
+            "httpStatusExpected": []
+        },
+        "tests": {
+            "responsePolicy": {
+                "httpStatusExpected": true,
+                "mustBeConformant": true
+            }
+        }
+    },
+    "operations": {
+        "/user/alamat/edit-alamat:patch": {
+            "operationId": "/user/alamat/edit-alamat:patch",
+            "scenarios": [
+                {
+                    "key": "happy.path",
+                    "fuzzing": true,
+                    "requests": [
+                        {
+                            "$ref": "#/operations/~1user~1alamat~1edit-alamat:patch/request",
+                            "fuzzing": true
+                        }
+                    ]
+                }
+            ],
+            "request": {
+                "operationId": "/user/alamat/edit-alamat:patch",
+                "request": {
+                    "type": "42c",
+                    "details": {
+                        "url": "{{host}}/user/alamat/edit-alamat",
+                        "method": "PATCH",
+                        "headers": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "requestBody": {
+                            "mode": "json",
+                            "json": {
+                                "deskripsi": "Lantai 2 dekat lift",
+                                "id_alamat_pengguna": 55,
+                                "identitas_pengguna": {
+                                    "id_pengguna": 912,
+                                    "platform": "mobile",
+                                    "token": "token_valid_123"
+                                },
+                                "kode_negara": "ID",
+                                "kode_pos": "40111",
+                                "kota": "Bandung",
+                                "latitude": -6.914744,
+                                "longitude": 107.60981,
+                                "nama_alamat": "Jl. Asia Afrika No. 12",
+                                "nomor_telefon": "08567891234",
+                                "panggilan_alamat": "Kantor",
+                                "provinsi": "Jawa Barat"
+                            }
+                        }
+                    }
+                },
+                "defaultResponse": "200",
+                "responses": {
+                    "200": {
+                        "expectations": {
+                            "httpStatus": 200
+                        }
+                    }
+                }
+            }
+        },
+        "/user/alamat/hapus-alamat:delete": {
+            "operationId": "/user/alamat/hapus-alamat:delete",
+            "scenarios": [
+                {
+                    "key": "happy.path",
+                    "fuzzing": true,
+                    "requests": [
+                        {
+                            "$ref": "#/operations/~1user~1alamat~1hapus-alamat:delete/request",
+                            "fuzzing": true
+                        }
+                    ]
+                }
+            ],
+            "request": {
+                "operationId": "/user/alamat/hapus-alamat:delete",
+                "request": {
+                    "type": "42c",
+                    "details": {
+                        "url": "{{host}}/user/alamat/hapus-alamat",
+                        "method": "DELETE",
+                        "headers": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "requestBody": {
+                            "mode": "json",
+                            "json": {
+                                "id_alamat_hapus_alamat": 55,
+                                "identitas_pengguna": {
+                                    "id_pengguna": 912,
+                                    "platform": "mobile",
+                                    "token": "token_valid_123"
+                                }
+                            }
+                        }
+                    }
+                },
+                "defaultResponse": "200",
+                "responses": {
+                    "200": {
+                        "expectations": {
+                            "httpStatus": 200
+                        }
+                    }
+                }
+            }
+        },
+        "/user/alamat/membuat-alamat:post": {
+            "operationId": "/user/alamat/membuat-alamat:post",
+            "scenarios": [
+                {
+                    "key": "happy.path",
+                    "fuzzing": true,
+                    "requests": [
+                        {
+                            "$ref": "#/operations/~1user~1alamat~1membuat-alamat:post/request",
+                            "fuzzing": true
+                        }
+                    ]
+                }
+            ],
+            "request": {
+                "operationId": "/user/alamat/membuat-alamat:post",
+                "request": {
+                    "type": "42c",
+                    "details": {
+                        "url": "{{host}}/user/alamat/membuat-alamat",
+                        "method": "POST",
+                        "headers": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "requestBody": {
+                            "mode": "json",
+                            "json": {
+                                "deskripsi": "Rumah warna hijau dekat masjid",
+                                "identitas_pengguna": {
+                                    "id_pengguna": 912,
+                                    "platform": "mobile",
+                                    "token": "token_valid_123"
+                                },
+                                "kode_negara": "ID",
+                                "kode_pos": "40123",
+                                "kota": "Bandung",
+                                "latitude": -6.90389,
+                                "longitude": 107.618622,
+                                "nama_alamat": "Jl. Merdeka No. 20",
+                                "nomor_telefon": "081212345678",
+                                "panggilan_alamat": "Rumah",
+                                "provinsi": "Jawa Barat"
+                            }
+                        }
+                    }
+                },
+                "defaultResponse": "200",
+                "responses": {
+                    "200": {
+                        "expectations": {
+                            "httpStatus": 200
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "environments": {
+        "default": {
+            "variables": {
+                "host": {
+                    "from": "environment",
+                    "name": "SCAN42C_HOST",
+                    "required": false,
+                    "default": "https://api.domainmu.com"
+                }
+            }
+        }
+    }
+}
