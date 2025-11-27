@@ -10,6 +10,8 @@ type Pengiriman struct {
 	ID                int64          `gorm:"primaryKey;autoIncrement" json:"id_pengiriman"`
 	IdTransaksi       int64          `gorm:"column:id_transaksi;not null" json:"id_transaksi_pengiriman"`
 	Transaksi         Transaksi      `gorm:"foreignKey:IdTransaksi;references:ID" json:"-"`
+	IdSeller          int64          `gorm:"column:id_seller;not null" json:"id_seller_pengiriman"`
+	Seller            Seller         `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
 	IdAlamatGudang    int64          `gorm:"column:id_alamat_gudang;not null" json:"id_alamat_gudang_pengiriman"`
 	AlamatGudang      AlamatGudang   `gorm:"foreignKey:IdAlamatGudang;references:ID" json:"-"`
 	IdAlamatPengguna  int64          `gorm:"column:id_alamat_pengguna;not null" json:"id_alamat_pengguna_pengiriman"`
@@ -51,6 +53,8 @@ type PengirimanEkspedisi struct {
 	ID                int64           `gorm:"primaryKey;autoIncrement" json:"id_pengiriman_ekspedisi"`
 	IdTransaksi       int64           `gorm:"column:id_transaksi;not null" json:"id_transaksi_pengiriman_ekspedisi"`
 	Transaksi         Transaksi       `gorm:"foreignKey:IdTransaksi;references:ID" json:"-"`
+	IdSeller          int64           `gorm:"column:id_seller;not null" json:"id_seller_pengiriman_ekspedisi"`
+	Seller            Seller          `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
 	IdAlamatGudang    int64           `gorm:"column:id_alamat_gudang;not null" json:"id_alamat_gudang_pengiriman_ekspedisi"`
 	AlamatGudang      AlamatGudang    `gorm:"foreignKey:IdAlamatGudang;references:ID" json:"-"`
 	IdAlamatEkspedisi int64           `gorm:"column:id_alamat_ekspedisi;not null" json:"id_alamat_ekspedisi_pengiriman_ekspedisi"`

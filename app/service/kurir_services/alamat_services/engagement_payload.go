@@ -8,6 +8,7 @@ type PayloadMasukanAlamatKurir struct {
 	NomorTelephone  string                        `json:"nomor_telephone"`
 	NamaAlamat      string                        `json:"nama_alamat"`
 	Kota            string                        `json:"kota"`
+	Provinsi        string                        `json:"provinsi"`
 	KodeNegara      string                        `json:"kode_negara"`
 	KodePos         string                        `json:"kode_pos"`
 	Deskripsi       string                        `json:"deskripsi"`
@@ -22,6 +23,7 @@ type PayloadEditAlamatKurir struct {
 	NomorTelephone  string                        `json:"nomor_telephone"`
 	NamaAlamat      string                        `json:"nama_alamat"`
 	Kota            string                        `json:"kota"`
+	Provinsi        string                        `json:"provinsi"`
 	KodeNegara      string                        `json:"kode_negara"`
 	KodePos         string                        `json:"kode_pos"`
 	Deskripsi       string                        `json:"deskripsi"`

@@ -182,12 +182,19 @@ func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds
 		}
 		hasil = jenis_seller_services.EditDataBrand(ctx, data, db)
 	case "/seller/transaction/approve-order":
-		var data seller_transaksi_services.PayloadApproveOrder
+		var data seller_transaksi_services.PayloadApproveOrderTransaksi
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = seller_transaksi_services.ApproveOrderTransaksi(ctx, data, db)
+		hasil = seller_transaksi_services.ApproveOrderTransaksi(ctx, data, db, rds_engagement)
+	case "/seller/transaction/kirim-barang":
+		var data seller_transaksi_services.PayloadKirimOrderTransaksi
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = seller_transaksi_services.KirimOrderTransaksi(ctx, data, db)
 	default:
 		hasil = &response.ResponseForm{
 			Status:   http.StatusBadRequest,

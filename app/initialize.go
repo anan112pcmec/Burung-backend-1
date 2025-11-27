@@ -84,6 +84,7 @@ func Run() {
 	migrate.UpTransaksi(database)
 	migrate.UpEngagementEntity(database)
 	migrate.UpSystemData(database)
+	migrate.UpTresholdData(database)
 
 	// Caching data
 	maintain_cache.DataAlamatEkspedisiUp(database)

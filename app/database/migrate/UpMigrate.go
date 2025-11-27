@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/threshold"
 )
 
 func UpEntity(db *gorm.DB) {
@@ -249,4 +250,43 @@ func UpSystemData(db *gorm.DB) {
 	}
 
 	log.Println("All migrations System data completed successfully 🚀")
+}
+
+func UpTresholdData(db *gorm.DB) {
+	var wg sync.WaitGroup
+	errCh := make(chan error, 2)
+
+	modelsToMigrate := []interface{}{
+		&threshold.ThresholdTransaksiSeller{},
+		&threshold.ThresholdOrderSeller{},
+	}
+
+	wg.Add(len(modelsToMigrate))
+
+	for _, m := range modelsToMigrate {
+		go func(model interface{}) {
+			defer wg.Done()
+			if db.Migrator().HasTable(model) {
+				log.Printf("Table %T sudah ada, skipping migration ⚠️", model)
+				return
+			}
+
+			if err := db.AutoMigrate(model); err != nil {
+				errCh <- err
+				return
+			}
+			log.Printf("Migration success: %T ✅", model)
+		}(m)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		if err != nil {
+			log.Fatalf("Migration failed: %v", err)
+		}
+	}
+
+	log.Println("All migrations treshold data completed successfully 🚀")
 }

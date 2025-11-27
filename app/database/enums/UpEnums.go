@@ -210,7 +210,7 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		// "Dibatalkan" digunakan ketika pengguna atau seller membatalkan transaksi, baik karena kesepakatan maupun sepihak.
 		// Pembatalan hanya bisa dilakukan selama status masih "Dibayar".
 
-		"status_pengiriman": {"Packaging", "Picked Up", "Diperjalanan", "Sampai", "Trouble"},
+		"status_pengiriman": {"Waiting", "Picked Up", "Diperjalanan", "Sampai", "Trouble"},
 		// "Packaging" muncul di tabel pengiriman dan terjadi ketika status transaksi adalah "Diproses".
 		// Status berubah menjadi "Picked Up" ketika status transaksi berubah menjadi "Dikirim".
 		// Status menjadi "Diperjalanan" ketika kurir memperbarui status sendiri selama proses pengantaran.
@@ -220,7 +220,7 @@ func UpEnumsTransaksi(db *gorm.DB) error {
 		// Segala hal tak terduga seperti barang tidak sesuai, masalah di jalan, atau kerusakan barang
 		// akan masuk ke status "Trouble". Namun untuk saat ini, kita berasumsi semua berjalan lancar.
 
-		"status_pengiriman_ekspedisi": {"Picked Up", "Dikirim", "Sampai Agent", "Masuk Gateaway", "Sampai Agent Tujuan", "Dikirim Agent", "Sampai"},
+		"status_pengiriman_ekspedisi": {"Waiting", "Dikirim", "Sampai Agent", "Masuk Gateaway", "Sampai Agent Tujuan", "Dikirim Agent", "Sampai"},
 
 		"status_paid_failed": {"Ditinjau", "Pending", "Batal", "Lanjut"},
 		// "Ditinjau" berarti sistem sedang melakukan pemeriksaan terhadap transaksi gagal.

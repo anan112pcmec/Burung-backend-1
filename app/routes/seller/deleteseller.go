@@ -105,7 +105,7 @@ func DeleteSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		}
 		hasil = jenis_seller_services.HapusDataBrand(ctx, data, db)
 	case "/seller/transaction/unapprove-order":
-		var data seller_transaksi_services.PayloadUnApproveOrder
+		var data seller_transaksi_services.PayloadUnApproveOrderTransaksi
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
