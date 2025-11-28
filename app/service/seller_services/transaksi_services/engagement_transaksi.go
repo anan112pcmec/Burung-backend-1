@@ -15,7 +15,6 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/threshold"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
-
 )
 
 func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaksi, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
@@ -223,7 +222,7 @@ func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, d
 		JenisPengiriman:   data_transaksi.JenisPengiriman,
 		JarakTempuh:       data_transaksi.JarakTempuh,
 		KurirPaid:         data_transaksi.KurirPaid,
-		Status:            pengiriman_enums.Waiting,
+		Status:            pengiriman_enums.WaitingEkspedisi,
 	}
 
 	var id_data_threshold int64 = 0

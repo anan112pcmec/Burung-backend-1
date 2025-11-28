@@ -1,5 +1,6 @@
 package transaksi_enums
 
+// Enums Untuk Transaksi
 var (
 	Dibayar    = "Dibayar"
 	Diproses   = "Diproses"
