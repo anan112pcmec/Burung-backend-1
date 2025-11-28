@@ -100,6 +100,13 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_pengiriman_services.UpdatePosisiBidKurir(ctx, data, db)
+	case "/kurir/pengiriman/ambil-pengiriman":
+		var data kurir_pengiriman_services.PayloadAmbilPengirimanManual
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.AmbilPengirimanManual(ctx, data, db)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

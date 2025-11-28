@@ -32,6 +32,7 @@ func PostKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		hasil = kurir_informasi_services.AjukanInformasiKurir(ctx, data, db)
+
 	case "/kurir/alamat/masukan-alamat":
 		var data kurir_alamat_services.PayloadMasukanAlamatKurir
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

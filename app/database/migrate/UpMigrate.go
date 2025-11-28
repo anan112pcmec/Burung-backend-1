@@ -170,7 +170,6 @@ func UpEngagementEntity(db *gorm.DB) {
 		&models.InformasiKurir{},
 		&models.AlamatKurir{},
 		&models.RekeningKurir{},
-		&models.SaldoKurir{},
 		&models.DistributorData{},
 		&models.BrandData{},
 		&models.Etalase{},
@@ -182,6 +181,7 @@ func UpEngagementEntity(db *gorm.DB) {
 		&models.ReviewDislike{},
 		&models.Wishlist{},
 		&models.BidKurirData{},
+		&models.BidKurirNonEksScheduler{},
 	}
 
 	wg.Add(len(modelsToMigrate))

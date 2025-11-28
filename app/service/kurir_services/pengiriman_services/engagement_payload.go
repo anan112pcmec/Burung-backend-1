@@ -10,10 +10,23 @@ type PayloadAktifkanBidKurir struct {
 	Mode            string                        `json:"mode"`
 	Provinsi        string                        `json:"provinsi"`
 	Kota            string                        `json:"kota"`
+	IsEkspedisi     bool                          `json:"is_ekspedisi"`
 	Alamat          string                        `json:"alamat"`
 	Longitude       float64                       `json:"longitude"`
 	Latitude        float64                       `json:"latitude"`
 	MaxKg           int32                         `json:"max_kg"`
+}
+
+type PayloadAmbilPengirimanManual struct {
+	IdentitasKurir identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdPengiriman   int64                         `json:"id_pengiriman"`
+	IdBid          int64                         `json:"id_bid"`
+}
+
+type PayloadLockSiapAntar struct {
+	IdentitasKurir  identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdBidKurir      int64                         `json:"id_bid_kurir"`
+	JenisPengiriman string                        `json:"jenis_pengiriman"`
 }
 
 type PayloadUpdatePosisiBid struct {

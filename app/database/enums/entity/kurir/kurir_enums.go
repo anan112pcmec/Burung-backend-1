@@ -56,3 +56,8 @@ var (
 	Manual = "manual"
 	Auto   = "auto"
 )
+
+var (
+	Mengumpulkan = "Mengumpulkan"
+	SiapAntar    = "Siap Antar"
+)

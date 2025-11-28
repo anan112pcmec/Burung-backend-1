@@ -140,6 +140,8 @@ func UpEnumsEntity(db *gorm.DB) error {
 			"tuban",
 			"tulungagung",
 			"trenggalek"},
+		"status_bid_data":      {"Mengumpulkan", "Siap Antar"},
+		"status_bid_scheduler": {"Wait", "Ambil", "Kirim"},
 	}
 
 	for enumName, values := range enumMap {
