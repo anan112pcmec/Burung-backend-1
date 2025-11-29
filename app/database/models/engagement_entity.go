@@ -474,26 +474,26 @@ func (RekeningKurir) TableName() string {
 }
 
 type BidKurirData struct {
-	ID               int64          `gorm:"primaryKey;autoIncrement" json:"id_bid_kurir_data"`
-	IdKurir          int64          `gorm:"column:id_kurir;not null" json:"id_kurir_bid_kurir_data"`
-	Kurir            Kurir          `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
-	JenisPengiriman  string         `gorm:"column:jenis_pengiriman;type:jenis_layanan_kurir;not null" json:"jenis_pengiriman_bid_kurir_data"`
-	Mode             string         `gorm:"column:mode;type:mode_bid_kurir;not null" json:"mode_bid_kurir_data"`
-	Provinsi         string         `gorm:"column:provinsi;type:nama_provinsi;not null" json:"provinsi_bid_kurir_data"`
-	Kota             string         `gorm:"column:kota;type:nama_kota;not null" json:"kota_bid_kurir_data"`
-	IsEkspedisi      bool           `gorm:"column:is_ekspedisi;type:boolean;not null;default:false" json:"is_ekspedisi_bid_kurir_data"`
-	Alamat           string         `gorm:"column:alamat;type:text" json:"alamat_bid_kurir_data"`
-	Longitude        float64        `gorm:"column:longitude;type:numeric(11,8);not null" json:"longitude_bid_kurir_data"`
-	Latitude         float64        `gorm:"column:latitude;type:numeric(11,8);not null" json:"latitude_bid_kurir_data"`
-	MaxKg            int16          `gorm:"column:max_kg;type:smallint;not null" json:"max_kg_bid_kurir_data"`
-	BookedPengiriman int32          `gorm:"column:booked_pengiriman;type:int;not null;default:0" json:"booked_pengiriman_bid_kurir_data"`
-	Dimulai          time.Time      `gorm:"column:dimulai;type:time;not null" json:"dimulai_bid_kurir_data"`
-	Selesai          *time.Time     `gorm:"column:selesai;type:time" json:"selesai_bid_kurir_data"`
-	JenisKendaraan   string         `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null" json:"jenis_kendaraan_bid_kurir_data"`
-	Status           string         `gorm:"column:status;type:status_bid_data;not null;default:'Mengumpulkan'" json:"status_bid_data"`
-	CreatedAt        time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt        time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt        gorm.DeletedAt `gorm:"index"`
+	ID              int64          `gorm:"primaryKey;autoIncrement" json:"id_bid_kurir_data"`
+	IdKurir         int64          `gorm:"column:id_kurir;not null" json:"id_kurir_bid_kurir_data"`
+	Kurir           Kurir          `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	JenisPengiriman string         `gorm:"column:jenis_pengiriman;type:jenis_layanan_kurir;not null" json:"jenis_pengiriman_bid_kurir_data"`
+	Mode            string         `gorm:"column:mode;type:mode_bid_kurir;not null" json:"mode_bid_kurir_data"`
+	Provinsi        string         `gorm:"column:provinsi;type:nama_provinsi;not null" json:"provinsi_bid_kurir_data"`
+	Kota            string         `gorm:"column:kota;type:nama_kota;not null" json:"kota_bid_kurir_data"`
+	IsEkspedisi     bool           `gorm:"column:is_ekspedisi;type:boolean;not null;default:false" json:"is_ekspedisi_bid_kurir_data"`
+	Alamat          string         `gorm:"column:alamat;type:text" json:"alamat_bid_kurir_data"`
+	Longitude       float64        `gorm:"column:longitude;type:numeric(11,8);not null" json:"longitude_bid_kurir_data"`
+	Latitude        float64        `gorm:"column:latitude;type:numeric(11,8);not null" json:"latitude_bid_kurir_data"`
+	MaxKg           int16          `gorm:"column:max_kg;type:smallint;not null" json:"max_kg_bid_kurir_data"`
+	SlotTersisa     int32          `gorm:"column:slot_tersisa;type:int;not null;default:0" json:"slot_tersisa_bid_kurir_data"`
+	Dimulai         time.Time      `gorm:"column:dimulai;type:time;not null" json:"dimulai_bid_kurir_data"`
+	Selesai         *time.Time     `gorm:"column:selesai;type:time" json:"selesai_bid_kurir_data"`
+	JenisKendaraan  string         `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;not null" json:"jenis_kendaraan_bid_kurir_data"`
+	Status          string         `gorm:"column:status;type:status_bid_data;not null;default:'Mengumpulkan'" json:"status_bid_data"`
+	CreatedAt       time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt       time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
 func (BidKurirData) TableName() string {

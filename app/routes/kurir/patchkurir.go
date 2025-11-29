@@ -100,14 +100,29 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_pengiriman_services.UpdatePosisiBidKurir(ctx, data, db)
-	case "/kurir/pengiriman/ambil-pengiriman":
-		var data kurir_pengiriman_services.PayloadAmbilPengirimanManual
+	case "/kurir/pengiriman/ambil-pengiriman-manual-non-eks":
+		var data kurir_pengiriman_services.PayloadAmbilPengirimanNonEksManualReguler
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = kurir_pengiriman_services.AmbilPengirimanManual(ctx, data, db)
+		hasil = kurir_pengiriman_services.AmbilPengirimanNonEksManualReguler(ctx, data, db)
+	case "/kurir/pengiriman/ambil-pengiriman-manual-eks":
+		var data kurir_pengiriman_services.PayloadAmbilPengirimanEksManualReguler
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.AmbilPengirimanEksManualReguler(ctx, data, db)
+	case "/kurir/pengiriman/lock-siap-antar-bid":
+		var data kurir_pengiriman_services.PayloadLockSiapAntar
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.LockSiapAntarBidKurir(ctx, data, db)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(hasil)
