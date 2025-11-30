@@ -14,7 +14,7 @@ import (
 )
 
 func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *gorm.DB) *response.ResponseForm {
-	services := "AktifkanBidKurir"
+	const services = "AktifkanBidKurir"
 
 	kurir, status := data.IdentitasKurir.Validating(ctx, db)
 
@@ -122,7 +122,7 @@ func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *gor
 }
 
 func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *gorm.DB) *response.ResponseForm {
-	services := "UpdatePosisiBidKurir"
+	const services = "UpdatePosisiBidKurir"
 
 	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
 		return &response.ResponseForm{
@@ -173,7 +173,7 @@ func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *
 }
 
 func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPengirimanNonEksManualReguler, db *gorm.DB) *response.ResponseForm {
-	services := "AmbilPengirimanManualReguler"
+	const services = "AmbilPengirimanManualReguler"
 
 	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
 		return &response.ResponseForm{
@@ -320,7 +320,7 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 }
 
 func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengirimanEksManualReguler, db *gorm.DB) *response.ResponseForm {
-	services := "AmbilPengirimanEksManualReguler"
+	const services = "AmbilPengirimanEksManualReguler"
 
 	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
 		return &response.ResponseForm{
@@ -393,7 +393,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 	var id_bid_scheduler int64 = 0
 	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 		IdPengirimanEks: data.IdPengiriman,
-	}).Limit(1).Scan(id_bid_scheduler).Error; err != nil {
+	}).Limit(1).Scan(&id_bid_scheduler).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -465,7 +465,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 }
 
 func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *gorm.DB) *response.ResponseForm {
-	services := "LockSiapAntarBidKurir"
+	const services = "LockSiapAntarBidKurir"
 
 	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
 		return &response.ResponseForm{
@@ -503,7 +503,7 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 		if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 			IdBid:   data.IdBidKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,
-			Status:  "Wait",
+			Status:  kurir_enums.Wait,
 		}).Limit(8 - int(data_bid_kurir.SlotTersisa)).Scan(&ids_data_bid_kurir_scheduler).Error; err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
@@ -515,7 +515,7 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 		if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 			IdBid:   data.IdBidKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,
-			Status:  "Wait",
+			Status:  kurir_enums.Wait,
 		}).Limit(8 - int(data_bid_kurir.SlotTersisa)).Scan(&ids_data_bid_kurir_scheduler).Error; err != nil {
 			return &response.ResponseForm{
 				Message: "Gagal server sedang sibuk coba lagi lain waktu",
@@ -534,18 +534,18 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		if data_bid_kurir.IsEkspedisi {
-			if err := tx.Model(&models.BidKurirEksScheduler{}).Where("id IN ?", ids_data_bid_kurir_scheduler).Update("status", "Ambil").Error; err != nil {
+			if err := tx.Model(&models.BidKurirEksScheduler{}).Where("id IN ?", ids_data_bid_kurir_scheduler).Update("status", kurir_enums.Ambil).Error; err != nil {
 				return err
 			}
 		} else {
-			if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where("id IN ?", ids_data_bid_kurir_scheduler).Update("status", "Ambil").Error; err != nil {
+			if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where("id IN ?", ids_data_bid_kurir_scheduler).Update("status", kurir_enums.Ambil).Error; err != nil {
 				return err
 			}
 		}
 
 		if err := tx.Model(&models.BidKurirData{}).Where(&models.BidKurirData{
 			ID: data.IdBidKurir,
-		}).Update("status", "Siap Antar").Error; err != nil {
+		}).Update("status", kurir_enums.SiapAntar).Error; err != nil {
 			return err
 		}
 
@@ -567,6 +567,307 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 		Status:   http.StatusOK,
 		Services: services,
 		Message:  "Selamat mengantar Paket",
+	}
+}
+
+func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirimanNonEks, db *gorm.DB) *response.ResponseForm {
+	const services = "PickedUpPengiriman"
+
+	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data kurir tidak ditemukan",
+		}
+	}
+
+	var check_exist_bid_schedul int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+		IdBid:        data.IdBidKurir,
+		IdKurir:      data.IdentitasKurir.IdKurir,
+		IdPengiriman: data.IdPengiriman,
+		Status:       kurir_enums.Ambil,
+	}).Limit(1).Scan(&check_exist_bid_schedul).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if check_exist_bid_schedul == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data tidak ditemukan",
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
+			ID: check_exist_bid_schedul,
+		}).Update("status", kurir_enums.Kirim).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Pengiriman{}).Where(&models.Pengiriman{
+			ID: data.IdPengiriman,
+		}).Update("status", pengiriman_enums.PickedUp).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(&models.JejakPengiriman{
+			IdPengiriman: data.IdPengiriman,
+			Lokasi:       data.Lokasi,
+			Keterangan:   data.Keterangan,
+			Latitude:     data.Latitude,
+			Longtitude:   data.Longitude,
+		}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
+	}
+}
+
+func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEks, db *gorm.DB) *response.ResponseForm {
+	const services = "KirimPengirimanNonEks"
+
+	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data kurir tidak ditemukan",
+		}
+	}
+
+	var exist_bid_data_schedul int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+		IdBid:        data.IdBidKurir,
+		IdKurir:      data.IdentitasKurir.IdKurir,
+		IdPengiriman: data.IdPengiriman,
+		Status:       kurir_enums.Kirim,
+	}).Limit(1).Scan(&exist_bid_data_schedul).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if exist_bid_data_schedul == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data tidak ditemukan",
+		}
+	}
+
+	var id_jejak_pengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
+		IdPengiriman: data.IdPengiriman,
+	}).Limit(1).Scan(&id_jejak_pengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_jejak_pengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal",
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
+			ID: exist_bid_data_schedul,
+		}).Update("status", kurir_enums.Finish).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Pengiriman{}).Where(&models.Pengiriman{
+			ID: data.IdPengiriman,
+		}).Update("status", pengiriman_enums.Diperjalanan).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
+			ID: id_jejak_pengiriman,
+		}).Updates(&models.JejakPengiriman{
+			Lokasi:     data.Lokasi,
+			Keterangan: data.Keterangan,
+			Latitude:   data.Latitude,
+			Longtitude: data.Longitude,
+		}).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
+	}
+}
+
+func UpdateInformasiPengirimanNonEks(ctx context.Context, data PayloadUpdateInformasiPerjalananPengiriman, db *gorm.DB) *response.ResponseForm {
+	const services = "UpdateInformasiPengirimanNonEks"
+
+	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	var id_jejak_pengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
+		IdPengiriman: data.IdPengiriman,
+	}).Limit(1).Scan(&id_jejak_pengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_jejak_pengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data pengiriman tidak ditemukan",
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
+		ID: id_jejak_pengiriman,
+	}).Updates(&models.JejakPengiriman{
+		Lokasi:     data.Lokasi,
+		Keterangan: data.Keterangan,
+		Latitude:   data.Latitude,
+		Longtitude: data.Longitude,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal memperbarui informasi pengiriman",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
+	}
+}
+
+func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNonEks, db *gorm.DB) *response.ResponseForm {
+	const services = "SampaiPengirimanNonEks"
+
+	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	var exist_bid_data_schedul int64 = 0
+	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+		IdBid:        data.IdBidKurir,
+		IdKurir:      data.IdentitasKurir.IdKurir,
+		IdPengiriman: data.IdPengiriman,
+		Status:       kurir_enums.Kirim,
+	}).Limit(1).Scan(&exist_bid_data_schedul).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if exist_bid_data_schedul == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data tidak ditemukan",
+		}
+	}
+
+	var id_jejak_pengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
+		IdPengiriman: data.IdPengiriman,
+	}).Limit(1).Scan(&id_jejak_pengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_jejak_pengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal",
+		}
+	}
+
+	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
+		if err := tx.Model(&models.Pengiriman{}).Where(&models.Pengiriman{
+			ID: data.IdPengiriman,
+		}).Update("status", pengiriman_enums.Sampai).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
+			ID: id_jejak_pengiriman,
+		}).Updates(&models.JejakPengiriman{
+			Lokasi:     data.Lokasi,
+			Keterangan: data.Keterangan,
+			Latitude:   data.Latitude,
+			Longtitude: data.Longitude,
+		}).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
 	}
 }
 

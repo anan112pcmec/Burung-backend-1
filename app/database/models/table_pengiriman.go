@@ -33,20 +33,24 @@ func (Pengiriman) TableName() string {
 }
 
 type JejakPengiriman struct {
-	ID           int64          `gorm:"primaryKey;autoIncrement" json:"id_jejak_pengiriman"`
-	IdPengiriman int64          `gorm:"column:id_pengiriman;not null" json:"id_pengiriman_jejak_pengiriman"`
-	Pengiriman   Pengiriman     `gorm:"foreignKey:IdPengiriman;references:ID"`
-	Lokasi       string         `gorm:"column:lokasi;type:text" json:"lokasi_jejak_pengiriman"`
-	Keterangan   string         `gorm:"column:keterangan;type:text;not null" json:"keterangan_jejak_pengiriman"`
-	Latitude     float64        `gorm:"column:latitude;type:numeric(11,8);not null" json:"latitude_jejak_pengiriman"`
-	Longtitude   float64        `gorm:"column:longtitude;type:numeric(11,8);not null" json:"longtitude_jejak_pengiriman"`
-	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	ID           int64          `gorm:"primaryKey;autoIncrement" db:"id" json:"id_jejak_pengiriman"`
+	IdPengiriman int64          `gorm:"column:id_pengiriman;not null" db:"id_pengiriman" json:"id_pengiriman_jejak_pengiriman"`
+	Pengiriman   Pengiriman     `gorm:"foreignKey:IdPengiriman;references:ID" db:"-" json:"-"`
+	Lokasi       string         `gorm:"column:lokasi;type:text" db:"lokasi" json:"lokasi_jejak_pengiriman"`
+	Keterangan   string         `gorm:"column:keterangan;type:text;not null" db:"keterangan" json:"keterangan_jejak_pengiriman"`
+	Latitude     float64        `gorm:"column:latitude;type:numeric(11,8);not null" db:"latitude" json:"latitude_jejak_pengiriman"`
+	Longtitude   float64        `gorm:"column:longtitude;type:numeric(11,8);not null" db:"longtitude" json:"longtitude_jejak_pengiriman"`
+	CreatedAt    time.Time      `gorm:"autoCreateTime" db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime" db:"updated_at" json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" db:"deleted_at" json:"deleted_at,omitempty"`
 }
 
 func (JejakPengiriman) TableName() string {
 	return "jejak_pengiriman"
+}
+
+func (JejakPengiriman) HystoricalDbName() []string {
+	return []string{"jejak_pengiriman"}
 }
 
 type PengirimanEkspedisi struct {

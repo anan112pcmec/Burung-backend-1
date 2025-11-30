@@ -55,7 +55,7 @@ func Run() {
 		RMQ_PORT: "",
 	}
 
-	database, redis_entity_cache, redis_barang_cache, redis_engagement_cache, searchengine, _ :=
+	database, redis_entity_cache, redis_barang_cache, redis_engagement_cache, searchengine, _, _ :=
 		env.RunConnectionEnvironment()
 
 	// Router utama
@@ -63,10 +63,6 @@ func Run() {
 	Router.Use(enableCORS)
 	// Router.Use(rateLimitMiddleware)
 	// Router.Use(blockBadRequestsMiddleware)
-
-	Router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Halo dari App Burung"))
-	})
 
 	// Jalankan enums dan migrasi
 	if err := enums.UpEnumsEntity(database); err != nil {

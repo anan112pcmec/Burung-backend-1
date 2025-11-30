@@ -22,3 +22,13 @@ services:
     ports:
       - "7700:7700"
     restart: unless-stopped
+
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra_burung_hystorical_data
+    environment:
+      - CASSANDRA_CLUSTER_NAME=history_cluster
+      - CASSANDRA_NUM_TOKENS=8
+    ports:
+      - "9042:9042" 
+    restart: unless-stopped
