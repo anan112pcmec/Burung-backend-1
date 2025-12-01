@@ -55,7 +55,7 @@ func Run() {
 		RMQ_PORT: "",
 	}
 
-	database, redis_entity_cache, redis_barang_cache, redis_engagement_cache, searchengine, _, _ :=
+	database, redis_entity_cache, redis_barang_cache, redis_engagement_cache, searchengine, _ :=
 		env.RunConnectionEnvironment()
 
 	// Router utama

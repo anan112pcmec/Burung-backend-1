@@ -8,20 +8,18 @@ var (
 )
 
 // Enums untuk pengiriman non ekspedisi
-var (
-	Waiting      = "Waiting"
-	PickedUp     = "Picked Up"
-	Diperjalanan = "Diperjalanan"
-	Sampai       = "Sampai"
-	Trouble      = "Trouble"
-)
+
+const Waiting string = "Waiting"
+const PickedUp string = "Picked Up"
+const Diperjalanan string = "Diperjalanan"
+const Sampai string = "Sampai"
+const Trouble = "Trouble"
 
 // Enums untuk pengiriman ekspedisi
-var (
-	WaitingEkspedisi           = "Waiting"
-	DikirimEkspedisi           = "Dikirim"
-	SampaiAgentEkspedisi       = "Sampai Agent"
-	SampaiAgentTujuanEkspedisi = "Sampai Agent Tujuan"
-	DikirimAgentEkspedisi      = "Dikirim Agent"
-	SampaiEkspedisi            = "Sampai"
-)
+
+const WaitingEkspedisi string = "Waiting"
+const DikirimEkspedisi string = "Dikirim"
+const SampaiAgentEkspedisi string = "Sampai Agent"
+const SampaiAgentTujuanEkspedisi string = "Sampai Agent Tujuan"
+const DikirimAgentEkspedisi string = "Dikirim Agent"
+const SampaiEkspedisi string = "Sampai"

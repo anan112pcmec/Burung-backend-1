@@ -121,6 +121,34 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_pengiriman_services.LockSiapAntarBidKurir(ctx, data, db)
+	case "/kurir/pengiriman/picked-up-pengiriman-non-eks":
+		var data kurir_pengiriman_services.PayloadPickedUpPengirimanNonEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.PickedUpPengirimanNonEks(ctx, data, db)
+	case "/kurir/pengiriman/kirim-pengiriman-non-eks":
+		var data kurir_pengiriman_services.PayloadKirimPengirimanNonEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.KirimPengirimanNonEks(ctx, data, db)
+	case "/kurir/pengiriman/update-informasi-pengiriman":
+		var data kurir_pengiriman_services.PayloadUpdateInformasiPerjalananPengiriman
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.UpdateInformasiPerjalananPengirimanNonEks(ctx, data, db)
+	case "/kurir/pengiriman/sampai-pengiriman-non-eks":
+		var data kurir_pengiriman_services.PayloadSampaiPengirimanNonEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.SampaiPengirimanNonEks(ctx, data, db)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -82,6 +82,36 @@ type PayloadSampaiPengirimanNonEks struct {
 	Longitude      float64                       `json:"longitude"`
 }
 
+type PayloadPickedUpPengirimanEks struct {
+	IdentitasKurir  identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdBidKurir      int64                         `json:"id_bid_kurir"`
+	IdPengirimanEks int64                         `json:"id_pengiriman"`
+	Lokasi          string                        `json:"lokasi"`
+	Keterangan      string                        `json:"keterangan"`
+	Latitude        float64                       `json:"latitude"`
+	Longitude       float64                       `json:"longitude"`
+}
+
+type PayloadKirimPengirimanEks struct {
+	IdentitasKurir  identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdBidKurir      int64                         `json:"id_bid_kurir"`
+	IdPengirimanEks int64                         `json:"id_pengiriman"`
+	Lokasi          string                        `json:"lokasi"`
+	Keterangan      string                        `json:"keterangan"`
+	Latitude        float64                       `json:"latitude"`
+	Longitude       float64                       `json:"longitude"`
+}
+
+type PayloadSampaiPengirimanEks struct {
+	IdentitasKurir  identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdBidKurir      int64                         `json:"id_bid_kurir"`
+	IdPengirimanEks int64                         `json:"id_pengiriman"`
+	Lokasi          string                        `json:"lokasi"`
+	Keterangan      string                        `json:"keterangan"`
+	Latitude        float64                       `json:"latitude"`
+	Longitude       float64                       `json:"longitude"`
+}
+
 type PayloadNonaktifkanBidKurir struct {
 	IdentitasKurir identity_kurir.IdentitasKurir `json:"identitas_kurir"`
 	IdBidKurir     int64                         `json:"id_bid_kurir"`
