@@ -12,20 +12,20 @@ type BarangContract interface {
 
 type BarangInduk struct {
 	ID               int32          `gorm:"primaryKey;autoIncrement" json:"id_barang_induk"`
-	SellerID         int32          `gorm:"column:id_seller;not null" json:"id_seller_barang_induk"`
+	SellerID         int32          `gorm:"index;column:id_seller;not null" json:"id_seller"`
 	Seller           Seller         `gorm:"foreignKey:SellerID;references:ID" json:"-"`
 	IdDiskon         int64          `gorm:"column:id_diskon"`
-	NamaBarang       string         `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama_barang_induk"`
-	JenisBarang      string         `gorm:"column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis_barang_induk,omitempty"`
-	Deskripsi        string         `gorm:"column:deskripsi;type:text" json:"deskripsi_barang_induk,omitempty"`
+	NamaBarang       string         `gorm:"column:nama_barang;type:varchar(200);not null" json:"nama"`
+	JenisBarang      string         `gorm:"index;column:jenis_barang;type:seller_dedication;not null;default:'Semua Barang'" json:"jenis,omitempty"`
+	Deskripsi        string         `gorm:"column:deskripsi;type:text" json:"deskripsi,omitempty"`
 	OriginalKategori int64          `gorm:"column:original_kategori;type:int8" json:"original_kategori,omitempty"`
-	Viewed           int32          `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed_barang_induk,omitempty"`
-	Likes            int32          `gorm:"column:likes;type:int4;not null;default:0" json:"likes_barang_induk,omitempty"`
-	TotalKomentar    int32          `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar_barang_induk,omitempty"`
+	Viewed           int32          `gorm:"column:viewed;type:int4;not null;default:0" json:"viewed,omitempty"`
+	Likes            int32          `gorm:"column:likes;type:int4;not null;default:0" json:"likes,omitempty"`
+	TotalKomentar    int32          `gorm:"column:total_komentar;type:int4;not null;default:0" json:"total_komentar,omitempty"`
 	HargaKategoris   int32          `gorm:"column:harga_kategori_barang" json:"harga_kategori_barang"`
-	CreatedAt        time.Time      `gorm:"autoCreateTime"`
-	UpdatedAt        time.Time      `gorm:"autoUpdateTime"`
-	DeletedAt        gorm.DeletedAt `gorm:"index"`
+	CreatedAt        time.Time      `gorm:"autoCreateTime"  json:"created_at"`
+	UpdatedAt        time.Time      `gorm:"autoUpdateTime"  json:"updated_at"`
+	DeletedAt        gorm.DeletedAt `gorm:"index" db:"deleted_at" json:"deleted_at,omitempty"`
 }
 
 func (BarangInduk) TableName() string {
@@ -34,9 +34,9 @@ func (BarangInduk) TableName() string {
 
 type KategoriBarang struct {
 	ID             int64          `gorm:"primaryKey;autoIncrement" json:"id_kategori_barang"`
-	SellerID       int32          `gorm:"column:id_seller;not null" json:"id_seller_kategori_barang"`
+	SellerID       int32          `gorm:"index;column:id_seller;not null" json:"id_seller_kategori_barang"`
 	Seller         Seller         `gorm:"foreignKey:SellerID;references:ID" json:"-"`
-	IdBarangInduk  int32          `gorm:"column:id_barang_induk;not null" json:"id_barang_induk_kategori"`
+	IdBarangInduk  int32          `gorm:"index;column:id_barang_induk;not null" json:"id_barang_induk_kategori"`
 	BarangInduk    BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID;constraint:OnDelete:CASCADE;" json:"-"`
 	IDAlamat       int64          `gorm:"column:id_alamat_gudang;type:int8" json:"id_alamat_gudang_kategori_barang"`
 	AlamatGudang   AlamatGudang   `gorm:"foreignKey:IDAlamat;references:ID" json:"-"`
@@ -61,15 +61,6 @@ type KategoriBarang struct {
 func (KategoriBarang) TableName() string {
 	return "kategori_barang"
 }
-
-type StatusVarianBarang string
-
-const (
-	Ready    StatusVarianBarang = "Ready"
-	Dipesan  StatusVarianBarang = "Dipesan"
-	Diproses StatusVarianBarang = "Diproses"
-	Terjual  StatusVarianBarang = "Terjual"
-)
 
 type VarianBarang struct {
 	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id_varian_barang"`
