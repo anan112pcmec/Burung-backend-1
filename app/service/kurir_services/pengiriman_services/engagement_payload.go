@@ -102,6 +102,16 @@ type PayloadKirimPengirimanEks struct {
 	Longitude       float64                       `json:"longitude"`
 }
 
+type PayloadUpdateInformasiPerjalananPengirimanEks struct {
+	IdenititasKurir identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	IdBid           int64                         `json:"id_bid"`
+	IdPengirimanEks int64                         `json:"id_pengiriman_eks"`
+	Lokasi          string                        `json:"lokasi"`
+	Keterangan      string                        `json:"keterangan"`
+	Latitude        float64                       `json:"latitude"`
+	Longitude       float64                       `json:"longitude"`
+}
+
 type PayloadSampaiPengirimanEks struct {
 	IdentitasKurir  identity_kurir.IdentitasKurir `json:"identitas_kurir"`
 	IdBidKurir      int64                         `json:"id_bid_kurir"`

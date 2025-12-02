@@ -906,8 +906,9 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 	var id_data_bid_schedul int64 = 0
 	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 		IdBid:           data.IdBidKurir,
+		IdKurir:         data.IdentitasKurir.IdKurir,
 		IdPengirimanEks: data.IdPengirimanEks,
-		Status:          pengiriman_enums.Waiting,
+		Status:          kurir_enums.Ambil,
 	}).Limit(1).Scan(&id_data_bid_schedul).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -979,6 +980,7 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 		IdBid:           data.IdBidKurir,
 		IdKurir:         data.IdentitasKurir.IdKurir,
 		IdPengirimanEks: data.IdPengirimanEks,
+		Status:          kurir_enums.Kirim,
 	}).Limit(1).Scan(&id_data_schedul).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -998,7 +1000,7 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 	var id_jejak_pengiriman_eks int64 = 0
 	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
 		IdPengirimanEkspedisi: data.IdPengirimanEks,
-	}).Limit(1).Error; err != nil {
+	}).Limit(1).Scan(&id_jejak_pengiriman_eks).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -1054,6 +1056,58 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 	}
 }
 
+func UpdateInformasiPerjalananPengirimanEks(ctx context.Context, data PayloadUpdateInformasiPerjalananPengirimanEks, db *gorm.DB) *response.ResponseForm {
+	const services = "UpdateInformasiPerjalananPengirimanEks"
+
+	if _, status := data.IdenititasKurir.Validating(ctx, db); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data kurir tidak ditemukan",
+		}
+	}
+
+	var id_data_jejak_pengiriman_eks int64 = 0
+	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
+		IdPengirimanEkspedisi: data.IdPengirimanEks,
+	}).Limit(1).Scan(&id_data_jejak_pengiriman_eks).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if id_data_jejak_pengiriman_eks == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data jejak pengiriman tidak ditemukan",
+		}
+	}
+
+	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Where(&models.JejakPengirimanEkspedisi{
+		ID: id_data_jejak_pengiriman_eks,
+	}).Updates(&models.JejakPengirimanEkspedisi{
+		Lokasi:     data.Lokasi,
+		Keterangan: data.Keterangan,
+		Latitude:   data.Latitude,
+		Longitude:  data.Longitude,
+	}).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	return &response.ResponseForm{
+		Status:   http.StatusOK,
+		Services: services,
+		Message:  "Berhasil",
+	}
+}
+
 func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, db *gorm.DB) *response.ResponseForm {
 	const services = "SampaiPengirimanEks"
 
@@ -1067,9 +1121,10 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 
 	var id_bid_schedul int64 = 0
 	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
-		IdBid:   data.IdBidKurir,
-		IdKurir: data.IdBidKurir,
-		Status:  kurir_enums.Finish,
+		IdBid:           data.IdBidKurir,
+		IdPengirimanEks: data.IdPengirimanEks,
+		IdKurir:         data.IdBidKurir,
+		Status:          kurir_enums.Finish,
 	}).Limit(1).Scan(&id_bid_schedul).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

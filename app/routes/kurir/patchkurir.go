@@ -128,6 +128,13 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_pengiriman_services.PickedUpPengirimanNonEks(ctx, data, db)
+	case "/kurir/pengiriman/picked-up-pengiriman-eks":
+		var data kurir_pengiriman_services.PayloadPickedUpPengirimanEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.PickedUpPengirimanEks(ctx, data, db)
 	case "/kurir/pengiriman/kirim-pengiriman-non-eks":
 		var data kurir_pengiriman_services.PayloadKirimPengirimanNonEks
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -135,13 +142,27 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_pengiriman_services.KirimPengirimanNonEks(ctx, data, db)
-	case "/kurir/pengiriman/update-informasi-pengiriman":
+	case "/kurir/pengiriman/kirim-pengiriman-eks":
+		var data kurir_pengiriman_services.PayloadKirimPengirimanEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.KirimPengirimanEks(ctx, data, db)
+	case "/kurir/pengiriman/update-informasi-pengiriman-non-eks":
 		var data kurir_pengiriman_services.PayloadUpdateInformasiPerjalananPengiriman
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		hasil = kurir_pengiriman_services.UpdateInformasiPerjalananPengirimanNonEks(ctx, data, db)
+	case "/kurir/pengiriman/update-informasi-pengiriman-eks":
+		var data kurir_pengiriman_services.PayloadUpdateInformasiPerjalananPengirimanEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.UpdateInformasiPerjalananPengirimanEks(ctx, data, db)
 	case "/kurir/pengiriman/sampai-pengiriman-non-eks":
 		var data kurir_pengiriman_services.PayloadSampaiPengirimanNonEks
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
@@ -149,6 +170,14 @@ func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds 
 			return
 		}
 		hasil = kurir_pengiriman_services.SampaiPengirimanNonEks(ctx, data, db)
+	case "/kurir/pengiriman/sampai-pengiriman-eks":
+		var data kurir_pengiriman_services.PayloadSampaiPengirimanEks
+		if err := helper.DecodeJSONBody(r, &data); err != nil {
+			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		hasil = kurir_pengiriman_services.SampaiPengirimanEks(ctx, data, db)
+
 	}
 
 	w.Header().Set("Content-Type", "application/json")
