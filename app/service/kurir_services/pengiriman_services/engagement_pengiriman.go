@@ -11,6 +11,7 @@ import (
 
 	kurir_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity/kurir"
 	pengiriman_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/pengiriman"
+	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 )
@@ -605,6 +606,25 @@ func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirima
 		}
 	}
 
+	var IdTransaksiPengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Pengiriman{}).Select("id_transaksi").Where(&models.Pengiriman{
+		ID: data.IdPengiriman,
+	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if IdTransaksiPengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data Id Transaksi Tidak ditemukan",
+		}
+	}
+
 	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
 			ID: check_exist_bid_schedul,
@@ -630,6 +650,12 @@ func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirima
 			Longtitude:   data.Longitude,
 		}).Error; err != nil {
 			fmt.Println("jeder")
+			return err
+		}
+
+		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+			ID: IdTransaksiPengiriman,
+		}).Update("status", transaksi_enums.Dikirim).Error; err != nil {
 			return err
 		}
 
@@ -807,7 +833,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 	}
 
 	wg.Add(1)
-	go func(con context.Context, idBid int64) {
+	go func(idBid int64) {
 		defer wg.Done()
 		var ids_data_bid_kurir_scheduler []int64 = make([]int64, 0, 8)
 		if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
@@ -819,7 +845,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		if len(ids_data_bid_kurir_scheduler) == 1 {
 			final = true
 		}
-	}(ctx, data.IdBidKurir)
+	}(data.IdBidKurir)
 	var exist_bid_data_schedul int64 = 0
 	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 		IdBid:        data.IdBidKurir,
@@ -861,6 +887,25 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		}
 	}
 
+	var IdTransaksiPengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.Pengiriman{}).Select("id_transaksi").Where(&models.Pengiriman{
+		ID: data.IdPengiriman,
+	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if IdTransaksiPengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data Id Transaksi Tidak ditemukan",
+		}
+	}
+
 	wg.Wait()
 
 	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -892,6 +937,12 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 			Latitude:   data.Latitude,
 			Longtitude: data.Longitude,
 		}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+			ID: IdTransaksiPengiriman,
+		}).Update("status", transaksi_enums.Selesai).Error; err != nil {
 			return err
 		}
 
@@ -957,6 +1008,25 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 		}
 	}
 
+	var IdTransaksiPengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("id_transaksi").Where(&models.PengirimanEkspedisi{
+		ID: data.IdPengirimanEks,
+	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if IdTransaksiPengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data Id Transaksi Tidak ditemukan",
+		}
+	}
+
 	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
 			ID: id_data_bid_schedul,
@@ -977,6 +1047,12 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 			Latitude:              data.Latitude,
 			Longitude:             data.Longitude,
 		}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+			ID: IdTransaksiPengiriman,
+		}).Update("status", transaksi_enums.Dikirim).Error; err != nil {
 			return err
 		}
 
@@ -1154,11 +1230,11 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	}
 
 	wg.Add(1)
-	go func(con context.Context, idBid int64) {
+	go func(idBid int64) {
 		defer wg.Done()
 
 		var ids_data_bid_kurir_scheduler []int64
-		if err := db.WithContext(con).Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
+		if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
 			IdBid: idBid,
 		}).Limit(8).Scan(&ids_data_bid_kurir_scheduler).Error; err != nil {
 			return
@@ -1167,7 +1243,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		if len(ids_data_bid_kurir_scheduler) == 1 {
 			final = true
 		}
-	}(ctx, data.IdBidKurir)
+	}(data.IdBidKurir)
 
 	var id_bid_schedul int64 = 0
 	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
@@ -1210,6 +1286,25 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		}
 	}
 
+	var IdTransaksiPengiriman int64 = 0
+	if err := db.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("id_transaksi").Where(&models.PengirimanEkspedisi{
+		ID: data.IdPengirimanEks,
+	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
+
+	if IdTransaksiPengiriman == 0 {
+		return &response.ResponseForm{
+			Status:   http.StatusUnauthorized,
+			Services: services,
+			Message:  "Gagal data Id Transaksi Tidak ditemukan",
+		}
+	}
+
 	wg.Wait()
 
 	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -1224,7 +1319,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 
 		if err := tx.Model(&models.PengirimanEkspedisi{}).Where(&models.PengirimanEkspedisi{
 			ID: data.IdPengirimanEks,
-		}).Update("status", pengiriman_enums.SampaiEkspedisi).Error; err != nil {
+		}).Update("status", pengiriman_enums.SampaiAgentEkspedisi).Error; err != nil {
 			return err
 		}
 
@@ -1241,6 +1336,14 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 			Keterangan: data.Keterangan,
 			Latitude:   data.Latitude,
 			Longitude:  data.Longitude,
+		}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
+			ID: IdTransaksiPengiriman,
+		}).Updates(&models.Transaksi{
+			KodeResiEkspedisi: &data.NoResiEkspedisi,
 		}).Error; err != nil {
 			return err
 		}

@@ -501,15 +501,18 @@ func (BidKurirData) TableName() string {
 }
 
 type BidKurirNonEksScheduler struct {
-	ID           int64        `gorm:"primaryKey;autoIncrement" json:"id"`
-	IdBid        int64        `gorm:"column:id_bid;not null" json:"id_bid"`
-	BidKurirData BidKurirData `gorm:"foreignKey:IdBid;references:ID" json:"-"`
-	IdKurir      int64        `gorm:"column:id_kurir;not null" json:"id_kurir"`
-	Kurir        Kurir        `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
-	Urutan       int8         `gorm:"column:urutan;type:int;not null"`
-	IdPengiriman int64        `gorm:"column:id_pengiriman;not null" json:"id_pengiriman"`
-	Pengiriman   Pengiriman   `gorm:"foreignKey:IdPengiriman;references:ID" json:"-"`
-	Status       string       `gorm:"column:status;type:status_bid_scheduler;not null;default:Wait" json:"status"`
+	ID           int64          `gorm:"primaryKey;autoIncrement" json:"id"`
+	IdBid        int64          `gorm:"column:id_bid;not null" json:"id_bid"`
+	BidKurirData BidKurirData   `gorm:"foreignKey:IdBid;references:ID" json:"-"`
+	IdKurir      int64          `gorm:"column:id_kurir;not null" json:"id_kurir"`
+	Kurir        Kurir          `gorm:"foreignKey:IdKurir;references:ID" json:"-"`
+	Urutan       int8           `gorm:"column:urutan;type:int;not null"`
+	IdPengiriman int64          `gorm:"column:id_pengiriman;not null" json:"id_pengiriman"`
+	Pengiriman   Pengiriman     `gorm:"foreignKey:IdPengiriman;references:ID" json:"-"`
+	Status       string         `gorm:"column:status;type:status_bid_scheduler;not null;default:Wait" json:"status"`
+	CreatedAt    time.Time      `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
 func (BidKurirNonEksScheduler) TableName() string {
@@ -526,6 +529,9 @@ type BidKurirEksScheduler struct {
 	IdPengirimanEks     int64               `gorm:"column:id_pengiriman_ekspedisi;not null" json:"id_pengiriman_ekspedisi"`
 	PengirimanEkspedisi PengirimanEkspedisi `gorm:"foreignKey:IdPengirimanEks;references:ID" json:"-"`
 	Status              string              `gorm:"column:status;type:status_bid_scheduler;not null;default:Wait" json:"status"`
+	CreatedAt           time.Time           `gorm:"autoCreateTime"`
+	UpdatedAt           time.Time           `gorm:"autoUpdateTime"`
+	DeletedAt           gorm.DeletedAt      `gorm:"index"`
 }
 
 func (BidKurirEksScheduler) TableName() string {

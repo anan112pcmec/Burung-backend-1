@@ -29,7 +29,7 @@ type Transaksi struct {
 	ID                  int64          `gorm:"primaryKey;autoIncrement" json:"id_transaksi"`
 	IdPengguna          int64          `gorm:"index;column:id_pengguna;not null" json:"id_pengguna"`
 	Pengguna            Pengguna       `gorm:"foreignKey:IdPengguna;references:ID" json:"-"`
-	IdSeller            int32          `gorm:"index;column:id_seller;not null" json:"id_seller"`
+	IdSeller            int32          `gorm:"column:id_seller;not null" json:"id_seller"`
 	Seller              Seller         `gorm:"foreignKey:IdSeller;references:ID" json:"-"`
 	IdBarangInduk       int64          `gorm:"index;column:id_barang_induk;not null" json:"id_barang_induk"`
 	BarangInduk         BarangInduk    `gorm:"foreignKey:IdBarangInduk;references:ID" json:"-"`

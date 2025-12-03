@@ -103,7 +103,7 @@ func AmbilRandomSeller(FinalTake int64, ctx context.Context, db *gorm.DB, rds *r
 			}
 
 			idSeller, errID := strconv.Atoi(data["id_seller"])
-			follower, _ := strconv.Atoi(data["follower_total_seller"])
+
 			if errID != nil || idSeller == 0 {
 				return
 			}
@@ -116,7 +116,6 @@ func AmbilRandomSeller(FinalTake int64, ctx context.Context, db *gorm.DB, rds *r
 				Password:         "",
 				SellerDedication: data["seller_dedication_seller"],
 				Deskripsi:        data["deskripsi_seller"],
-				FollowerTotal:    int32(follower),
 				Email:            data["email_seller"],
 				Jenis:            data["jenis_seller"],
 				Punchline:        data["punchline_seller"],
@@ -235,7 +234,6 @@ func AmbilSellerByNama(
 			}
 
 			idSeller, errID := strconv.Atoi(data["id_seller"])
-			follower, _ := strconv.Atoi(data["follower_total_seller"])
 			if errID != nil || idSeller == 0 {
 				return
 			}
@@ -247,7 +245,6 @@ func AmbilSellerByNama(
 				JamOperasional:   data["jam_operasional_seller"],
 				SellerDedication: data["seller_dedication_seller"],
 				Deskripsi:        data["deskripsi_seller"],
-				FollowerTotal:    int32(follower),
 				Email:            data["email_seller"],
 				Jenis:            data["jenis_seller"],
 				Punchline:        data["punchline_seller"],
@@ -373,11 +370,6 @@ func AmbilSellerByJenis(FinalTake int64, ctx context.Context, jenis string, db *
 				return
 			}
 
-			followerTotal, errFollower := strconv.Atoi(data["follower_total_seller"])
-			if errFollower != nil {
-				return
-			}
-
 			sellerData := models.Seller{
 				ID:               int32(idSeller),
 				Username:         data["username_seller"],
@@ -388,7 +380,6 @@ func AmbilSellerByJenis(FinalTake int64, ctx context.Context, jenis string, db *
 				Deskripsi:        data["deskripsi_seller"],
 				Nama:             data["nama_seller"],
 				SellerDedication: data["seller_dedication_seller"],
-				FollowerTotal:    int32(followerTotal),
 			}
 
 			if sellerData.Username != "" {
@@ -497,11 +488,6 @@ func AmbilSellerByDedication(FinalTake int64, ctx context.Context, dedication st
 				return
 			}
 
-			followerTotal, errFollower := strconv.Atoi(data["follower_total_seller"])
-			if errFollower != nil {
-				return
-			}
-
 			sellerData := models.Seller{
 				ID:               int32(idSeller),
 				Username:         data["username_seller"],
@@ -512,7 +498,6 @@ func AmbilSellerByDedication(FinalTake int64, ctx context.Context, dedication st
 				Deskripsi:        data["deskripsi_seller"],
 				Nama:             data["nama_seller"],
 				SellerDedication: data["seller_dedication_seller"],
-				FollowerTotal:    int32(followerTotal),
 			}
 
 			if sellerData.Username != "" {
@@ -596,7 +581,6 @@ func AmbilSellerByNamaDanJenis(FinalTake int64, ctx context.Context, nama, jenis
 			}
 
 			id_seller, _ := strconv.Atoi(seller["id_seller"])
-			follower_total, _ := strconv.Atoi(seller["follower_total_seller"])
 
 			mu.Lock()
 			sellers = append(sellers, models.Seller{
@@ -609,7 +593,6 @@ func AmbilSellerByNamaDanJenis(FinalTake int64, ctx context.Context, nama, jenis
 				Deskripsi:        seller["deskripsi_seller"],
 				Nama:             seller["nama_seller"],
 				SellerDedication: seller["seller_dedication_seller"],
-				FollowerTotal:    int32(follower_total),
 			})
 			mu.Unlock()
 		}(id)
@@ -682,10 +665,6 @@ func AmbilSellerByNamaDanDedication(FinalTake int64, ctx context.Context, nama, 
 			if err_id != nil {
 				return
 			}
-			follower_total, err_follower := strconv.Atoi(seller["follower_total_seller"])
-			if err_follower != nil {
-				return
-			}
 
 			seller_data := models.Seller{
 				ID:               int32(id_seller),
@@ -697,7 +676,6 @@ func AmbilSellerByNamaDanDedication(FinalTake int64, ctx context.Context, nama, 
 				Deskripsi:        seller["deskripsi_seller"],
 				Nama:             seller["nama_seller"],
 				SellerDedication: seller["seller_dedication_seller"],
-				FollowerTotal:    int32(follower_total),
 			}
 
 			if seller_data.Username != "" {
@@ -790,10 +768,6 @@ func AmbilSellerByJenisDanDedication(FinalTake int64, ctx context.Context, jenis
 			if errID != nil {
 				return
 			}
-			followerTotal, errFollower := strconv.Atoi(seller["follower_total_seller"])
-			if errFollower != nil {
-				return
-			}
 
 			sellerData := models.Seller{
 				ID:               int32(idSeller),
@@ -805,7 +779,6 @@ func AmbilSellerByJenisDanDedication(FinalTake int64, ctx context.Context, jenis
 				Deskripsi:        seller["deskripsi_seller"],
 				Nama:             seller["nama_seller"],
 				SellerDedication: seller["seller_dedication_seller"],
-				FollowerTotal:    int32(followerTotal),
 			}
 
 			if sellerData.Username != "" {
@@ -875,11 +848,6 @@ func AmbilSellerByNamaJenisDedication(FinalTake int64, ctx context.Context, nama
 				return
 			}
 
-			follower_total, errFollower := strconv.Atoi(sellerMap["follower_total_seller"])
-			if errFollower != nil {
-				return
-			}
-
 			sellerData := models.Seller{
 				ID:               int32(id_seller),
 				Username:         sellerMap["username_seller"],
@@ -890,7 +858,6 @@ func AmbilSellerByNamaJenisDedication(FinalTake int64, ctx context.Context, nama
 				Deskripsi:        sellerMap["deskripsi_seller"],
 				Nama:             sellerMap["nama_seller"],
 				SellerDedication: sellerMap["seller_dedication_seller"],
-				FollowerTotal:    int32(follower_total),
 			}
 
 			if sellerData.Username != "" {

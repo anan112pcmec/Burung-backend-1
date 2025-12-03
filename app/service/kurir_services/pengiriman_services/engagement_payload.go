@@ -114,6 +114,7 @@ type PayloadUpdateInformasiPerjalananPengirimanEks struct {
 
 type PayloadSampaiPengirimanEks struct {
 	IdentitasKurir  identity_kurir.IdentitasKurir `json:"identitas_kurir"`
+	NoResiEkspedisi string                        `json:"no_resi_ekspedisi"`
 	IdBidKurir      int64                         `json:"id_bid_kurir"`
 	IdPengirimanEks int64                         `json:"id_pengiriman"`
 	Lokasi          string                        `json:"lokasi"`

@@ -1,18 +1,16 @@
 package transaksi_enums
 
 // Enums Untuk Transaksi
-var (
-	Dibayar    = "Dibayar"
-	Diproses   = "Diproses"
-	Waiting    = "Waiting"
-	Dikirim    = "Dikirim"
-	Selesai    = "Selesai"
-	Dibatalkan = "Dibatalkan"
-)
+
+const Dibayar string = "Dibayar"
+const Diproses string = "Diproses"
+const Waiting string = "Waiting"
+const Dikirim string = "Dikirim"
+const Selesai string = "Selesai"
+const Dibatalkan string = "Dibatalkan"
 
 // Untuk failed transaksi
-var (
-	Pending = "Pending"
-	Batal   = "Batal"
-	Lanjut  = "Lanjut"
-)
+
+const Pending string = "Pending"
+const Batal string = "Batal"
+const Lanjut string = "Lanjut"

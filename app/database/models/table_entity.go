@@ -61,22 +61,21 @@ func (Seller) TableName() string {
 type JenisLayananKurir string
 
 type Kurir struct {
-	ID               int64          `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
-	Nama             string         `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama"`
-	Username         string         `gorm:"column:username;type:text;not null" json:"username"`
-	Email            string         `gorm:"column:email;type:varchar(150);not null;default:''" json:"email"`
-	Jenis            string         `gorm:"column:jenis;type:jenis_layanan_kurir;not null;default:'Reguler'" json:"jenis"`
-	PasswordHash     string         `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"password_hash"`
-	Deskripsi        string         `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi"`
-	StatusKurir      string         `gorm:"column:status;type:status;not null;default:'Offline'" json:"status"`
-	StatusBid        string         `gorm:"column:status_bid;type:status_kurir;not null;default:'Off'" json:"status_bid"`
-	VerifiedKurir    bool           `gorm:"column:verified;type:boolean;not null;default:false" json:"verified"`
-	JumlahPengiriman int32          `gorm:"column:jumlah_pengiriman;type:int4;not null;default:0" json:"jumlah_pengiriman"`
-	Rating           float32        `gorm:"column:rating;type:float;default:0" json:"rating"`
-	TipeKendaraan    string         `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;default:'Unknown'" json:"tipe_kendaraan"`
-	CreatedAt        time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt        time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	ID            int64          `gorm:"primaryKey;autoIncrement" json:"id_kurir"`
+	Nama          string         `gorm:"column:nama;type:varchar(150);not null;default:''" json:"nama"`
+	Username      string         `gorm:"column:username;type:text;not null" json:"username"`
+	Email         string         `gorm:"column:email;type:varchar(150);not null;default:''" json:"email"`
+	Jenis         string         `gorm:"column:jenis;type:jenis_layanan_kurir;not null;default:'Reguler'" json:"jenis"`
+	PasswordHash  string         `gorm:"column:password_hash;type:varchar(250);not null;default:''" json:"password_hash"`
+	Deskripsi     string         `gorm:"column:deskripsi;type:text;not null;default:''" json:"deskripsi"`
+	StatusKurir   string         `gorm:"column:status;type:status;not null;default:'Offline'" json:"status"`
+	StatusBid     string         `gorm:"column:status_bid;type:status_kurir;not null;default:'Off'" json:"status_bid"`
+	VerifiedKurir bool           `gorm:"column:verified;type:boolean;not null;default:false" json:"verified"`
+	Rating        float32        `gorm:"column:rating;type:float;default:0" json:"rating"`
+	TipeKendaraan string         `gorm:"column:jenis_kendaraan;type:jenis_kendaraan_kurir;default:'Unknown'" json:"tipe_kendaraan"`
+	CreatedAt     time.Time      `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
 }
 
 func (Kurir) TableName() string {

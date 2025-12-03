@@ -61,6 +61,7 @@ func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProf
 	return &response.ResponseForm{
 		Status:   http.StatusOK,
 		Services: services,
+		Message:  "Berhasil Memperbarui",
 		Payload: response_profiling_pengguna.ResponsePersonalProfilingPengguna{
 			UpdateNama:     hasil_update_nama,
 			UpdateUsername: hasil_update_username,

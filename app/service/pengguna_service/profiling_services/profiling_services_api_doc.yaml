@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Pengguna Profiling Services API
+  version: 1.0.0
+  description: >
+    API Documentation utnuk layanan manajemen profiling pengguna.
+    Semua Response Menggunakan Struktif `ResponseForm`.
+
+servers:
+  - url: http://localhost:8080
+    description: Development Server
+
+components:
+  schemas:
+    # ===============================
+    # Universal Response Wrapper
+    # ===============================
+    ResponseForm:
+      type: object
+      properties:
+        status: 
+          type: integer
+          example: 200
+        services: 
+          type: string
+          example: "Personal Profiling Pengguna" 
+        pesan: 
+          type: string 
+          example: "Berhasil"
+        response_payload:
+          type: object
+          nullable: true
+
+    IdentityPengguna:
+      type: object
+      properties:
+        id_pengguna: 
+          type: integer
+          example: 1
+        username_pengguna:
+          type: string
+          example: "username_burung"
+        email_pengguna:
+          type: string
+          example: "burungapp@gmail.com"
+      required: 
+        - id_pengguna
+        - username_pengguna
+        - email_pengguna
+
+    PayloadPesonalProfilingPengguna:
+      type: object
+      properties:
+        identitas_pengguna: 
+          $ref: "#/components/schemas/IdentityPengguna"
+        update_username_user:
+          type: string
+          example: "username_update_burung"
+        update_nama_user:
+          type: string
+          example: "update_nama_burung"
+        update_email_user:
+          type: string
+          example: "update_gmail_burung"
+      required:
+        - identitas_pengguna
+        - update_username_user
+        - update_nama_user
+        - update_email_user        
+
+paths: 
+ 
+ /user/profiling/personal-update:
+    patch:
+      summary: "Mengupdate Profile pengguna"
+      tags: 
+        - Profiling Pengguna
+      requestBody:
+        required: true
+        content: 
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayloadPesonalProfilingPengguna"
+      responses:
+        "200":
+          description: Selesai Profile berhasil diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseForm"
+
+
+    
+      
+
+
+
