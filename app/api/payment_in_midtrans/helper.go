@@ -1,4 +1,4 @@
-package payment_gateaway
+package payment_in_gateaway
 
 import (
 	"fmt"

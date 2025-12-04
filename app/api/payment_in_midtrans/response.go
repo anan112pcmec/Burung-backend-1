@@ -1,4 +1,4 @@
-package payment_gateaway
+package payment_in_gateaway
 
 type StandardFullResponse struct {
 	FinishRedirectUrl string `json:"finish_redirect_url"`

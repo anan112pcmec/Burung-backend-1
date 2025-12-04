@@ -1,4 +1,16 @@
 services:
+  pg-slave:
+    image: postgres:17
+    container_name: pg_burung_slave
+    environment:
+      POSTGRES_PASSWORD: slavepass
+      POSTGRES_USER: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_slave_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   redis:
     image: redis:latest
     container_name: redis_burung_cache
@@ -27,8 +39,11 @@ services:
     image: cassandra:4.1
     container_name: cassandra_burung_hystorical_data
     environment:
-      - CASSANDRA_CLUSTER_NAME=history_cluster
+      - CASSANDRA_CLUSTER_NAME=burung_cluster
       - CASSANDRA_NUM_TOKENS=8
     ports:
-      - "9042:9042" 
+      - "9042:9042"
     restart: unless-stopped
+
+volumes:
+  pg_slave_data:

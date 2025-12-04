@@ -1,4 +1,4 @@
-package payment_wallet
+package payment_in_wallet
 
 type WalletResponse struct {
 	Status            string `json:"status_code"`

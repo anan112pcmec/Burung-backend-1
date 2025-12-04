@@ -1,4 +1,4 @@
-package payment_wallet
+package payment_in_wallet
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package payment_va
+package payment_in_va
 
 import (
 	"context"

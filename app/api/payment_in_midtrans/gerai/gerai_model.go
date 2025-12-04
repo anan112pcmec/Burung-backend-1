@@ -1,4 +1,4 @@
-package payment_gerai
+package payment_in_gerai
 
 type GeraiResponse struct {
 	Status            string `json:"status_code"`

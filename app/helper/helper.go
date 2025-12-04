@@ -2,6 +2,7 @@ package helper
 
 import (
 	crand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -283,4 +284,10 @@ func ParseCoordinates(koordinatMentah string) (float64, float64, error) {
 	lng = round6(lng)
 
 	return lat, lng, nil
+}
+
+func GenerateIdempotencyKey() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }

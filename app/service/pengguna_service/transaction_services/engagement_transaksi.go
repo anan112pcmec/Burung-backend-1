@@ -17,9 +17,9 @@ import (
 	ekspedisi_cost "github.com/anan112pcmec/Burung-backend-1/app/api/ekspedisi_raja_ongkir/cost"
 	open_route_direction "github.com/anan112pcmec/Burung-backend-1/app/api/open_route_map/direction"
 	payment_gateaway "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans"
-	payment_gerai "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/gerai"
-	payment_va "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/virtual_account"
-	payment_wallet "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/wallet"
+	payment_in_gerai "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/gerai"
+	payment_in_va "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/virtual_account"
+	payment_in_wallet "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/wallet"
 	data_cache "github.com/anan112pcmec/Burung-backend-1/app/cache/data"
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
@@ -989,7 +989,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	}
 
 	var (
-		resp payment_va.Response
+		resp payment_in_va.Response
 	)
 
 	d, err_m := json.Marshal(data.PaymentResult)
@@ -1003,7 +1003,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 
 	switch bank {
 	case "bca":
-		var obj payment_va.BcaVirtualAccountResponse
+		var obj payment_in_va.BcaVirtualAccountResponse
 		if err := json.Unmarshal(d, &obj); err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
@@ -1014,7 +1014,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 		resp = &obj
 
 	case "bni":
-		var obj payment_va.BniVirtualAccountResponse
+		var obj payment_in_va.BniVirtualAccountResponse
 		if err := json.Unmarshal(d, &obj); err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
@@ -1025,7 +1025,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 		resp = &obj
 
 	case "bri":
-		var obj payment_va.BriVirtualAccountResponse
+		var obj payment_in_va.BriVirtualAccountResponse
 		if err := json.Unmarshal(d, &obj); err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
@@ -1036,7 +1036,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 		resp = &obj
 
 	case "permata":
-		var obj payment_va.PermataVirtualAccount
+		var obj payment_in_va.PermataVirtualAccount
 		if err := json.Unmarshal(d, &obj); err != nil {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
@@ -1167,11 +1167,11 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		}
 	}
 
-	var resp payment_va.Response
+	var resp payment_in_va.Response
 
 	switch bank {
 	case "bca":
-		var obj payment_va.BcaVirtualAccountResponse
+		var obj payment_in_va.BcaVirtualAccountResponse
 		if err := json.Unmarshal(raw, &obj); err != nil {
 			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
 				Message: "Gagal mengenali virtual account",
@@ -1180,7 +1180,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		resp = &obj
 
 	case "bni":
-		var obj payment_va.BniVirtualAccountResponse
+		var obj payment_in_va.BniVirtualAccountResponse
 		if err := json.Unmarshal(raw, &obj); err != nil {
 			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
 				Message: "Gagal mengenali virtual account",
@@ -1189,7 +1189,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		resp = &obj
 
 	case "bri":
-		var obj payment_va.BriVirtualAccountResponse
+		var obj payment_in_va.BriVirtualAccountResponse
 		if err := json.Unmarshal(raw, &obj); err != nil {
 			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
 				Message: "Gagal mengenali virtual account",
@@ -1198,7 +1198,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 		resp = &obj
 
 	case "permata":
-		var obj payment_va.PermataVirtualAccount
+		var obj payment_in_va.PermataVirtualAccount
 		if err := json.Unmarshal(raw, &obj); err != nil {
 			return &response.ResponseForm{Status: http.StatusBadRequest, Services: services, Payload: response_transaction_pengguna.ResponsePaidFailedTransaksi{
 				Message: "Gagal mengenali virtual account",
@@ -1401,7 +1401,7 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.DB) *response.ResponseForm {
 	services := "PaidFailedTransaksiWallet"
 
-	var resp payment_wallet.Response = &data.PaymentResult
+	var resp payment_in_wallet.Response = &data.PaymentResult
 	standard_response, _ := resp.Pembayaran()
 
 	standard_response.IdPengguna = data.DataHold[0].IDUser
@@ -1481,7 +1481,7 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 	}
 
 	var (
-		resp payment_gerai.Response
+		resp payment_in_gerai.Response
 	)
 	resp = &data.PaymentResult
 
@@ -1577,7 +1577,7 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB) *response.ResponseForm {
 	services := "PaidFailedTransaksiGerai"
 
-	var resp payment_gerai.Response = &data.PaymentResult
+	var resp payment_in_gerai.Response = &data.PaymentResult
 	standard_response, _ := resp.Pembayaran()
 
 	standard_response.IdPengguna = data.DataHold[0].IDUser
