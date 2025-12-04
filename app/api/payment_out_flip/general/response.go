@@ -25,3 +25,11 @@ type ResponseGetBank []struct {
 type ResponseMaintenanceInfo struct {
 	Maintenance string `json:"maintenance"`
 }
+
+type ResponseFlipGeneralWrapper struct {
+	Err401         *Response401Error
+	Err422         *Response422Error
+	GetBalance     *ResponseGetBalance
+	GetBank        *[]ResponseGetBank
+	GetMaintenance *ResponseMaintenanceInfo
+}

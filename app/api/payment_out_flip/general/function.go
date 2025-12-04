@@ -7,15 +7,14 @@ import (
 	"net/http"
 
 	payment_out_constanta "github.com/anan112pcmec/Burung-backend-1/app/api/payment_out_flip"
+)
 
-func GetBalance[T Response401Error | ResponseGetBalance]() T {
-	var result T
-
+func GetBalance() (*ResponseFlipGeneralWrapper, error) {
 	url := "https://bigflip.id/big_sandbox_api/v2/general/balance"
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return result
+		return nil, err
 	}
 
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
@@ -24,116 +23,150 @@ func GetBalance[T Response401Error | ResponseGetBalance]() T {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return result
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return result
+		return nil, err
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
-		return result
+	output := &ResponseFlipGeneralWrapper{}
+
+	switch res.StatusCode {
+	case 200:
+		var r ResponseGetBalance
+		if err := json.Unmarshal(body, &r); err != nil {
+			return nil, err
+		}
+		output.GetBalance = &r
+
+	case 401:
+		var r Response401Error
+		if err := json.Unmarshal(body, &r); err != nil {
+			return nil, err
+		}
+		output.Err401 = &r
+
+	case 422:
+		var r Response422Error
+		if err := json.Unmarshal(body, &r); err != nil {
+			return nil, err
+		}
+		output.Err422 = &r
+
+	default:
+		return nil, fmt.Errorf("unexpected status code %d", res.StatusCode)
 	}
 
-	if res.StatusCode != 200 {
-		return result
-	}
-
-	return result
+	return output, nil
 }
 
-func GetListBank[T ResponseGetBank | Response401Error | Response422Error]() T {
-	var result T
+func GetListBank() (*ResponseFlipGeneralWrapper, bool) {
 	url := "https://bigflip.id/big_sandbox_api/v2/general/banks"
 
-	client := &http.Client{}
+	wrapper := &ResponseFlipGeneralWrapper{}
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return result
+		return wrapper, false
 	}
 
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", payment_out_constanta.Auth)
 
+	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return result
+		return wrapper, false
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return result
+		return wrapper, false
 	}
 
 	switch res.StatusCode {
+
 	case 200:
-		if err := json.Unmarshal(body, &result); err != nil {
-			return result
+		var success []ResponseGetBank
+		if err := json.Unmarshal(body, &success); err != nil {
+			return wrapper, false
 		}
-		return result
+		wrapper.GetBank = &success
+		return wrapper, true
 
 	case 401:
-
-		_ = json.Unmarshal(body, &result)
-		return result
+		var err401 Response401Error
+		_ = json.Unmarshal(body, &err401)
+		wrapper.Err401 = &err401
+		return wrapper, false
 
 	case 422:
-		_ = json.Unmarshal(body, &result)
-		return result
+		var err422 Response422Error
+		_ = json.Unmarshal(body, &err422)
+		wrapper.Err422 = &err422
+		return wrapper, false
 
 	default:
-		return result
+		return wrapper, false
 	}
 }
 
-func GetMaintenanceInfo[T ResponseMaintenanceInfo | Response401Error]() T {
-	var result T
+func GetMaintenanceInfo() (*ResponseFlipGeneralWrapper, bool) {
 	url := "https://bigflip.id/big_sandbox_api/v2/general/maintenance"
-	method := "GET"
 
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
+	wrapper := &ResponseFlipGeneralWrapper{}
 
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		fmt.Println(err)
-		return result
+		fmt.Println("Request error:", err)
+		return wrapper, false
 	}
+
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", payment_out_constanta.Auth)
 
+	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return result
+		fmt.Println("HTTP error:", err)
+		return wrapper, false
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return result
+		fmt.Println("Read body error:", err)
+		return wrapper, false
 	}
 
 	switch res.StatusCode {
 	case 200:
-		if err := json.Unmarshal(body, &result); err != nil {
-			return result
+		var success ResponseMaintenanceInfo // sesuaikan struct MaintenanceInfo
+		if err := json.Unmarshal(body, &success); err != nil {
+			fmt.Println("Unmarshal error:", err)
+			return wrapper, false
 		}
-		return result
+		wrapper.GetMaintenance = &success
+		return wrapper, true
 
 	case 401:
-
-		_ = json.Unmarshal(body, &result)
-		return result
+		var err401 Response401Error
+		_ = json.Unmarshal(body, &err401)
+		wrapper.Err401 = &err401
+		return wrapper, false
 
 	case 422:
-		_ = json.Unmarshal(body, &result)
-		return result
+		var err422 Response422Error
+		_ = json.Unmarshal(body, &err422)
+		wrapper.Err422 = &err422
+		return wrapper, false
 
 	default:
-		return result
+		fmt.Println("Unexpected status code:", res.StatusCode)
+		return wrapper, false
 	}
-
 }

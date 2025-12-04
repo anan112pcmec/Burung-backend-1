@@ -49,3 +49,11 @@ type ResponseDisbursment struct {
 	IdempotencyKey   string `json:"idempotency_key"`
 	IsVirtualAccount bool   `json:"is_virtual_account"`
 }
+
+type ResponseDisbursmentWrapper struct {
+	Error401               *Response401Error
+	Error422               *Response422Error
+	ResponseBankAccInq     *ResponseBankAccInquiry
+	ResponseDisbursment    *ResponseDisbursment
+	ResponseAllDisbursment *[]ResponseDisbursment
+}

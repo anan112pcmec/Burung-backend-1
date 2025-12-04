@@ -1,21 +1,16 @@
 package payment_out_disbursment
 
-type ValidasiResponse interface {
-	Validation() bool
-}
-
-func (Response401Error) Validation() bool {
-	return false
-}
-
-func (Response422Error) Validation() bool {
-	return false
-}
-
-func (ResponseBankAccInquiry) Validation() bool {
+func (r ResponseDisbursmentWrapper) Validating() bool {
+	if r.Error401 != nil || r.Error422 != nil {
+		return false
+	}
 	return true
 }
 
-func (ResponseDisbursment) Validation() bool {
-	return true
+func (r ResponseDisbursmentWrapper) ReturnResBankInq() ResponseBankAccInquiry {
+	return *r.ResponseBankAccInq
+}
+
+func (r ResponseDisbursmentWrapper) ReturnDisburstment() ResponseDisbursment {
+	return *r.ResponseDisbursment
 }

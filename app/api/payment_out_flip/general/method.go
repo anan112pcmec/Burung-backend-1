@@ -1,37 +1,17 @@
 package payment_out_general
 
-import "fmt"
-
-type ValidasiResponse interface {
-	Validation() bool
-}
-
-func (Response401Error) Validation() bool {
-	return false
-}
-
-func (Response422Error) Validation() bool {
-	return false
-}
-
-func (ResponseGetBalance) Validation() bool {
-	return true
-}
-
-func (ResponseGetBank) Validation() bool {
-	return true
-}
-
-func (ResponseMaintenanceInfo) Validation() bool {
-	return true
-}
-
-func HandleResponse[T ValidasiResponse](resp T) error {
-	if resp.Validation() {
-		fmt.Println("Valid response")
-		return nil
-	} else {
-		fmt.Println("Error response")
-		return fmt.Errorf("gagal bukan data response berhasil")
+func (r ResponseFlipGeneralWrapper) Validating() bool {
+	if r.Err401 != nil || r.Err422 != nil {
+		return false
 	}
+
+	return true
+}
+
+func (r ResponseFlipGeneralWrapper) ReturnGetBalance() ResponseGetBalance {
+	return *r.GetBalance
+}
+
+func (r ResponseFlipGeneralWrapper) ReturnGetBank() []ResponseGetBank {
+	return *r.GetBank
 }

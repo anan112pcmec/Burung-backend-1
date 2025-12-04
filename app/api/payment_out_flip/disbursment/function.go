@@ -13,10 +13,9 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 )
 
-func ReqBankAccountInquiry[T ResponseBankAccInquiry | Response401Error | Response422Error](data PayloadBankAccountInquiry) (T, bool) {
+func ReqBankAccountInquiry(data PayloadBankAccountInquiry) (*ResponseDisbursmentWrapper, bool) {
 
-	var result T
-
+	wrapper := &ResponseDisbursmentWrapper{}
 	tautan := "https://bigflip.id/big_sandbox_api/v2/disbursement/bank-account-inquiry"
 
 	// Build x-www-form-urlencoded payload
@@ -27,7 +26,7 @@ func ReqBankAccountInquiry[T ResponseBankAccInquiry | Response401Error | Respons
 
 	req, err := http.NewRequest("POST", tautan, strings.NewReader(payload.Encode()))
 	if err != nil {
-		return result, false
+		return nil, false
 	}
 
 	// Headers
@@ -38,26 +37,49 @@ func ReqBankAccountInquiry[T ResponseBankAccInquiry | Response401Error | Respons
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return result, false
+		return nil, false
 	}
 	defer res.Body.Close()
 
 	// Read body
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return result, false
+		return nil, false
 	}
 
-	// Unmarshal ke struct generic
-	if err := json.Unmarshal(body, &result); err != nil {
-		return result, false
-	}
+	switch res.StatusCode {
+	case 200:
+		var parse ResponseBankAccInquiry
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return nil, false
+		}
 
-	return result, true
+		wrapper.ResponseBankAccInq = &parse
+		return wrapper, true
+	case 401:
+		var parse Response401Error
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return nil, false
+		}
+
+		wrapper.Error401 = &parse
+		return wrapper, true
+	case 422:
+		var parse Response422Error
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return nil, false
+		}
+
+		wrapper.Error422 = &parse
+		return wrapper, true
+	default:
+		return nil, false
+	}
 }
 
-func ReqCreateDisbursment[T ResponseDisbursment | Response401Error | Response422Error](data PayloadCreateDisbursment) (T, bool) {
-	var result T
+func ReqCreateDisbursment(data PayloadCreateDisbursment) (*ResponseDisbursmentWrapper, bool) {
+
+	wrapper := &ResponseDisbursmentWrapper{}
 
 	tautan := "https://bigflip.id/big_sandbox_api/v3/disbursement"
 	method := "POST"
@@ -79,7 +101,7 @@ func ReqCreateDisbursment[T ResponseDisbursment | Response401Error | Response422
 	// --- create request ---
 	req, err := http.NewRequest(method, tautan, bodyPayload)
 	if err != nil {
-		return result, false
+		return nil, false
 	}
 
 	// --- headers ---
@@ -99,95 +121,96 @@ func ReqCreateDisbursment[T ResponseDisbursment | Response401Error | Response422
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return result, false
+		return nil, false
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return result, false
+		return nil, false
 	}
 
-	// --- decode ke generic T ---
-	if err := json.Unmarshal(body, &result); err != nil {
-		return result, false
-	}
+	switch res.StatusCode {
+	case 200:
+		var parse ResponseDisbursment
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return nil, false
+		}
 
-	return result, true
+		wrapper.ResponseDisbursment = &parse
+		return wrapper, true
+	case 401:
+		var parse Response401Error
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return nil, false
+		}
+
+		wrapper.Error401 = &parse
+		return wrapper, true
+	case 422:
+		var parse Response422Error
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return nil, false
+		}
+
+		wrapper.Error422 = &parse
+		return wrapper, true
+	default:
+		return nil, false
+	}
 }
 
-func GetDisbursmentById[T ResponseDisbursment | Response401Error | Response422Error](data PayloadGetDisburstmentById) (T, bool) {
-	var result T
-	id := data.Id
-
-	// masukin ID ke query: ?id=xxxxx
-	url := fmt.Sprintf("https://bigflip.id/big_sandbox_api/v3/get-disbursement?id=%s", id)
-	method := "GET"
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
-
-	if err != nil {
-		fmt.Println(err)
-		return result, false
+func GetDisbursmentByFilter(params map[string]string) (*ResponseDisbursmentWrapper, bool) {
+	query := url.Values{}
+	for k, v := range params {
+		query.Set(k, v)
 	}
+
+	url := fmt.Sprintf("https://bigflip.id/big_sandbox_api/v3/get-disbursement?%s", query.Encode())
+	wrapper := &ResponseDisbursmentWrapper{}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return wrapper, false
+	}
+
 	req.Header.Add("Accept", "application/json; charset=UTF-8")
 	req.Header.Add("Authorization", payment_out_constanta.Auth)
 
-	res, err := client.Do(req)
-	if err != nil {
-		fmt.Println(err)
-		return result, false
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		fmt.Println(err)
-		return result, false
-	}
-
-	if err := json.Unmarshal(body, &result); err != nil {
-		return result, false
-	}
-
-	return result, true
-}
-
-func GetDisbursmentByIdempotencyKey[T ResponseDisbursment | Response401Error | Response422Error](data PayloadGetDisburstmentByIdempotencyKey) (T, bool) {
-	var result T
-	idempotency_key := data.IdempotencyKey
-
-	// masukin ID ke query: ?id=xxxxx
-	url := fmt.Sprintf("https://bigflip.id/big_sandbox_api/v3/get-disbursement?idempotency-key=%s", idempotency_key)
-	method := "GET"
-
 	client := &http.Client{}
-	req, err := http.NewRequest(method, url, nil)
-
-	if err != nil {
-		fmt.Println(err)
-		return result, false
-	}
-	req.Header.Add("Accept", "application/json; charset=UTF-8")
-	req.Header.Add("Authorization", payment_out_constanta.Auth)
-
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return result, false
+		return wrapper, false
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println(err)
-		return result, false
+		return wrapper, false
 	}
 
-	if err := json.Unmarshal(body, &result); err != nil {
-		return result, false
-	}
+	switch res.StatusCode {
+	case 200:
+		var parse []ResponseDisbursment
+		if err := json.Unmarshal(body, &parse); err != nil {
+			return wrapper, false
+		}
+		wrapper.ResponseAllDisbursment = &parse
+		return wrapper, true
 
-	return result, true
+	case 401:
+		var parse Response401Error
+		_ = json.Unmarshal(body, &parse)
+		wrapper.Error401 = &parse
+		return wrapper, false
+
+	case 422:
+		var parse Response422Error
+		_ = json.Unmarshal(body, &parse)
+		wrapper.Error422 = &parse
+		return wrapper, false
+
+	default:
+		return wrapper, false
+	}
 }
