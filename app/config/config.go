@@ -20,15 +20,23 @@ const (
 )
 
 type Environment struct {
-	DBHOST, DBUSER, DBPASS, DBNAME, DBPORT           string
-	RDSHOST, RDSPORT                                 string
-	RDSENTITYDB, RDSBARANGDB, RDSENGAGEMENTDB        int
-	MEILIHOST, MEILIKEY, MEILIPORT                   string
-	RMQ_HOST, RMQ_USER, RMQ_PASS, EXCHANGE, RMQ_PORT string
+	DB_MASTER_HOST, DB_MASTER_USER, DB_MASTER_PASS, DB_MASTER_NAME, DB_MASTER_PORT                                         string
+	DB_REPLICA_SYSTEM_HOST, DB_REPLICA_SYSTEM_USER, DB_REPLICA_SYSTEM_PASS, DB_REPLICA_SYSTEM_NAME, DB_REPLICA_SYSTEM_PORT string
+	DB_REPLICA_CLIENT_HOST, DB_REPLICA_CLIENT_USER, DB_REPLICA_CLIENT_PASS, DB_REPLICA_CLIENT_NAME, DB_REPLICA_CLIENT_PORT string
+	RDSHOST, RDSPORT                                                                                                       string
+	RDSENTITYDB, RDSBARANGDB, RDSENGAGEMENTDB                                                                              int
+	MEILIHOST, MEILIKEY, MEILIPORT                                                                                         string
+	RMQ_HOST, RMQ_USER, RMQ_PASS, EXCHANGE, RMQ_PORT                                                                       string
+}
+
+type InternalDBReadWriteSystem struct {
+	Write *gorm.DB
+	Read  *gorm.DB
 }
 
 func (e *Environment) RunConnectionEnvironment() (
-	db *gorm.DB,
+	db_system *InternalDBReadWriteSystem,
+	db_replica_client *gorm.DB,
 	redis_entity *redis.Client,
 	redis_barang *redis.Client,
 	redis_engagement *redis.Client,
@@ -36,24 +44,28 @@ func (e *Environment) RunConnectionEnvironment() (
 	notification *amqp091.Connection,
 ) {
 
-	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
-		e.DBHOST, e.DBUSER, e.DBPASS, e.DBNAME, e.DBPORT,
-	)
+	getDsn := func(host, user, pass, name, port string) string {
+		return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Jakarta",
+			host, user, pass, name, port)
+	}
+
+	dsn_master := getDsn(e.DB_MASTER_HOST, e.DB_MASTER_USER, e.DB_MASTER_PASS, e.DB_MASTER_NAME, e.DB_MASTER_PORT)
+	dsn_replica_system := getDsn(e.DB_REPLICA_SYSTEM_HOST, e.DB_REPLICA_SYSTEM_USER, e.DB_REPLICA_SYSTEM_PASS, e.DB_REPLICA_SYSTEM_NAME, e.DB_REPLICA_SYSTEM_PORT)
+	dsn_replica_client := getDsn(e.DB_REPLICA_CLIENT_HOST, e.DB_REPLICA_CLIENT_USER, e.DB_REPLICA_CLIENT_PASS, e.DB_REPLICA_CLIENT_NAME, e.DB_REPLICA_CLIENT_PORT)
 
 	log.Println("🔍 Mencoba koneksi ke PostgreSQL...")
-	log.Println("🔗 DSN:", dsn)
+	log.Println("🔗 DSN:", dsn_master)
 
 	var err error
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+	db_master, err := gorm.Open(postgres.Open(dsn_master), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn), // pakai level Warn agar log tidak terlalu ramai
 	})
 	if err != nil {
-		log.Fatalf("❌ Gagal konek ke PostgreSQL: %v", err)
+		log.Fatalf("❌ koneksi master Gagal konek ke PostgreSQL: %v", err)
 	}
 
 	// Coba koneksi langsung
-	sqlDB, err := db.DB()
+	sqlDB, err := db_master.DB()
 	if err != nil {
 		log.Fatalf("❌ Gagal mendapatkan *sql.DB dari GORM: %v", err)
 	}
@@ -69,10 +81,71 @@ func (e *Environment) RunConnectionEnvironment() (
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	var currentDB string
-	if err := db.Raw("SELECT current_database();").Scan(&currentDB).Error; err != nil {
+	if err := db_master.Raw("SELECT current_database();").Scan(&currentDB).Error; err != nil {
 		log.Printf("⚠️ Tidak bisa membaca nama database: %v", err)
 	} else {
 		log.Println("✅ Berhasil terkoneksi ke database:", currentDB)
+	}
+
+	// Koneksi ke replica_system
+	db_replica_system, err := gorm.Open(postgres.Open(dsn_replica_system), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Warn),
+	})
+	if err != nil {
+		log.Fatalf("❌ koneksi replica_system Gagal konek ke PostgreSQL: %v", err)
+	}
+
+	sqlDBReplicaSystem, err := db_replica_system.DB()
+	if err != nil {
+		log.Fatalf("❌ Gagal mendapatkan *sql.DB dari GORM (replica_system): %v", err)
+	}
+
+	if err := sqlDBReplicaSystem.Ping(); err != nil {
+		log.Fatalf("❌ Gagal ping ke PostgreSQL (replica_system): %v", err)
+	}
+
+	sqlDBReplicaSystem.SetMaxOpenConns(100)
+	sqlDBReplicaSystem.SetMaxIdleConns(50)
+	sqlDBReplicaSystem.SetConnMaxLifetime(time.Hour)
+
+	var currentReplicaSystem string
+	if err := db_replica_system.Raw("SELECT current_database();").Scan(&currentReplicaSystem).Error; err != nil {
+		log.Printf("⚠️ Tidak bisa membaca nama database replica_system: %v", err)
+	} else {
+		log.Println("✅ Berhasil terkoneksi ke database replica_system:", currentReplicaSystem)
+	}
+
+	db_system = &InternalDBReadWriteSystem{
+		Write: db_master,
+		Read:  db_replica_system,
+	}
+
+	// Koneksi ke replica_client
+	db_replica_client, err = gorm.Open(postgres.Open(dsn_replica_client), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Warn),
+	})
+	if err != nil {
+		log.Fatalf("❌ koneksi replica_client Gagal konek ke PostgreSQL: %v", err)
+	}
+
+	sqlDBReplicaClient, err := db_replica_client.DB()
+	if err != nil {
+		log.Fatalf("❌ Gagal mendapatkan *sql.DB dari GORM (replica_client): %v", err)
+	}
+
+	if err := sqlDBReplicaClient.Ping(); err != nil {
+		log.Fatalf("❌ Gagal ping ke PostgreSQL (replica_client): %v", err)
+	}
+
+	sqlDBReplicaClient.SetMaxOpenConns(100)
+	sqlDBReplicaClient.SetMaxIdleConns(50)
+	sqlDBReplicaClient.SetConnMaxLifetime(time.Hour)
+
+	var currentReplicaClient string
+	if err := db_replica_client.Raw("SELECT current_database();").Scan(&currentReplicaClient).Error; err != nil {
+		log.Printf("⚠️ Tidak bisa membaca nama database replica_client: %v", err)
+	} else {
+		log.Println("✅ Berhasil terkoneksi ke database replica_client:", currentReplicaClient)
 	}
 
 	redis_entity = redis.NewClient(&redis.Options{

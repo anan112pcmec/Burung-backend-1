@@ -6,8 +6,7 @@ import (
 	"log"
 	"time"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/emailservices"
@@ -17,11 +16,11 @@ import (
 // Fungsi Prosedur mengubah username pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahUsernamePengguna(ctx context.Context, db *gorm.DB, id_pengguna int64, username string) ResponseUbahUsername {
+func UbahUsernamePengguna(ctx context.Context, db *config.InternalDBReadWriteSystem, id_pengguna int64, username string) ResponseUbahUsername {
 
 	var countUsername int64
 
-	if err := db.WithContext(ctx).Model(&models.Pengguna{}).
+	if err := db.Read.WithContext(ctx).Model(&models.Pengguna{}).
 		Where(&models.Pengguna{Username: username}).
 		Count(&countUsername).Error; err != nil {
 		log.Printf("[ERROR] Gagal memeriksa username: %v", err)
@@ -33,7 +32,7 @@ func UbahUsernamePengguna(ctx context.Context, db *gorm.DB, id_pengguna int64, u
 
 	// Jika username belum digunakan, langsung ubah
 	if countUsername == 0 {
-		if err_update := db.WithContext(ctx).Model(&models.Pengguna{}).
+		if err_update := db.Write.WithContext(ctx).Model(&models.Pengguna{}).
 			Where(&models.Pengguna{ID: id_pengguna}).
 			Update("username", username).Error; err_update == nil {
 			log.Printf("[INFO] Username berhasil diubah untuk pengguna ID %d", id_pengguna)
@@ -61,7 +60,7 @@ func UbahUsernamePengguna(ctx context.Context, db *gorm.DB, id_pengguna int64, u
 			usernameBaru := username + helper.GenerateRandomDigits()
 			var tmp int64
 
-			if err := db.WithContext(ctx).Model(&models.Pengguna{}).
+			if err := db.Read.WithContext(ctx).Model(&models.Pengguna{}).
 				Where(&models.Pengguna{Username: usernameBaru}).
 				Count(&tmp).Error; err != nil {
 				log.Printf("[WARN] Gagal memeriksa ketersediaan saran username: %v", err)
@@ -101,9 +100,9 @@ func UbahUsernamePengguna(ctx context.Context, db *gorm.DB, id_pengguna int64, u
 // Fungsi Prosedur mengubah nama pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahNamaPengguna(ctx context.Context, id_pengguna int64, nama string, db *gorm.DB) ResponseUbahNama {
+func UbahNamaPengguna(ctx context.Context, id_pengguna int64, nama string, db *config.InternalDBReadWriteSystem) ResponseUbahNama {
 
-	if err_db := db.WithContext(ctx).Model(&models.Pengguna{}).Where(&models.Pengguna{ID: id_pengguna}).Update("nama", nama).Error; err_db == nil {
+	if err_db := db.Write.WithContext(ctx).Model(&models.Pengguna{}).Where(&models.Pengguna{ID: id_pengguna}).Update("nama", nama).Error; err_db == nil {
 		log.Printf("[INFO] Nama berhasil diubah untuk pengguna ID %d", id_pengguna)
 		return ResponseUbahNama{
 			Message: "Nama berhasil diubah.",
@@ -121,11 +120,11 @@ func UbahNamaPengguna(ctx context.Context, id_pengguna int64, nama string, db *g
 // Fungsi Prosedur mengubah email pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahEmailPengguna(ctx context.Context, id_pengguna int64, email string, db *gorm.DB) ResponseUbahEmail {
+func UbahEmailPengguna(ctx context.Context, id_pengguna int64, email string, db *config.InternalDBReadWriteSystem) ResponseUbahEmail {
 
 	// ambil email lama
 	var email_lama string
-	if err := db.WithContext(ctx).Model(&models.Pengguna{}).
+	if err := db.Read.WithContext(ctx).Model(&models.Pengguna{}).
 		Select("email").
 		Where(&models.Pengguna{ID: id_pengguna}).
 		Limit(1).Scan(&email_lama).Error; err != nil {
@@ -137,7 +136,7 @@ func UbahEmailPengguna(ctx context.Context, id_pengguna int64, email string, db 
 	}
 
 	// update email
-	if err := db.WithContext(ctx).Model(&models.Pengguna{}).
+	if err := db.Write.WithContext(ctx).Model(&models.Pengguna{}).
 		Where(&models.Pengguna{ID: id_pengguna}).
 		Update("email", email).Error; err != nil {
 		log.Printf("[ERROR] Gagal mengubah email untuk pengguna ID %d: %v", id_pengguna, err)

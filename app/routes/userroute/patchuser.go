@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	pengguna_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/alamat_services"
@@ -17,7 +17,7 @@ import (
 	pengguna_transaction_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services"
 )
 
-func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_barang *redis.Client, rds_engagement *redis.Client) {
+func PatchUserHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request, rds_barang *redis.Client, rds_engagement *redis.Client) {
 	var hasil *response.ResponseForm
 	ctx := r.Context()
 
@@ -77,14 +77,14 @@ func PatchUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_b
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaOtp(data, db, rds_engagement)
+		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaOtp(ctx, data, db, rds_engagement)
 	case "/user/credential/validate-password-pin":
 		var data pengguna_credential_services.PayloadValidatePinPasswordPengguna
 		if err := helper.DecodeJSONBody(r, &data); err != nil {
 			http.Error(w, "Gagal parsing JSON: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaPin(data, db, rds_engagement)
+		hasil = pengguna_credential_services.ValidateUbahPasswordPenggunaViaPin(ctx, data, db, rds_engagement)
 	case "/user/credential/update-pin":
 		var data pengguna_credential_services.PayloadUpdatePinPengguna
 		if err := helper.DecodeJSONBody(r, &data); err != nil {

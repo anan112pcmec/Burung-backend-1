@@ -35,11 +35,22 @@ func Run() {
 	rdsengagement, _ := strconv.Atoi(Getenvi("RDSENGAGEMET", "0"))
 
 	env := config.Environment{
-		DBHOST:          Getenvi("DBHOST", "NIL"),
-		DBUSER:          Getenvi("DBUSER", "NIL"),
-		DBPASS:          Getenvi("DBPASS", "NIL"),
-		DBNAME:          Getenvi("DBNAME", "NIL"),
-		DBPORT:          Getenvi("DBPORT", "NIL"),
+		DB_MASTER_HOST:         Getenvi("DB_MASTER_HOST", "NIL"),
+		DB_MASTER_USER:         Getenvi("DB_MASTER_USER", "NIL"),
+		DB_MASTER_PASS:         Getenvi("DB_MASTER_PASS", "NIL"),
+		DB_MASTER_NAME:         Getenvi("DB_MASTER_NAME", "NIL"),
+		DB_MASTER_PORT:         Getenvi("DB_MASTER_PORT", "NIL"),
+		DB_REPLICA_SYSTEM_HOST: Getenvi("DB_REPLICA_SYSTEM_HOST", "NIL"),
+		DB_REPLICA_SYSTEM_USER: Getenvi("DB_REPLICA_SYSTEM_USER", "NIL"),
+		DB_REPLICA_SYSTEM_PASS: Getenvi("DB_REPLICA_SYSTEM_PASS", "NIL"),
+		DB_REPLICA_SYSTEM_NAME: Getenvi("DB_REPLICA_SYSTEM_NAME", "NIL"),
+		DB_REPLICA_SYSTEM_PORT: Getenvi("DB_REPLICA_SYSTEM_PORT", "NIL"),
+		DB_REPLICA_CLIENT_HOST: Getenvi("DB_REPLICA_CLIENT_HOST", "NIL"),
+		DB_REPLICA_CLIENT_USER: Getenvi("DB_REPLICA_CLIENT_USER", "NIL"),
+		DB_REPLICA_CLIENT_PASS: Getenvi("DB_REPLICA_CLIENT_PASS", "NIL"),
+		DB_REPLICA_CLIENT_NAME: Getenvi("DB_REPLICA_CLIENT_NAME", "NIL"),
+		DB_REPLICA_CLIENT_PORT: Getenvi("DB_REPLICA_CLIENT_PORT", "NIL"),
+
 		RDSHOST:         Getenvi("RDSHOST", "NIL"),
 		RDSPORT:         Getenvi("RDSPORT", "NIL"),
 		RDSENTITYDB:     rdsentity,
@@ -55,7 +66,7 @@ func Run() {
 		RMQ_PORT: "",
 	}
 
-	database, redis_entity_cache, redis_barang_cache, redis_engagement_cache, searchengine, _ :=
+	db_system, db_replica_client, redis_entity_cache, redis_barang_cache, redis_engagement_cache, searchengine, _ :=
 		env.RunConnectionEnvironment()
 
 	// Router utama
@@ -65,25 +76,25 @@ func Run() {
 	// Router.Use(blockBadRequestsMiddleware)
 
 	// Jalankan enums dan migrasi
-	if err := enums.UpEnumsEntity(database); err != nil {
+	if err := enums.UpEnumsEntity(db_system.Write); err != nil {
 		log.Printf("❌ Gagal UpEnumsEntity: %v", err)
 	}
-	if err := enums.UpBarangEnums(database); err != nil {
+	if err := enums.UpBarangEnums(db_system.Write); err != nil {
 		log.Printf("❌ Gagal UpBarangEnums: %v", err)
 	}
-	if err := enums.UpEnumsTransaksi(database); err != nil {
+	if err := enums.UpEnumsTransaksi(db_system.Write); err != nil {
 		log.Printf("❌ Gagal UpEnumsTransaksi: %v", err)
 	}
 
-	migrate.UpEntity(database)
-	migrate.UpBarang(database)
-	migrate.UpTransaksi(database)
-	migrate.UpEngagementEntity(database)
-	migrate.UpSystemData(database)
-	migrate.UpTresholdData(database)
+	migrate.UpEntity(db_system.Write)
+	migrate.UpBarang(db_system.Write)
+	migrate.UpTransaksi(db_system.Write)
+	migrate.UpEngagementEntity(db_system.Write)
+	migrate.UpSystemData(db_system.Write)
+	migrate.UpTresholdData(db_system.Write)
 
 	// Caching data
-	maintain_cache.DataAlamatEkspedisiUp(database)
+	maintain_cache.DataAlamatEkspedisiUp(db_system.Write)
 	maintain_cache.DataOperasionalPengirimanUp()
 	//
 
@@ -93,23 +104,23 @@ func Run() {
 	})
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.GetHandler(database, redis_barang_cache, redis_entity_cache, searchengine),
+		routes.GetHandler(db_replica_client, redis_barang_cache, redis_entity_cache, searchengine),
 	)).Methods("GET")
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.PostHandler(database, redis_entity_cache, redis_engagement_cache),
+		routes.PostHandler(db_system, redis_entity_cache, redis_engagement_cache),
 	)).Methods("POST")
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.PutHandler(database),
+		routes.PutHandler(db_system),
 	)).Methods("PUT")
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.PatchHandler(database, redis_barang_cache, redis_engagement_cache),
+		routes.PatchHandler(db_system, redis_barang_cache, redis_engagement_cache),
 	)).Methods("PATCH")
 
 	Router.PathPrefix("/").Handler(http.HandlerFunc(
-		routes.DeleteHandler(database),
+		routes.DeleteHandler(db_system),
 	)).Methods("DELETE")
 
 	// go cleanupClients()

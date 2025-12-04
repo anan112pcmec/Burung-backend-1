@@ -5,17 +5,16 @@ import (
 	"log"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_informasi_services_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/informasi_services/response_informasi_services"
 )
 
-func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
+func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKendaraan, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "AjukanInformasiKendaraanKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(ctx, db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -29,7 +28,7 @@ func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKend
 	}
 
 	var id_pengajuan_data_kendaraan int64 = 0
-	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
+	if err := db.Read.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
 		IDkurir: data.DataIdentitasKurir.IdKurir,
 	}).Limit(1).Scan(&id_pengajuan_data_kendaraan).Error; err != nil {
 		return &response.ResponseForm{
@@ -51,7 +50,7 @@ func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKend
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.InformasiKendaraanKurir{
+	if err := db.Write.WithContext(ctx).Create(&models.InformasiKendaraanKurir{
 		IDkurir:        data.DataIdentitasKurir.IdKurir,
 		JenisKendaraan: data.JenisKendaraan,
 		NamaKendaraan:  data.NamaKendaraan,
@@ -81,10 +80,10 @@ func AjukanInformasiKendaraan(ctx context.Context, data PayloadInformasiDataKend
 	}
 }
 
-func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKendaraan, db *gorm.DB) *response.ResponseForm {
+func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKendaraan, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditInformasiKendaraanKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(ctx, db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -98,7 +97,7 @@ func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKe
 	}
 
 	var id_data_informasi_kendaraan int64 = 0
-	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
+	if err := db.Read.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Select("id").Where(&models.InformasiKendaraanKurir{
 		ID:      data.IdInformasiKendaraan,
 		IDkurir: data.DataIdentitasKurir.IdKurir,
 	}).Limit(1).Scan(&id_data_informasi_kendaraan).Error; err != nil {
@@ -121,7 +120,7 @@ func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKe
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Where(&models.InformasiKendaraanKurir{
+	if err := db.Write.WithContext(ctx).Model(&models.InformasiKendaraanKurir{}).Where(&models.InformasiKendaraanKurir{
 		ID: data.IdInformasiKendaraan,
 	}).Updates(&models.InformasiKendaraanKurir{
 		JenisKendaraan: data.JenisKendaraan,
@@ -152,10 +151,10 @@ func EditInformasiKendaraan(ctx context.Context, data PayloadEditInformasiDataKe
 
 }
 
-func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
+func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "AjukanInformasiKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(ctx, db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -169,9 +168,15 @@ func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, d
 	}
 
 	var id_data_pengajuan_informasi int64 = 0
-	_ = db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
+	if err := db.Read.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
 		IDkurir: data.DataIdentitasKurir.IdKurir,
-	}).Limit(1).Scan(&id_data_pengajuan_informasi).Error
+	}).Limit(1).Scan(&id_data_pengajuan_informasi).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang sibuk coba lagi lain waktu",
+		}
+	}
 
 	if id_data_pengajuan_informasi != 0 {
 		log.Printf("[WARN] Sudah ada pengajuan data kurir yang belum diproses untuk kurir ID %d", data.DataIdentitasKurir.IdKurir)
@@ -184,7 +189,7 @@ func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, d
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.InformasiKurir{
+	if err := db.Write.WithContext(ctx).Create(&models.InformasiKurir{
 		IDkurir:      data.DataIdentitasKurir.IdKurir,
 		TanggalLahir: data.TanggalLahir,
 		Alasan:       data.Alasan,
@@ -211,10 +216,10 @@ func AjukanInformasiKurir(ctx context.Context, data PayloadInformasiDataKurir, d
 	}
 }
 
-func EditInformasiKurir(ctx context.Context, data PayloadEditInformasiDataKurir, db *gorm.DB) *response.ResponseForm {
+func EditInformasiKurir(ctx context.Context, data PayloadEditInformasiDataKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditInformasiKurir"
 
-	_, status := data.DataIdentitasKurir.Validating(ctx, db)
+	_, status := data.DataIdentitasKurir.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial kurir tidak valid untuk ID %d", data.DataIdentitasKurir.IdKurir)
@@ -228,7 +233,7 @@ func EditInformasiKurir(ctx context.Context, data PayloadEditInformasiDataKurir,
 	}
 
 	var id_data_pengajuan_informasi int64 = 0
-	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
+	if err := db.Read.WithContext(ctx).Model(&models.InformasiKurir{}).Select("id").Where(&models.InformasiKurir{
 		ID:      data.IdInformasiKurir,
 		IDkurir: data.DataIdentitasKurir.IdKurir,
 	}).Limit(1).Scan(&id_data_pengajuan_informasi).Error; err != nil {
@@ -251,7 +256,7 @@ func EditInformasiKurir(ctx context.Context, data PayloadEditInformasiDataKurir,
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.InformasiKurir{}).Where(&models.InformasiKurir{
+	if err := db.Write.WithContext(ctx).Model(&models.InformasiKurir{}).Where(&models.InformasiKurir{
 		ID: data.IdInformasiKurir,
 	}).Updates(&models.InformasiKurir{
 		TanggalLahir: data.TanggalLahir,

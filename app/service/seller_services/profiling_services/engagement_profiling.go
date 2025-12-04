@@ -5,8 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_particular_profiling "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services/particular_profiling"
 	seller_response_profiling "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/profiling_services/response_profiling"
@@ -16,13 +15,13 @@ import (
 // Fungsi Prosedur Update Personal Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdateProfilePersonalSeller) *response.ResponseForm {
+func UpdatePersonalSeller(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadUpdateProfilePersonalSeller) *response.ResponseForm {
 	services := "UpdatePersonalSeller"
 	var hasil_update_nama seller_particular_profiling.ResponseUbahNama
 	var hasil_update_username seller_particular_profiling.ResponseUbahUsername
 	var hasil_update_gmail seller_particular_profiling.ResponseUbahEmail
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -62,14 +61,14 @@ func UpdatePersonalSeller(ctx context.Context, db *gorm.DB, data PayloadUpdatePr
 // Fungsi Prosedur Update Info General Public
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UpdateInfoGeneralPublic(ctx context.Context, db *gorm.DB, data PayloadUpdateInfoGeneralSeller) *response.ResponseForm {
+func UpdateInfoGeneralPublic(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadUpdateInfoGeneralSeller) *response.ResponseForm {
 	services := "UpdatePersonalSeller"
 	var hasil_update_punchline seller_particular_profiling.ResponseUbahPunchline
 	var hasil_update_deskripsi seller_particular_profiling.ResponseUbahDeskripsi
 	var hasil_update_jam_operasional seller_particular_profiling.ResponseUbahJamOperasional
 	var hasil_update_dedication seller_particular_profiling.ResponseUbahDedication
 
-	seller, status := data.IdentitasSeller.Validating(ctx, db)
+	seller, status := data.IdentitasSeller.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,

@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	particular_profiling_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/profiling_services/particular_profiling"
 	response_profiling_pengguna "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/profiling_services/response_profiling"
@@ -16,7 +15,7 @@ import (
 // Fungsi Prosedur Ubah Personal Profiling Pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProfilingPengguna, db *gorm.DB) *response.ResponseForm {
+func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProfilingPengguna, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	var wg sync.WaitGroup
 
 	services := "UbahPersonalProfilingPengguna"
@@ -24,7 +23,7 @@ func UbahPersonalProfilingPengguna(ctx context.Context, data PayloadPersonalProf
 	var hasil_update_username particular_profiling_pengguna.ResponseUbahUsername
 	var hasil_update_nama particular_profiling_pengguna.ResponseUbahNama
 
-	seller, status := data.IdentitasPengguna.Validating(ctx, db)
+	seller, status := data.IdentitasPengguna.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,

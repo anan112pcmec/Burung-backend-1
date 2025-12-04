@@ -4,8 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -15,10 +14,10 @@ import (
 // Fungsi Masukan Alamat Pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPengguna, db *gorm.DB) *response.ResponseForm {
+func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPengguna, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MasukanAlamatPengguna"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -27,7 +26,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 	}
 
 	var id_data_alamats []int64
-	if err := db.WithContext(ctx).Select("id").Model(&models.AlamatPengguna{}).
+	if err := db.Read.WithContext(ctx).Select("id").Model(&models.AlamatPengguna{}).
 		Where(models.AlamatPengguna{IDPengguna: data.IdentitasPengguna.ID}).
 		Limit(5).Scan(&id_data_alamats).Error; err != nil {
 		return &response.ResponseForm{
@@ -46,7 +45,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 	}
 
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
 		IDPengguna:      data.IdentitasPengguna.ID,
 		PanggilanAlamat: data.PanggilanAlamat,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
@@ -67,7 +66,7 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 
 	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
-	if err := db.WithContext(ctx).Create(&models.AlamatPengguna{
+	if err := db.Write.WithContext(ctx).Create(&models.AlamatPengguna{
 		IDPengguna:      data.IdentitasPengguna.ID,
 		PanggilanAlamat: data.PanggilanAlamat,
 		NamaAlamat:      data.NamaAlamat,
@@ -94,10 +93,10 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 	}
 }
 
-func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db *gorm.DB) *response.ResponseForm {
+func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditAlamatPengguna"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -106,7 +105,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 	}
 
 	var id_alamat_pengguna int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
 		ID:         data.IdAlamatPengguna,
 		IDPengguna: data.IdentitasPengguna.ID,
 	}).Limit(1).Scan(&id_alamat_pengguna).Error; err != nil {
@@ -127,7 +126,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 
 	var idDataTransaksi int64 = 0
 
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.Transaksi{}).
 		Select("id").
 		Where("id_alamat_pengguna = ? AND status != ?", data.IdAlamatPengguna, "Selesai").
@@ -152,7 +151,7 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 
 	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
-	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Where(&models.AlamatPengguna{
+	if err := db.Write.WithContext(ctx).Model(&models.AlamatPengguna{}).Where(&models.AlamatPengguna{
 		ID: data.IdAlamatPengguna,
 	}).Updates(&models.AlamatPengguna{
 		PanggilanAlamat: data.PanggilanAlamat,
@@ -184,10 +183,10 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 // Fungsi Hapus Alamat Pengguna
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, db *gorm.DB) *response.ResponseForm {
+func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusAlamatPengguna"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusOK,
 			Services: services,
@@ -196,7 +195,7 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 	}
 
 	var id_alamat_pengguna int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatPengguna{}).Select("id").Where(&models.AlamatPengguna{
 		ID:         data.IdAlamatPengguna,
 		IDPengguna: data.IdentitasPengguna.ID,
 	}).Limit(1).Scan(&id_alamat_pengguna).Error; err != nil {
@@ -217,7 +216,7 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 
 	var idDataTransaksi int64 = 0
 
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.Transaksi{}).
 		Select("id").
 		Where("id_alamat_pengguna = ? AND status != ?", data.IdAlamatPengguna, "Selesai").
@@ -240,7 +239,7 @@ func HapusAlamatPengguna(ctx context.Context, data PayloadHapusAlamatPengguna, d
 		}
 	}
 
-	if err_hapus := db.WithContext(ctx).Where(models.AlamatPengguna{
+	if err_hapus := db.Write.WithContext(ctx).Where(models.AlamatPengguna{
 		ID: data.IdAlamatPengguna,
 	}).Delete(&models.AlamatPengguna{}).Error; err_hapus != nil {
 		return &response.ResponseForm{

@@ -30,6 +30,6 @@ type ResponseFlipGeneralWrapper struct {
 	Err401         *Response401Error
 	Err422         *Response422Error
 	GetBalance     *ResponseGetBalance
-	GetBank        *[]ResponseGetBank
+	GetBank        *ResponseGetBank
 	GetMaintenance *ResponseMaintenanceInfo
 }

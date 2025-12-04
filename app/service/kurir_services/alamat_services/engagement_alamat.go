@@ -4,19 +4,18 @@ import (
 	"context"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services/response_alamat_service_kurir"
 )
 
-func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db *gorm.DB) *response.ResponseForm {
+func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MasukanAlamatKurir"
 
 	// Validasi identitas kurir
-	_, valid := data.IdentitasKurir.Validating(ctx, db)
+	_, valid := data.IdentitasKurir.Validating(ctx, db.Read)
 	if !valid {
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
@@ -29,9 +28,8 @@ func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db 
 
 	// Cek apakah alamat sudah ada
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").
 		Where(&models.AlamatKurir{IdKurir: data.IdentitasKurir.IdKurir}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
-
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -54,7 +52,7 @@ func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db 
 	helper.SanitasiKoordinat(&data.Latitude, &data.Longtitude)
 
 	// Simpan alamat baru
-	if err := db.WithContext(ctx).Create(&models.AlamatKurir{
+	if err := db.Write.WithContext(ctx).Create(&models.AlamatKurir{
 		IdKurir:         data.IdentitasKurir.IdKurir,
 		PanggilanAlamat: data.PanggilanAlamat,
 		NomorTelephone:  data.NomorTelephone,
@@ -87,11 +85,11 @@ func MasukanAlamatKurir(ctx context.Context, data PayloadMasukanAlamatKurir, db 
 	}
 }
 
-func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *gorm.DB) *response.ResponseForm {
+func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditAlamatKurir"
 
 	// Validasi identitas kurir
-	_, valid := data.IdentitasKurir.Validating(ctx, db)
+	_, valid := data.IdentitasKurir.Validating(ctx, db.Read)
 	if !valid {
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
@@ -104,7 +102,7 @@ func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *gorm.
 
 	// Cek apakah alamat dengan ID dan kurir terkait benar-benar ada
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
 		ID:      data.IDAlamatKurir,
 		IdKurir: data.IdentitasKurir.IdKurir,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
@@ -128,7 +126,7 @@ func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *gorm.
 	}
 
 	// Update data alamat
-	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).
+	if err := db.Write.WithContext(ctx).Model(&models.AlamatKurir{}).
 		Where(&models.AlamatKurir{ID: data.IDAlamatKurir}).
 		Updates(&models.AlamatKurir{
 			PanggilanAlamat: data.PanggilanAlamat,
@@ -162,11 +160,11 @@ func EditAlamatKurir(ctx context.Context, data PayloadEditAlamatKurir, db *gorm.
 	}
 }
 
-func HapusAlamatKurir(ctx context.Context, data PayloadHapusAlamatKurir, db *gorm.DB) *response.ResponseForm {
+func HapusAlamatKurir(ctx context.Context, data PayloadHapusAlamatKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusAlamatKurir"
 
 	// Validasi identitas kurir
-	_, valid := data.IdentitasKurir.Validating(ctx, db)
+	_, valid := data.IdentitasKurir.Validating(ctx, db.Read)
 	if !valid {
 		return &response.ResponseForm{
 			Status:   http.StatusUnauthorized,
@@ -179,7 +177,7 @@ func HapusAlamatKurir(ctx context.Context, data PayloadHapusAlamatKurir, db *gor
 
 	// Cek apakah alamat milik kurir tersebut ada
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatKurir{}).Select("id").Where(&models.AlamatKurir{
 		ID:      data.IdAlamatKurir,
 		IdKurir: data.IdentitasKurir.IdKurir,
 	}).Limit(1).Take(&id_data_alamat).Error; err != nil {
@@ -203,7 +201,7 @@ func HapusAlamatKurir(ctx context.Context, data PayloadHapusAlamatKurir, db *gor
 	}
 
 	// Hapus alamat
-	if err := db.Model(&models.AlamatKurir{}).
+	if err := db.Write.Model(&models.AlamatKurir{}).
 		Where(&models.AlamatKurir{
 			ID:      data.IdAlamatKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,

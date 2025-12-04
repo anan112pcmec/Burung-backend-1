@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 )
 
-func PutKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func PutKurirHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request) {
 	var hasil any
 
 	w.Header().Set("Content-Type", "application/json")

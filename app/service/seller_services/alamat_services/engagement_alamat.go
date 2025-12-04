@@ -5,8 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -19,10 +18,10 @@ import (
 // gudang yang boleh dilampirkan alamat nya
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db *gorm.DB) *response.ResponseForm {
+func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahAlamatGudang"
 
-	_, status := data.IdentitasSeller.Validating(ctx, db)
+	_, status := data.IdentitasSeller.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -36,7 +35,7 @@ func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db 
 	}
 
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
 		IDSeller:   data.IdentitasSeller.IdSeller,
 		NamaAlamat: data.NamaAlamat,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
@@ -61,7 +60,7 @@ func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db 
 
 	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
-	if err := db.WithContext(ctx).Create(&models.AlamatGudang{
+	if err := db.Write.WithContext(ctx).Create(&models.AlamatGudang{
 		IDSeller:        data.IdentitasSeller.IdSeller,
 		PanggilanAlamat: data.PanggilanAlamat,
 		NomorTelephone:  data.NomorTelefon,
@@ -96,10 +95,10 @@ func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db 
 // Berfungsi Untuk Seller manakala mereka ingin mengedit gudang mereka entah perubahan titik, nama dll
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gorm.DB) *response.ResponseForm {
+func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditAlamatGudang"
 
-	_, status := data.IdentitasSeller.Validating(ctx, db)
+	_, status := data.IdentitasSeller.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -113,7 +112,7 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gor
 	}
 
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
 		ID:       data.IdAlamatGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
@@ -138,7 +137,7 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gor
 
 	var idDataTransaksi int64 = 0
 
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.Transaksi{}).
 		Select("id").
 		Where("id_alamat_gudang = ? AND status != ?", data.IdAlamatGudang, "Selesai").
@@ -163,7 +162,7 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gor
 
 	helper.SanitasiKoordinat(&data.Latitude, &data.Longitude)
 
-	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+	if err := db.Write.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
 		ID: data.IdAlamatGudang,
 	}).Updates(&models.AlamatGudang{
 		PanggilanAlamat: data.PanggilanAlamat,
@@ -201,10 +200,10 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *gor
 // Berfungsi Untuk Menghapus Suatu Alamat Gudang Seller
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *gorm.DB) *response.ResponseForm {
+func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusAlamatGudang"
 
-	_, status := data.IdentitasSeller.Validating(ctx, db)
+	_, status := data.IdentitasSeller.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -219,7 +218,7 @@ func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *g
 
 	var id_data_alamat int64 = 0
 
-	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
 		ID:       data.IdGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
@@ -243,7 +242,7 @@ func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *g
 	}
 
 	var total int64 = 0
-	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 		IDAlamat: data.IdGudang,
 	}).Count(&total).Error; err != nil {
 		return &response.ResponseForm{
@@ -267,7 +266,7 @@ func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *g
 
 	var idDataTransaksi int64 = 0
 
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.Transaksi{}).
 		Select("id").
 		Where("id_alamat_gudang = ? AND status != ?", data.IdGudang, "Selesai").
@@ -290,7 +289,7 @@ func HapusAlamatGudang(ctx context.Context, data PayloadHapusAlamatGudang, db *g
 		}
 	}
 
-	if err_hapus := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
+	if err_hapus := db.Write.WithContext(ctx).Model(&models.AlamatGudang{}).Where(models.AlamatGudang{
 		ID:       data.IdGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Delete(&models.AlamatGudang{}).Error; err_hapus != nil {

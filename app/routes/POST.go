@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	admin_routes "github.com/anan112pcmec/Burung-backend-1/app/routes/admin"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/auth"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
@@ -15,7 +15,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
 )
 
-func PostHandler(db *gorm.DB, rds *redis.Client, rds_engagement *redis.Client) http.HandlerFunc {
+func PostHandler(db *config.InternalDBReadWriteSystem, rds *redis.Client, rds_engagement *redis.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PostHandler dijalankan...")
 

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	kurir_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services"
@@ -18,7 +18,7 @@ import (
 	kurir_social_media_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/social_media_services"
 )
 
-func PatchKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
+func PatchKurirHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
 	var hasil *response.ResponseForm
 	ctx := r.Context()
 	switch r.URL.Path {

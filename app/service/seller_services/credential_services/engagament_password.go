@@ -9,8 +9,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -23,10 +23,10 @@ import (
 // Berfungsi untuk mengirim kode otp ke gmail nantinya sebelum password benar benar diubah
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func PreUbahPasswordSeller(ctx context.Context, data PayloadPreUbahPasswordSeller, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func PreUbahPasswordSeller(ctx context.Context, data PayloadPreUbahPasswordSeller, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordSeller"
 
-	seller, status := data.IdentitasSeller.Validating(ctx, db)
+	seller, status := data.IdentitasSeller.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -121,7 +121,7 @@ func PreUbahPasswordSeller(ctx context.Context, data PayloadPreUbahPasswordSelle
 // Berfungsi untuk memvalidasi dengan kode otp yang telah dikirimkan untuk mengubah password mereka
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordSeller"
 
 	if data.OtpKeyValidateSeller == "" {
@@ -157,7 +157,7 @@ func ValidateUbahPasswordSeller(data PayloadValidateUbahPasswordSellerOTP, db *g
 		log.Printf("[INFO] OTP key %s berhasil dihapus dari Redis.", key)
 	}
 
-	if err_change_pass := db.Model(models.Seller{}).Where(models.Seller{ID: data.IdentitasSeller.IdSeller}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+	if err_change_pass := db.Write.WithContext(ctx).Model(models.Seller{}).Where(models.Seller{ID: data.IdentitasSeller.IdSeller}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
 		log.Printf("[ERROR] Gagal mengubah password seller ID %d: %v", data.IdentitasSeller.IdSeller, err_change_pass)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

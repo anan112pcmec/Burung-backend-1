@@ -5,15 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/seller"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
-
 )
 
-func PutHandler(db *gorm.DB) http.HandlerFunc {
+func PutHandler(db *config.InternalDBReadWriteSystem) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("PutHandler dijalankan...")
 

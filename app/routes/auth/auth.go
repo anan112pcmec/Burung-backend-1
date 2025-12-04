@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/authservices"
@@ -16,7 +16,7 @@ type OTPkey struct {
 	Value string `json:"otp_key"`
 }
 
-func HandleAuth(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
+func HandleAuth(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request, rds *redis.Client) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch r.URL.Path {

@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
@@ -20,10 +21,10 @@ import (
 // Berfungsi untuk melayani seller yang hendak memasukan barang nya ke sistem burung
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBarangInduk) *response.ResponseForm {
+func MasukanBarangInduk(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadMasukanBarangInduk) *response.ResponseForm {
 	services := "MasukanBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -36,7 +37,7 @@ func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBar
 	data.BarangInduk.SellerID = data.IdentitasSeller.IdSeller
 
 	var id_data_barang int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).
 		Select("id").
 		Where(&models.BarangInduk{
 			SellerID:   data.IdentitasSeller.IdSeller,
@@ -77,35 +78,21 @@ func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBar
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	barang_induk := models.BarangInduk{
+		SellerID:       data.IdentitasSeller.IdSeller,
+		NamaBarang:     data.BarangInduk.NamaBarang,
+		JenisBarang:    data.BarangInduk.JenisBarang,
+		Deskripsi:      data.BarangInduk.Deskripsi,
+		HargaKategoris: int32(harga_original),
+	}
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
-		if err := tx.WithContext(ctx).Create(&models.BarangInduk{
-			SellerID:       data.IdentitasSeller.IdSeller,
-			NamaBarang:     data.BarangInduk.NamaBarang,
-			JenisBarang:    data.BarangInduk.JenisBarang,
-			Deskripsi:      data.BarangInduk.Deskripsi,
-			HargaKategoris: int32(harga_original),
-		}).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(&barang_induk).Error; err != nil {
 			return err
-		}
-
-		var IdBI int64 = 0
-		if err := tx.Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
-			SellerID:       data.IdentitasSeller.IdSeller,
-			NamaBarang:     data.BarangInduk.NamaBarang,
-			JenisBarang:    data.BarangInduk.JenisBarang,
-			Deskripsi:      data.BarangInduk.Deskripsi,
-			HargaKategoris: int32(harga_original),
-		}).Limit(1).Scan(&IdBI).Error; err != nil {
-			return err
-		}
-
-		if IdBI == 0 {
-			return fmt.Errorf("gagal data barang induk tidak ditemukan")
 		}
 
 		for i, _ := range data.KategoriBarang {
-			data.KategoriBarang[i].IdBarangInduk = int32(IdBI)
+			data.KategoriBarang[i].IdBarangInduk = int32(barang_induk.ID)
 			data.KategoriBarang[i].SellerID = data.IdentitasSeller.IdSeller
 			data.KategoriBarang[i].IDAlamat = data.IdAlamatGudang
 			data.KategoriBarang[i].IDRekening = data.IdRekening
@@ -117,21 +104,21 @@ func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBar
 
 		var id_origin_kategori int64 = 0
 		if err := tx.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
-			IdBarangInduk: int32(IdBI),
+			IdBarangInduk: int32(barang_induk.ID),
 			IsOriginal:    true,
 		}).Limit(1).Scan(&id_origin_kategori).Error; err != nil {
 			return err
 		}
 
 		if err := tx.Model(&models.BarangInduk{}).Where(&models.BarangInduk{
-			ID: int32(IdBI),
+			ID: barang_induk.ID,
 		}).Update("original_kategori", id_origin_kategori).Error; err != nil {
 			return err
 		}
 
 		var id_kategoris []int64
 		if err := tx.Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
-			IdBarangInduk: int32(IdBI),
+			IdBarangInduk: barang_induk.ID,
 		}).Limit(len(data.KategoriBarang)).Scan(&id_kategoris).Error; err != nil {
 			return err
 		}
@@ -148,7 +135,7 @@ func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBar
 
 			for i := 0; i < int(kategori.Stok); i++ {
 				varian_barang = append(varian_barang, models.VarianBarang{
-					IdBarangInduk: int32(IdBI),
+					IdBarangInduk: barang_induk.ID,
 					IdKategori:    kategori.ID,
 					Sku:           kategori.Sku,
 					Status:        "Ready",
@@ -188,10 +175,10 @@ func MasukanBarangInduk(ctx context.Context, db *gorm.DB, data PayloadMasukanBar
 // Berfungsi untuk seller dalam melakukan edit atau pembaruan informasi seputar barang induknya
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EditBarangInduk(ctx context.Context, db *gorm.DB, data PayloadEditBarangInduk) *response.ResponseForm {
+func EditBarangInduk(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadEditBarangInduk) *response.ResponseForm {
 	services := "EditBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -202,7 +189,7 @@ func EditBarangInduk(ctx context.Context, db *gorm.DB, data PayloadEditBarangInd
 	}
 
 	var id_data_barang_induk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
 		ID:       int32(data.IdBarangInduk),
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_barang_induk).Error; err != nil {
@@ -225,7 +212,7 @@ func EditBarangInduk(ctx context.Context, db *gorm.DB, data PayloadEditBarangInd
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Where(&models.BarangInduk{
+	if err := db.Write.WithContext(ctx).Model(&models.BarangInduk{}).Where(&models.BarangInduk{
 		ID: int32(data.IdBarangInduk),
 	}).Updates(&models.BarangInduk{
 		NamaBarang:  data.NamaBarang,
@@ -256,11 +243,11 @@ func EditBarangInduk(ctx context.Context, db *gorm.DB, data PayloadEditBarangInd
 // nya
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusBarangInduk(ctx context.Context, db *gorm.DB, data PayloadHapusBarangInduk) *response.ResponseForm {
+func HapusBarangInduk(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadHapusBarangInduk) *response.ResponseForm {
 	services := "HapusBarang"
 
 	// Validasi kredensial seller
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -271,7 +258,7 @@ func HapusBarangInduk(ctx context.Context, db *gorm.DB, data PayloadHapusBarangI
 	}
 
 	var id_data_barang_induk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
 		ID:       int32(data.IdBarangInduk),
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_barang_induk).Error; err != nil {
@@ -296,7 +283,7 @@ func HapusBarangInduk(ctx context.Context, db *gorm.DB, data PayloadHapusBarangI
 
 	// Cek apakah masih ada varian dalam transaksi (status: Dipesan/Diproses)
 	var id_varian_dalam_transaksi int64 = 0
-	if err := db.Model(&models.VarianBarang{}).Select("id").
+	if err := db.Read.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").
 		Where("id_barang_induk = ? AND status IN ?", data.IdBarangInduk, []string{"Dipesan", "Diproses"}).
 		Limit(1).Scan(&id_varian_dalam_transaksi).Error; err != nil {
 		return &response.ResponseForm{
@@ -318,7 +305,7 @@ func HapusBarangInduk(ctx context.Context, db *gorm.DB, data PayloadHapusBarangI
 	}
 
 	// Jalankan proses penghapusan dalam goroutine (asynchronous)
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		// 🔸 Hapus varian (permanent delete)
 		if err := tx.Unscoped().Model(&models.VarianBarang{}).Where(&models.VarianBarang{IdBarangInduk: int32(data.IdBarangInduk)}).
@@ -365,11 +352,11 @@ func HapusBarangInduk(ctx context.Context, db *gorm.DB, data PayloadHapusBarangI
 // Berfungsi untuk seller menambahkan kategori barang pada barang induk
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKategori) *response.ResponseForm {
+func TambahKategoriBarang(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadTambahKategori) *response.ResponseForm {
 	services := "TambahKategoriBarang"
 
 	// Validasi kredensial seller
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -381,7 +368,7 @@ func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKa
 
 	// Pastikan barang induk milik seller
 	var id_data_barang_induk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
 		ID:       data.IdBarangInduk,
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_barang_induk).Error; err != nil {
@@ -405,7 +392,7 @@ func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKa
 	}
 
 	var id_data_alamat int64 = 0
-	if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
+	if err := db.Read.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").Where(&models.AlamatGudang{
 		ID:       data.IdAlamatGudang,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_alamat).Error; err != nil {
@@ -429,7 +416,7 @@ func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKa
 	}
 
 	var id_data_rekening int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+	if err := db.Read.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
 		ID:       data.IdRekening,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
@@ -451,57 +438,59 @@ func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKa
 			},
 		}
 	}
-	// Jalankan async tapi dengan salinan data yang aman
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
-		var kategori_barang []models.KategoriBarang
+	var kategori_barang []models.KategoriBarang
 
-		// 1️⃣ Loop validasi dan siapkan batch kategori
-		for i := range data.KategoriBarang {
-			var id_data_kategori_barang int64 = 0
+	// 1️⃣ Loop validasi dan siapkan batch kategori
+	for i := range data.KategoriBarang {
+		var id_data_kategori_barang int64 = 0
 
-			// Cek apakah kategori dengan nama yang sama sudah ada
-			if err := tx.Model(&models.KategoriBarang{}).
-				Select("id").
-				Where(&models.KategoriBarang{
-					IdBarangInduk: data.IdBarangInduk,
-					Nama:          data.KategoriBarang[i].Nama,
-				}).
-				Limit(1).
-				Scan(&id_data_kategori_barang).Error; err != nil {
-				return err
+		// Cek apakah kategori dengan nama yang sama sudah ada
+		if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).
+			Select("id").
+			Where(&models.KategoriBarang{
+				IdBarangInduk: data.IdBarangInduk,
+				Nama:          data.KategoriBarang[i].Nama,
+			}).
+			Limit(1).
+			Scan(&id_data_kategori_barang).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 			}
-
-			// Lewati jika sudah ada
-			if id_data_kategori_barang != 0 {
-				continue
-			}
-
-			// Tambahkan kategori baru ke batch
-			kategori_barang = append(kategori_barang, models.KategoriBarang{
-				SellerID:       data.IdentitasSeller.IdSeller,
-				IdBarangInduk:  data.IdBarangInduk,
-				IDAlamat:       data.IdAlamatGudang,
-				IDRekening:     data.IdRekening,
-				Nama:           data.KategoriBarang[i].Nama,
-				Deskripsi:      data.KategoriBarang[i].Deskripsi,
-				Warna:          data.KategoriBarang[i].Warna,
-				Stok:           data.KategoriBarang[i].Stok,
-				Harga:          data.KategoriBarang[i].Harga,
-				BeratGram:      data.KategoriBarang[i].BeratGram,
-				DimensiPanjang: data.KategoriBarang[i].DimensiPanjang,
-				DimensiLebar:   data.KategoriBarang[i].DimensiLebar,
-				Sku:            data.KategoriBarang[i].Sku,
-				IsOriginal:     false,
-			})
 		}
 
-		// 2️⃣ Insert batch kategori (otomatis isi ID pada slice)
+		// Lewati jika sudah ada
+		if id_data_kategori_barang != 0 {
+			continue
+		}
+
+		// Tambahkan kategori baru ke batch
+		kategori_barang = append(kategori_barang, models.KategoriBarang{
+			SellerID:       data.IdentitasSeller.IdSeller,
+			IdBarangInduk:  data.IdBarangInduk,
+			IDAlamat:       data.IdAlamatGudang,
+			IDRekening:     data.IdRekening,
+			Nama:           data.KategoriBarang[i].Nama,
+			Deskripsi:      data.KategoriBarang[i].Deskripsi,
+			Warna:          data.KategoriBarang[i].Warna,
+			Stok:           data.KategoriBarang[i].Stok,
+			Harga:          data.KategoriBarang[i].Harga,
+			BeratGram:      data.KategoriBarang[i].BeratGram,
+			DimensiPanjang: data.KategoriBarang[i].DimensiPanjang,
+			DimensiLebar:   data.KategoriBarang[i].DimensiLebar,
+			Sku:            data.KategoriBarang[i].Sku,
+			IsOriginal:     false,
+		})
+	}
+	// Jalankan async tapi dengan salinan data yang aman
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+
 		if err := tx.CreateInBatches(&kategori_barang, len(kategori_barang)).Error; err != nil {
 			return err
 		}
 
-		// 3️⃣ Generate varian untuk setiap kategori yang baru ditambahkan
 		var varian_barang_total []models.VarianBarang
 		var VarianBatch int64 = 0
 
@@ -517,7 +506,6 @@ func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKa
 			VarianBatch += int64(kategori.Stok)
 		}
 
-		// 4️⃣ Insert batch varian
 		if len(varian_barang_total) > 0 {
 			if err := tx.CreateInBatches(&varian_barang_total, int(VarianBatch)).Error; err != nil {
 				return err
@@ -552,10 +540,10 @@ func TambahKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadTambahKa
 // Berfungsi untuk mengedit data informasi tentang kategori barang induk yang dituju
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EditKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditKategori) *response.ResponseForm {
+func EditKategoriBarang(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadEditKategori) *response.ResponseForm {
 	services := "EditKategoriBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -566,7 +554,7 @@ func EditKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditKatego
 	}
 
 	var id_data_kategori int64 = 0
-	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
 		ID:            data.IdKategoriBarang,
 		IdBarangInduk: data.IdBarangInduk,
 		SellerID:      data.IdentitasSeller.IdSeller,
@@ -590,7 +578,7 @@ func EditKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditKatego
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 			ID: data.IdKategoriBarang,
 		}).Updates(&models.KategoriBarang{
@@ -640,11 +628,11 @@ func EditKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditKatego
 // Berfungsi untuk menghapus kategori barang induk yang ada
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadHapusKategori) *response.ResponseForm {
+func HapusKategoriBarang(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadHapusKategori) *response.ResponseForm {
 	services := "HapusKategoriBarang"
 
 	// Validasi kredensial seller
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -655,7 +643,7 @@ func HapusKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadHapusKate
 	}
 
 	var id_data_kategori int64 = 0
-	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
 		ID:            data.IdKategoriBarang,
 		IdBarangInduk: data.IdBarangInduk,
 		SellerID:      data.IdentitasSeller.IdSeller,
@@ -682,7 +670,7 @@ func HapusKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadHapusKate
 	// Cek apakah kategori yang akan dihapus masih punya varian dalam transaksi
 
 	var exist_varian_transaksi int64 = 0
-	if errStock := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").
+	if errStock := db.Read.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").
 		Where("id_barang_induk = ? AND id_kategori = ? AND status IN ?", data.IdBarangInduk, data.IdKategoriBarang, []string{"Dipesan", "Diproses"}).
 		Limit(1).Scan(&exist_varian_transaksi).Error; errStock != nil {
 	}
@@ -698,7 +686,7 @@ func HapusKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadHapusKate
 	}
 
 	// Jalankan proses penghapusan di goroutine
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.VarianBarang{}).Where(&models.VarianBarang{
 			IdKategori: data.IdKategoriBarang,
 		}).Delete(&models.KategoriBarang{}).Error; err != nil {
@@ -737,10 +725,10 @@ func HapusKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadHapusKate
 // STOK BARANG
 // ////////////////////////////////////////////////////////////////////////////////
 
-func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditStokKategoriBarang) *response.ResponseForm {
+func EditStokKategoriBarang(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadEditStokKategoriBarang) *response.ResponseForm {
 	services := "EditStokBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -751,7 +739,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 	}
 
 	var id_data_kategori int64 = 0
-	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
 		ID:            data.IdKategoriBarang,
 		IdBarangInduk: data.IdBarangInduk,
 		SellerID:      data.IdentitasSeller.IdSeller,
@@ -776,7 +764,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 	}
 
 	var stok_saat_ini int64 = 0
-	if err := db.Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("stok").Where(&models.KategoriBarang{
 		ID: id_data_kategori,
 	}).Limit(1).Scan(&stok_saat_ini).Error; err != nil {
 		return &response.ResponseForm{
@@ -794,7 +782,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 	}
 
 	var id_varians []int64
-	if err := db.Model(&models.VarianBarang{}).Select("id").
+	if err := db.Read.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").
 		Where(&models.VarianBarang{
 			IdBarangInduk: data.IdBarangInduk,
 			IdKategori:    data.IdKategoriBarang,
@@ -826,7 +814,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 	}
 
 	if len(id_varians) > int(data.UpdateStok) {
-		if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 			if err := tx.Model(&models.VarianBarang{}).Where("id IN ?", id_varians[data.UpdateStok:]).Delete(&models.VarianBarang{}).Error; err != nil {
 				return err
 			}
@@ -855,7 +843,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 
 	if len(id_varians) < int(data.UpdateStok) {
 		var sku string = ""
-		if err := db.Model(&models.KategoriBarang{}).Select("sku").Where(&models.KategoriBarang{
+		if err := db.Read.Model(&models.KategoriBarang{}).Select("sku").Where(&models.KategoriBarang{
 			ID: id_data_kategori,
 		}).Limit(1).Scan(&sku).Error; err != nil {
 			return &response.ResponseForm{
@@ -875,7 +863,7 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 				Status:        barang_enums.Ready,
 			})
 		}
-		if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 			if err := tx.CreateInBatches(&buat_varian_baru, len(buat_varian_baru)).Error; err != nil {
 				return err
 			}
@@ -908,10 +896,10 @@ func EditStokKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadEditSt
 	}
 }
 
-func DownStokBarangInduk(ctx context.Context, db *gorm.DB, data PayloadDownBarangInduk) *response.ResponseForm {
+func DownStokBarangInduk(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadDownBarangInduk) *response.ResponseForm {
 	services := "DownStokBarangInduk"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -922,7 +910,7 @@ func DownStokBarangInduk(ctx context.Context, db *gorm.DB, data PayloadDownBaran
 	}
 
 	var id_data_barang int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
 		ID:       data.IdBarangInduk,
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_barang).Error; err != nil {
@@ -945,7 +933,7 @@ func DownStokBarangInduk(ctx context.Context, db *gorm.DB, data PayloadDownBaran
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.VarianBarang{}).Where("id_barang_induk = ? AND status IN ?", data.IdBarangInduk, [3]string{"Pending", "Ready", "Terjual"}).Updates(&models.VarianBarang{
 			Status: "Down",
 		}).Error; err != nil {
@@ -981,10 +969,10 @@ func DownStokBarangInduk(ctx context.Context, db *gorm.DB, data PayloadDownBaran
 	}
 }
 
-func DownKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadDownKategoriBarang) *response.ResponseForm {
+func DownKategoriBarang(ctx context.Context, db *config.InternalDBReadWriteSystem, data PayloadDownKategoriBarang) *response.ResponseForm {
 	services := "DownKategoriBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -995,7 +983,7 @@ func DownKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadDownKatego
 	}
 
 	var id_data_kategori int64 = 0
-	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
 		ID:            data.IdKategoriBarang,
 		IdBarangInduk: data.IdBarangInduk,
 		SellerID:      data.IdentitasSeller.IdSeller,
@@ -1019,7 +1007,7 @@ func DownKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadDownKatego
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.VarianBarang{}).Where("id_kategori = ? AND status IN ?", data.IdKategoriBarang, [3]string{"Pending", "Ready", "Terjual"}).Updates(&models.VarianBarang{Status: "Down"}).Error; err != nil {
 			return err
 		}
@@ -1050,10 +1038,10 @@ func DownKategoriBarang(ctx context.Context, db *gorm.DB, data PayloadDownKatego
 	}
 }
 
-func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarangInduk, db *gorm.DB) *response.ResponseForm {
+func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarangInduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditRekeningBarangInduk"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1064,7 +1052,7 @@ func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarang
 	}
 
 	var id_data_rekening int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+	if err := db.Read.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
 		ID:       data.IdRekeningSeller,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
@@ -1088,7 +1076,7 @@ func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarang
 	}
 
 	var id_data_barang_induk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
 		ID:       data.IdBarangInduk,
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_barang_induk).Error; err != nil {
@@ -1111,7 +1099,7 @@ func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarang
 		}
 	}
 
-	if err_kategori := db.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+	if err_kategori := db.Write.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 		IdBarangInduk: data.IdBarangInduk,
 		SellerID:      data.IdentitasSeller.IdSeller,
 	}).Update("id_rekening", data.IdRekeningSeller).Error; err_kategori != nil {
@@ -1133,10 +1121,10 @@ func EditRekeningBarangInduk(ctx context.Context, data PayloadEditRekeningBarang
 	}
 }
 
-func EditAlamatGudangBarangInduk(ctx context.Context, data PayloadEditAlamatBarangInduk, db *gorm.DB) *response.ResponseForm {
+func EditAlamatGudangBarangInduk(ctx context.Context, data PayloadEditAlamatBarangInduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahAlamatGudangBarangInduk"
 
-	_, status := data.IdentitasSeller.Validating(ctx, db)
+	_, status := data.IdentitasSeller.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -1151,7 +1139,7 @@ func EditAlamatGudangBarangInduk(ctx context.Context, data PayloadEditAlamatBara
 
 	var id_data_barang_induk int64 = 0
 
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id").Where(&models.BarangInduk{
 		ID:       data.IdBarangInduk,
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_barang_induk).Error; err != nil {
@@ -1177,7 +1165,7 @@ func EditAlamatGudangBarangInduk(ctx context.Context, data PayloadEditAlamatBara
 
 	var id_alamat_gudang int64 = 0
 
-	if errCheck := db.Model(&models.AlamatGudang{}).Select("id").
+	if errCheck := db.Read.WithContext(ctx).Model(&models.AlamatGudang{}).Select("id").
 		Where(&models.AlamatGudang{
 			ID:       data.IdAlamatGudang,
 			IDSeller: data.IdentitasSeller.IdSeller,
@@ -1201,7 +1189,7 @@ func EditAlamatGudangBarangInduk(ctx context.Context, data PayloadEditAlamatBara
 		}
 	}
 
-	if err_edit := db.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+	if err_edit := db.Write.WithContext(ctx).Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 		IdBarangInduk: int32(id_data_barang_induk),
 	}).Update("id_alamat_gudang", data.IdAlamatGudang).Error; err_edit != nil {
 		return &response.ResponseForm{
@@ -1222,10 +1210,10 @@ func EditAlamatGudangBarangInduk(ctx context.Context, data PayloadEditAlamatBara
 	}
 }
 
-func EditAlamatGudangBarangKategori(ctx context.Context, data PayloadEditAlamatBarangKategori, db *gorm.DB) *response.ResponseForm {
+func EditAlamatGudangBarangKategori(ctx context.Context, data PayloadEditAlamatBarangKategori, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahAlamatGudangBarangKategori"
 
-	_, status := data.IdentitasSeller.Validating(ctx, db)
+	_, status := data.IdentitasSeller.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Kredensial seller tidak valid untuk ID %d", data.IdentitasSeller.IdSeller)
@@ -1239,7 +1227,7 @@ func EditAlamatGudangBarangKategori(ctx context.Context, data PayloadEditAlamatB
 	}
 
 	var id_barang_kategori int64 = 0
-	if err := db.Model(models.KategoriBarang{}).Select("id").Where(models.KategoriBarang{
+	if err := db.Read.Model(models.KategoriBarang{}).Select("id").Where(models.KategoriBarang{
 		ID:       data.IdKategoriBarang,
 		SellerID: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_barang_kategori).Error; err != nil {
@@ -1265,7 +1253,7 @@ func EditAlamatGudangBarangKategori(ctx context.Context, data PayloadEditAlamatB
 
 	var id_data_alamat_gudang int64 = 0
 
-	if errCheck := db.Model(&models.AlamatGudang{}).Select("id").
+	if errCheck := db.Read.Model(&models.AlamatGudang{}).Select("id").
 		Where(&models.AlamatGudang{
 			ID:       data.IdAlamatGudang,
 			IDSeller: data.IdentitasSeller.IdSeller,
@@ -1289,7 +1277,7 @@ func EditAlamatGudangBarangKategori(ctx context.Context, data PayloadEditAlamatB
 		}
 	}
 
-	if err_edit := db.Model(models.KategoriBarang{}).Where(models.KategoriBarang{
+	if err_edit := db.Write.Model(models.KategoriBarang{}).Where(models.KategoriBarang{
 		IdBarangInduk: data.IdBarangInduk,
 		ID:            data.IdKategoriBarang,
 	}).Update("id_alamat_gudang", data.IdAlamatGudang).Error; err_edit != nil {
@@ -1311,11 +1299,11 @@ func EditAlamatGudangBarangKategori(ctx context.Context, data PayloadEditAlamatB
 	}
 }
 
-func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBarangInduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahKomentarBarang"
 	is_seller := false
 	var id_seller_take int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
 		ID: data.IdBarangInduk,
 	}).Limit(1).Scan(&id_seller_take).Error; err != nil {
 		return &response.ResponseForm{
@@ -1331,7 +1319,7 @@ func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBaran
 		is_seller = true
 	}
 
-	if err := db.WithContext(ctx).Create(&models.Komentar{
+	if err := db.Write.WithContext(ctx).Create(&models.Komentar{
 		IdBarangInduk: data.IdBarangInduk,
 		IdEntity:      int64(data.IdentitasSeller.IdSeller),
 		JenisEntity:   entity_enums.Seller,
@@ -1356,10 +1344,10 @@ func MasukanKomentarBarang(ctx context.Context, data PayloadMasukanKomentarBaran
 	}
 }
 
-func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditKomentarBarang"
 
-	_, status := data.IdentitasSeller.Validating(ctx, db)
+	_, status := data.IdentitasSeller.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -1370,7 +1358,7 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
+	if err := db.Write.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
 		JenisEntity: entity_enums.Seller,
@@ -1393,10 +1381,18 @@ func EditKomentarBarang(ctx context.Context, data PayloadEditKomentarBarangInduk
 	}
 }
 
-func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInduk, db *gorm.DB) *response.ResponseForm {
+func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusKomentarBarang"
 
-	if err := db.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data seller tidak ditemukan",
+		}
+	}
+
+	if err := db.Write.WithContext(ctx).Model(&models.Komentar{}).Where(&models.Komentar{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
 		JenisEntity: entity_enums.Seller,
@@ -1419,14 +1415,14 @@ func HapusKomentarBarang(ctx context.Context, data PayloadHapusKomentarBarangInd
 	}
 }
 
-func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar, db *gorm.DB) *response.ResponseForm {
+func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MasukanChildKomentar"
 	is_seller := false
 
 	var id_seller_take int64 = 0
-	if err := db.Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
 		ID: data.IdBarangInduk,
-	}).Take(&id_seller_take).Error; err != nil {
+	}).Limit(1).Take(&id_seller_take).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1439,7 +1435,7 @@ func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar,
 	if id_seller_take == int64(data.IdentitasSeller.IdSeller) {
 		is_seller = true
 	}
-	if err := db.Create(&models.KomentarChild{
+	if err := db.Write.WithContext(ctx).Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentarBarang,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
 		JenisEntity: entity_enums.Seller,
@@ -1464,15 +1460,15 @@ func MasukanChildKomentar(ctx context.Context, data PayloadMasukanChildKomentar,
 	}
 }
 
-func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar, db *gorm.DB) *response.ResponseForm {
+func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MentionChildKomentar"
 
 	is_seller := false
 
 	var id_seller_take int64 = 0
-	if err := db.Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("id_seller").Where(&models.BarangInduk{
 		ID: data.IdBarangInduk,
-	}).Take(&id_seller_take).Error; err != nil {
+	}).Limit(1).Take(&id_seller_take).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1486,7 +1482,7 @@ func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar,
 		is_seller = true
 	}
 
-	if err := db.Create(&models.KomentarChild{
+	if err := db.Write.WithContext(ctx).Create(&models.KomentarChild{
 		IdKomentar:  data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
 		JenisEntity: entity_enums.Seller,
@@ -1512,10 +1508,10 @@ func MentionChildKomentar(ctx context.Context, data PayloadMentionChildKomentar,
 	}
 }
 
-func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *gorm.DB) *response.ResponseForm {
+func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditChildKomentar"
 
-	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+	if err := db.Write.WithContext(ctx).Model(&models.KomentarChild{}).Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
 		JenisEntity: entity_enums.Seller,
@@ -1538,9 +1534,9 @@ func EditChildKomentar(ctx context.Context, data PayloadEditChildKomentar, db *g
 	}
 }
 
-func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db *gorm.DB) *response.ResponseForm {
+func HapusChildKomentar(ctx context.Context, data PayloadHapusChildKomentar, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusChildKomentar"
-	if err := db.Model(&models.KomentarChild{}).Where(&models.KomentarChild{
+	if err := db.Write.WithContext(ctx).Model(&models.KomentarChild{}).Where(&models.KomentarChild{
 		ID:          data.IdKomentar,
 		IdEntity:    int64(data.IdentitasSeller.IdSeller),
 		JenisEntity: entity_enums.Seller,

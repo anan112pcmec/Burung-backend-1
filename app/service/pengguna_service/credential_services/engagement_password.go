@@ -9,8 +9,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -27,7 +27,7 @@ import (
 // yang tidak diinginkan dan penyalahgunaan pihak lain pada sebuah akun
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPengguna, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordPengguna"
 
 	if data.FaktorKedua != "OTP" && data.FaktorKedua != "PIN" {
@@ -39,7 +39,7 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 		}
 	}
 
-	user, status := data.IdentitasPengguna.Validating(ctx, db)
+	user, status := data.IdentitasPengguna.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -151,11 +151,11 @@ func PreUbahPasswordPengguna(ctx context.Context, data PayloadPreUbahPasswordPen
 // :Berfungsi untuk memvalidasi otp yang telah dikirim oleh preubah password dan menetapkan perubahan password
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func ValidateUbahPasswordPenggunaViaOtp(ctx context.Context, data PayloadValidateOTPPasswordPengguna, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordPenggunaViaOtp"
 
 	var id_user int64
-	if check_user := db.Model(models.Pengguna{}).Select("id").Where(models.Pengguna{ID: data.IDPengguna}).First(&id_user).Error; check_user != nil {
+	if check_user := db.Read.Model(models.Pengguna{}).Select("id").Where(models.Pengguna{ID: data.IDPengguna}).First(&id_user).Error; check_user != nil {
 		log.Printf("[WARN] Pengguna tidak ditemukan untuk validasi OTP: %v", check_user)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -164,7 +164,6 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 		}
 	}
 
-	ctx := context.Background()
 	key := fmt.Sprintf("user_ubah_password_by_otp:%s", data.OtpKey)
 
 	result, err_rds := rds.HGetAll(ctx, key).Result()
@@ -178,7 +177,7 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 		}
 	}
 
-	if err_change_pass := db.Model(models.Pengguna{}).Where(models.Pengguna{ID: data.IDPengguna}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+	if err_change_pass := db.Write.Model(models.Pengguna{}).Where(models.Pengguna{ID: data.IDPengguna}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
 		log.Printf("[ERROR] Gagal mengubah password via OTP: %v", err_change_pass)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -205,11 +204,11 @@ func ValidateUbahPasswordPenggunaViaOtp(data PayloadValidateOTPPasswordPengguna,
 // :Berfungsi untuk memvalidasi perubahan password via pin dan menetapkan perubahan password
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func ValidateUbahPasswordPenggunaViaPin(ctx context.Context, data PayloadValidatePinPasswordPengguna, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordPenggunaViaPin"
 
 	var pin_user string
-	if check_pin := db.Model(models.Pengguna{}).Select("pin_hash").Where(models.Pengguna{ID: data.IDPengguna}).Limit(1).Scan(&pin_user).Error; check_pin != nil {
+	if check_pin := db.Read.WithContext(ctx).Model(models.Pengguna{}).Select("pin_hash").Where(models.Pengguna{ID: data.IDPengguna}).Limit(1).Scan(&pin_user).Error; check_pin != nil {
 		log.Printf("[WARN] PIN pengguna tidak ditemukan: %v", check_pin)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -226,7 +225,6 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 			Message:  "PIN yang dimasukkan salah.",
 		}
 	} else {
-		ctx := context.Background()
 		key := fmt.Sprintf("user_ubah_password_by_pin:%v", data.IDPengguna)
 		result, err_validate := rds.HGetAll(ctx, key).Result()
 		if err_validate != nil || len(result) == 0 {
@@ -242,7 +240,7 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 			log.Printf("[WARN] Gagal menghapus OTP key: %v", err_del)
 		}
 
-		if err_change_pass := db.Model(models.Pengguna{}).Where(models.Pengguna{ID: data.IDPengguna}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+		if err_change_pass := db.Write.WithContext(ctx).Model(models.Pengguna{}).Where(models.Pengguna{ID: data.IDPengguna}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
 			log.Printf("[ERROR] Gagal mengubah password via PIN: %v", err_change_pass)
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
@@ -265,10 +263,10 @@ func ValidateUbahPasswordPenggunaViaPin(data PayloadValidatePinPasswordPengguna,
 // :Berfungsi untuk membuat secret pin
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPengguna, db *gorm.DB) *response.ResponseForm {
+func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPengguna, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MembuatSecretPinPengguna"
 
-	user, status := data.IdentitasPengguna.Validating(ctx, db)
+	user, status := data.IdentitasPengguna.Validating(ctx, db.Read)
 
 	if !status {
 		return &response.ResponseForm{
@@ -298,7 +296,7 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 	}
 
 	// Simpan hash PIN sebagai string untuk konsistensi penyimpanan (sama seperti password hash)
-	if errUpdatePin := db.Model(models.Pengguna{}).
+	if errUpdatePin := db.Write.WithContext(ctx).Model(models.Pengguna{}).
 		Where(models.Pengguna{ID: user.ID}).
 		Update("pin_hash", string(hashed_pin)).Error; errUpdatePin != nil {
 		log.Printf("[ERROR] Gagal menyimpan PIN ke database: %v", errUpdatePin)
@@ -322,10 +320,10 @@ func MembuatSecretPinPengguna(ctx context.Context, data PayloadMembuatPinPenggun
 // :Berfungsi untuk mengupdate secret pin
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna, db *gorm.DB) *response.ResponseForm {
+func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "UpdateSecretPinPengguna"
 
-	user, status := data.IdentitasPengguna.Validating(ctx, db)
+	user, status := data.IdentitasPengguna.Validating(ctx, db.Read)
 
 	if !status {
 		return &response.ResponseForm{
@@ -354,7 +352,7 @@ func UpdateSecretPinPengguna(ctx context.Context, data PayloadUpdatePinPengguna,
 		}
 	}
 
-	if errUpdatePin := db.Model(models.Pengguna{}).
+	if errUpdatePin := db.Write.WithContext(ctx).Model(models.Pengguna{}).
 		Where(models.Pengguna{ID: user.ID}).
 		Update("pin_hash", string(hashed_pin)).Error; errUpdatePin != nil {
 		log.Printf("[ERROR] Gagal menyimpan PIN baru ke database: %v", errUpdatePin)

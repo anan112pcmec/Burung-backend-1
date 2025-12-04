@@ -6,15 +6,16 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_etalase_services_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/etalase_services/response_etalase_services"
 )
 
-func TambahEtalaseSeller(ctx context.Context, data PayloadMenambahEtalase, db *gorm.DB) *response.ResponseForm {
+func TambahEtalaseSeller(ctx context.Context, data PayloadMenambahEtalase, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahEtalaseSeller"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -25,7 +26,7 @@ func TambahEtalaseSeller(ctx context.Context, data PayloadMenambahEtalase, db *g
 	}
 
 	var id_data_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Etalase{}).Select("id").Where(&models.Etalase{
+	if err := db.Read.WithContext(ctx).Model(&models.Etalase{}).Select("id").Where(&models.Etalase{
 		SellerID: int64(data.IdentitasSeller.IdSeller),
 		Nama:     data.NamaEtalase,
 	}).Limit(1).Scan(&id_data_etalase).Error; err != nil {
@@ -48,7 +49,7 @@ func TambahEtalaseSeller(ctx context.Context, data PayloadMenambahEtalase, db *g
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.Etalase{
+	if err := db.Write.WithContext(ctx).Create(&models.Etalase{
 		SellerID:     int64(data.IdentitasSeller.IdSeller),
 		Nama:         data.NamaEtalase,
 		Deskripsi:    data.Deskripsi,
@@ -72,10 +73,10 @@ func TambahEtalaseSeller(ctx context.Context, data PayloadMenambahEtalase, db *g
 	}
 }
 
-func EditEtalaseSeller(ctx context.Context, data PayloadEditEtalase, db *gorm.DB) *response.ResponseForm {
+func EditEtalaseSeller(ctx context.Context, data PayloadEditEtalase, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditEtalaseSeller"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -86,7 +87,7 @@ func EditEtalaseSeller(ctx context.Context, data PayloadEditEtalase, db *gorm.DB
 	}
 
 	var id_data_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Etalase{}).Select("id").Where(&models.Etalase{
+	if err := db.Read.WithContext(ctx).Model(&models.Etalase{}).Select("id").Where(&models.Etalase{
 		ID:       data.IdEtalase,
 		SellerID: int64(data.IdentitasSeller.IdSeller),
 	}).Limit(1).Scan(&id_data_etalase).Error; err != nil {
@@ -109,7 +110,7 @@ func EditEtalaseSeller(ctx context.Context, data PayloadEditEtalase, db *gorm.DB
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.Etalase{}).Where(&models.Etalase{
+	if err := db.Write.WithContext(ctx).Model(&models.Etalase{}).Where(&models.Etalase{
 		ID: data.IdEtalase,
 	}).Updates(&models.Etalase{
 		Nama:      data.NamaEtalase,
@@ -132,10 +133,10 @@ func EditEtalaseSeller(ctx context.Context, data PayloadEditEtalase, db *gorm.DB
 	}
 }
 
-func HapusEtalaseSeller(ctx context.Context, data PayloadHapusEtalase, db *gorm.DB) *response.ResponseForm {
+func HapusEtalaseSeller(ctx context.Context, data PayloadHapusEtalase, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusEtalaseSeller"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -146,7 +147,7 @@ func HapusEtalaseSeller(ctx context.Context, data PayloadHapusEtalase, db *gorm.
 	}
 
 	var id_data_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Etalase{}).Select("id").Where(&models.Etalase{
+	if err := db.Read.WithContext(ctx).Model(&models.Etalase{}).Select("id").Where(&models.Etalase{
 		ID:       data.IdEtalase,
 		SellerID: int64(data.IdentitasSeller.IdSeller),
 	}).Limit(1).Scan(&id_data_etalase).Error; err != nil {
@@ -169,7 +170,7 @@ func HapusEtalaseSeller(ctx context.Context, data PayloadHapusEtalase, db *gorm.
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BarangKeEtalase{}).Where(&models.BarangKeEtalase{
 			IdEtalase: data.IdEtalase,
 		}).Delete(&models.BarangKeEtalase{}).Error; err != nil {
@@ -200,10 +201,10 @@ func HapusEtalaseSeller(ctx context.Context, data PayloadHapusEtalase, db *gorm.
 	}
 }
 
-func TambahkanBarangKeEtalase(ctx context.Context, data PayloadTambahkanBarangKeEtalase, db *gorm.DB) *response.ResponseForm {
+func TambahkanBarangKeEtalase(ctx context.Context, data PayloadTambahkanBarangKeEtalase, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahkanBarangKeEtalase"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -214,7 +215,7 @@ func TambahkanBarangKeEtalase(ctx context.Context, data PayloadTambahkanBarangKe
 	}
 
 	var id_barang_ke_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Select("id").Where(&models.BarangKeEtalase{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangKeEtalase{}).Select("id").Where(&models.BarangKeEtalase{
 		IdEtalase:     data.IdEtalase,
 		IdBarangInduk: data.IdBarangInduk,
 	}).Limit(1).Scan(&id_barang_ke_etalase).Error; err != nil {
@@ -237,7 +238,7 @@ func TambahkanBarangKeEtalase(ctx context.Context, data PayloadTambahkanBarangKe
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.BarangKeEtalase{
+	if err := db.Write.WithContext(ctx).Create(&models.BarangKeEtalase{
 		IdBarangInduk: data.IdBarangInduk,
 		IdEtalase:     data.IdEtalase,
 	}).Error; err != nil {
@@ -259,10 +260,10 @@ func TambahkanBarangKeEtalase(ctx context.Context, data PayloadTambahkanBarangKe
 	}
 }
 
-func HapusBarangDariEtalase(ctx context.Context, data PayloadHapusBarangDiEtalase, db *gorm.DB) *response.ResponseForm {
+func HapusBarangDariEtalase(ctx context.Context, data PayloadHapusBarangDiEtalase, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusBarangDariEtalase"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -273,7 +274,7 @@ func HapusBarangDariEtalase(ctx context.Context, data PayloadHapusBarangDiEtalas
 	}
 
 	var id_barang_ke_etalase int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Select("id").Where(&models.BarangKeEtalase{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangKeEtalase{}).Select("id").Where(&models.BarangKeEtalase{
 		ID:            data.IdBarangKeEtalase,
 		IdEtalase:     data.IdEtalase,
 		IdBarangInduk: data.IdBarangInduk,
@@ -297,7 +298,7 @@ func HapusBarangDariEtalase(ctx context.Context, data PayloadHapusBarangDiEtalas
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.BarangKeEtalase{}).Where(&models.BarangKeEtalase{
+	if err := db.Write.WithContext(ctx).Model(&models.BarangKeEtalase{}).Where(&models.BarangKeEtalase{
 		ID: data.IdBarangKeEtalase,
 	}).Delete(&models.BarangKeEtalase{}).Error; err != nil {
 		return &response.ResponseForm{

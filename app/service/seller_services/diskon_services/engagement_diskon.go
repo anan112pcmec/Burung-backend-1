@@ -6,16 +6,17 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	seller_enum "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity/seller"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/diskon_services/response_diskon_services_seller"
 )
 
-func TambahDiskonProduk(ctx context.Context, data PayloadTambahDiskonProduk, db *gorm.DB) *response.ResponseForm {
+func TambahDiskonProduk(ctx context.Context, data PayloadTambahDiskonProduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahDiskonProduk"
 
-	seller, status := data.IdentitasSeller.Validating(ctx, db)
+	seller, status := data.IdentitasSeller.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -27,7 +28,7 @@ func TambahDiskonProduk(ctx context.Context, data PayloadTambahDiskonProduk, db 
 	}
 
 	var id_diskon_produk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
+	if err := db.Read.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
 		SellerId:     data.IdentitasSeller.IdSeller,
 		Nama:         data.Nama,
 		DiskonPersen: data.DiskonPersen,
@@ -62,7 +63,7 @@ func TambahDiskonProduk(ctx context.Context, data PayloadTambahDiskonProduk, db 
 	}
 
 	var id_diskon_produks []int64
-	if err := db.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
+	if err := db.Read.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
 		SellerId: data.IdentitasSeller.IdSeller,
 	}).Limit(limit).Scan(&id_diskon_produks).Error; err != nil {
 		return &response.ResponseForm{
@@ -84,7 +85,7 @@ func TambahDiskonProduk(ctx context.Context, data PayloadTambahDiskonProduk, db 
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.DiskonProduk{
+	if err := db.Write.WithContext(ctx).Create(&models.DiskonProduk{
 		SellerId:      data.IdentitasSeller.IdSeller,
 		Nama:          data.Nama,
 		Deskripsi:     data.Deskripsi,
@@ -111,10 +112,10 @@ func TambahDiskonProduk(ctx context.Context, data PayloadTambahDiskonProduk, db 
 	}
 }
 
-func EditDiskonProduk(ctx context.Context, data PayloadEditDiskonProduk, db *gorm.DB) *response.ResponseForm {
+func EditDiskonProduk(ctx context.Context, data PayloadEditDiskonProduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditDiskonProduk"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -125,7 +126,7 @@ func EditDiskonProduk(ctx context.Context, data PayloadEditDiskonProduk, db *gor
 	}
 
 	var id_diskon_produk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
+	if err := db.Read.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
 		ID:       data.IdDiskonProduk,
 		SellerId: data.IdentitasSeller.IdSeller,
 		Status:   seller_enum.Draft,
@@ -149,7 +150,7 @@ func EditDiskonProduk(ctx context.Context, data PayloadEditDiskonProduk, db *gor
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.DiskonProduk{}).Where(&models.DiskonProduk{
+	if err := db.Read.WithContext(ctx).Model(&models.DiskonProduk{}).Where(&models.DiskonProduk{
 		ID: data.IdDiskonProduk,
 	}).Updates(&models.DiskonProduk{
 		Nama:          data.Nama,
@@ -176,10 +177,10 @@ func EditDiskonProduk(ctx context.Context, data PayloadEditDiskonProduk, db *gor
 	}
 }
 
-func HapusDiskonProduk(ctx context.Context, data PayloadHapusDiskonProduk, db *gorm.DB) *response.ResponseForm {
+func HapusDiskonProduk(ctx context.Context, data PayloadHapusDiskonProduk, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusDiskonProduk"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -190,7 +191,7 @@ func HapusDiskonProduk(ctx context.Context, data PayloadHapusDiskonProduk, db *g
 	}
 
 	var id_diskon_produk int64 = 0
-	if err := db.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
+	if err := db.Read.WithContext(ctx).Model(&models.DiskonProduk{}).Select("id").Where(&models.DiskonProduk{
 		ID:       data.IdDiskonProduk,
 		SellerId: data.IdentitasSeller.IdSeller,
 		Status:   seller_enum.Draft,
@@ -214,7 +215,7 @@ func HapusDiskonProduk(ctx context.Context, data PayloadHapusDiskonProduk, db *g
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BarangDiDiskon{}).Where(&models.BarangDiDiskon{
 			IdDiskon: data.IdDiskonProduk,
 		}).Delete(&models.BarangDiDiskon{}).Error; err != nil {
@@ -245,10 +246,10 @@ func HapusDiskonProduk(ctx context.Context, data PayloadHapusDiskonProduk, db *g
 	}
 }
 
-func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPadaBarang, db *gorm.DB) *response.ResponseForm {
+func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPadaBarang, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TetapkanDiskonPadaBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -259,7 +260,7 @@ func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPad
 	}
 
 	var id_kategori_barang int64 = 0
-	if err := db.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id").Where(&models.KategoriBarang{
 		ID:            data.IdKategoriBarang,
 		IdBarangInduk: data.IdBarangInduk,
 		SellerID:      data.IdentitasSeller.IdSeller,
@@ -284,7 +285,7 @@ func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPad
 	}
 
 	var id_barang_di_diskon int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangDiDiskon{}).Select("id").Where(&models.BarangDiDiskon{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangDiDiskon{}).Select("id").Where(&models.BarangDiDiskon{
 		SellerId:         data.IdentitasSeller.IdSeller,
 		IdBarangInduk:    data.IdBarangInduk,
 		IdKategoriBarang: data.IdKategoriBarang,
@@ -308,7 +309,7 @@ func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPad
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.BarangDiDiskon{
+	if err := db.Write.WithContext(ctx).Create(&models.BarangDiDiskon{
 		SellerId:         data.IdentitasSeller.IdSeller,
 		IdDiskon:         data.IdDiskonProduk,
 		IdBarangInduk:    data.IdBarangInduk,
@@ -333,10 +334,10 @@ func TetapKanDiskonPadaBarang(ctx context.Context, data PayloadTetapkanDiskonPad
 	}
 }
 
-func HapusDiskonPadaBarang(ctx context.Context, data PayloadHapusDiskonPadaBarang, db *gorm.DB) *response.ResponseForm {
+func HapusDiskonPadaBarang(ctx context.Context, data PayloadHapusDiskonPadaBarang, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusDiskonPadaBarang"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -347,7 +348,7 @@ func HapusDiskonPadaBarang(ctx context.Context, data PayloadHapusDiskonPadaBaran
 	}
 
 	var id_barang_di_diskon int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BarangDiDiskon{}).Select("id").Where(&models.BarangDiDiskon{
+	if err := db.Read.WithContext(ctx).Model(&models.BarangDiDiskon{}).Select("id").Where(&models.BarangDiDiskon{
 		ID:       data.IdBarangDiDiskon,
 		SellerId: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_barang_di_diskon).Error; err != nil {
@@ -370,7 +371,7 @@ func HapusDiskonPadaBarang(ctx context.Context, data PayloadHapusDiskonPadaBaran
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.BarangDiDiskon{}).Where(&models.BarangDiDiskon{
+	if err := db.Write.WithContext(ctx).Model(&models.BarangDiDiskon{}).Where(&models.BarangDiDiskon{
 		ID: id_barang_di_diskon,
 	}).Delete(&models.BarangDiDiskon{}).Error; err != nil {
 		return &response.ResponseForm{

@@ -12,6 +12,6 @@ func (r ResponseFlipGeneralWrapper) ReturnGetBalance() ResponseGetBalance {
 	return *r.GetBalance
 }
 
-func (r ResponseFlipGeneralWrapper) ReturnGetBank() []ResponseGetBank {
+func (r ResponseFlipGeneralWrapper) ReturnGetBank() ResponseGetBank {
 	return *r.GetBank
 }

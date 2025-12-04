@@ -9,8 +9,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -18,10 +18,10 @@ import (
 	response_credential_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/credential_services/response_credential_services"
 )
 
-func PreUbahPasswordKurir(ctx context.Context, data PayloadPreUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func PreUbahPasswordKurir(ctx context.Context, data PayloadPreUbahPassword, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "PreUbahPasswordKurir"
 
-	kurir, status := data.DataIdentitas.Validating(ctx, db)
+	kurir, status := data.DataIdentitas.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Identitas kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
@@ -111,10 +111,10 @@ func PreUbahPasswordKurir(ctx context.Context, data PayloadPreUbahPassword, db *
 	}
 }
 
-func ValidateUbahPasswordKurir(ctx context.Context, data PayloadValidateUbahPassword, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func ValidateUbahPasswordKurir(ctx context.Context, data PayloadValidateUbahPassword, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUbahPasswordKurir"
 
-	_, status := data.DataIdentitas.Validating(ctx, db)
+	_, status := data.DataIdentitas.Validating(ctx, db.Read)
 
 	if !status {
 		log.Printf("[WARN] Identitas kurir tidak valid untuk ID %d", data.DataIdentitas.IdKurir)
@@ -142,7 +142,7 @@ func ValidateUbahPasswordKurir(ctx context.Context, data PayloadValidateUbahPass
 		}
 	}
 
-	if err_change_pass := db.Model(models.Kurir{}).Where(models.Kurir{ID: data.DataIdentitas.IdKurir}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
+	if err_change_pass := db.Write.WithContext(ctx).Model(models.Kurir{}).Where(models.Kurir{ID: data.DataIdentitas.IdKurir}).Update("password_hash", string(result["password_baru"])).Error; err_change_pass != nil {
 		log.Printf("[ERROR] Gagal mengubah password kurir ID %d: %v", data.DataIdentitas.IdKurir, err_change_pass)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
@@ -16,7 +15,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services"
 )
 
-func PostSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func PostSellerHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request) {
 	var hasil *response.ResponseForm
 
 	ctx := r.Context()

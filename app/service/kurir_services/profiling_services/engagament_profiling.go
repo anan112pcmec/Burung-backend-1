@@ -5,18 +5,17 @@ import (
 	"net/http"
 	"sync"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	particular_profiling_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services/particular_profiling"
 	response_profiling_kurir "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/profiling_services/response_profiling"
 )
 
-func PersonalProfilingKurir(ctx context.Context, data PayloadPersonalProfilingKurir, db *gorm.DB) *response.ResponseForm {
+func PersonalProfilingKurir(ctx context.Context, data PayloadPersonalProfilingKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	var wg sync.WaitGroup
 	services := "GeneralProfilingKurir"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -65,11 +64,11 @@ func PersonalProfilingKurir(ctx context.Context, data PayloadPersonalProfilingKu
 	}
 }
 
-func GeneralProfilingKurir(ctx context.Context, data PayloadGeneralProfiling, db *gorm.DB) *response.ResponseForm {
+func GeneralProfilingKurir(ctx context.Context, data PayloadGeneralProfiling, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "GeneralProfilingKurir"
 	var hasil_update_deskripsi particular_profiling_kurir.ResponseUbahDeskripsi
 
-	_, status := data.DataIdentitas.Validating(ctx, db)
+	_, status := data.DataIdentitas.Validating(ctx, db.Read)
 
 	if !status {
 		return &response.ResponseForm{

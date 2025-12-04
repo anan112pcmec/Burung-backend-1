@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	pengiriman_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/pengiriman"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
@@ -17,10 +18,10 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 )
 
-func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaksi, db *gorm.DB, rds *redis.Client) *response.ResponseForm {
+func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaksi, db *config.InternalDBReadWriteSystem, rds *redis.Client) *response.ResponseForm {
 	services := "ApproveOrderTransaksi"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -29,7 +30,7 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaks
 	}
 
 	var id_data_transaksi int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Transaksi{}).Select("id").Where(&models.Transaksi{
+	if err := db.Read.WithContext(ctx).Model(&models.Transaksi{}).Select("id").Where(&models.Transaksi{
 		ID:       data.IdTransaksi,
 		IdSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_transaksi).Error; err != nil {
@@ -49,7 +50,7 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaks
 	}
 
 	var id_threshold int64 = 0
-	if err := db.WithContext(ctx).Model(&threshold.ThresholdOrderSeller{}).Select("id").Where(&threshold.ThresholdOrderSeller{
+	if err := db.Read.WithContext(ctx).Model(&threshold.ThresholdOrderSeller{}).Select("id").Where(&threshold.ThresholdOrderSeller{
 		IdSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_threshold).Error; err != nil {
 		return &response.ResponseForm{
@@ -60,7 +61,7 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaks
 	}
 
 	if id_threshold == 0 {
-		if tStat := data.IdentitasSeller.UpThreshold(ctx, db); !tStat {
+		if tStat := data.IdentitasSeller.UpThreshold(ctx, db.Write); !tStat {
 			return &response.ResponseForm{
 				Status:   http.StatusInternalServerError,
 				Services: services,
@@ -68,7 +69,7 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaks
 			}
 		}
 
-		if err := db.WithContext(ctx).Model(&threshold.ThresholdOrderSeller{}).Select("id").Where(&threshold.ThresholdOrderSeller{
+		if err := db.Read.WithContext(ctx).Model(&threshold.ThresholdOrderSeller{}).Select("id").Where(&threshold.ThresholdOrderSeller{
 			IdSeller: data.IdentitasSeller.IdSeller,
 		}).Limit(1).Scan(&id_threshold).Error; err != nil {
 			return &response.ResponseForm{
@@ -80,7 +81,7 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaks
 
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
 			ID: data.IdTransaksi,
 		}).Updates(&models.Transaksi{
@@ -162,10 +163,10 @@ func ApproveOrderTransaksi(ctx context.Context, data PayloadApproveOrderTransaks
 	}
 }
 
-func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, db *gorm.DB) *response.ResponseForm {
+func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "KirimOrderTransaksi"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -174,7 +175,7 @@ func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, d
 	}
 
 	var data_transaksi models.Transaksi = models.Transaksi{ID: 0}
-	if err := db.WithContext(ctx).Model(&models.Transaksi{}).Where(&models.Transaksi{
+	if err := db.Read.WithContext(ctx).Model(&models.Transaksi{}).Where(&models.Transaksi{
 		ID:       data.IdTransaksi,
 		IdSeller: data.IdentitasSeller.IdSeller,
 		Status:   transaksi_enums.Diproses,
@@ -227,7 +228,7 @@ func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, d
 
 	var id_data_threshold int64 = 0
 
-	if err := db.WithContext(ctx).Model(&threshold.ThresholdOrderSeller{}).Select("id").Where(&threshold.ThresholdOrderSeller{
+	if err := db.Read.WithContext(ctx).Model(&threshold.ThresholdOrderSeller{}).Select("id").Where(&threshold.ThresholdOrderSeller{
 		IdSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_threshold).Error; err != nil {
 		return &response.ResponseForm{
@@ -245,7 +246,7 @@ func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, d
 		}
 	}
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.Transaksi{}).Where(&models.Transaksi{
 			ID: data_transaksi.ID,
 		}).Update("status", transaksi_enums.Waiting).Error; err != nil {
@@ -286,10 +287,10 @@ func KirimOrderTransaksi(ctx context.Context, data PayloadKirimOrderTransaksi, d
 	}
 }
 
-func UnApproveOrderTransaksi(ctx context.Context, data PayloadUnApproveOrderTransaksi, db *gorm.DB) *response.ResponseForm {
+func UnApproveOrderTransaksi(ctx context.Context, data PayloadUnApproveOrderTransaksi, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "UnApproveOrderTransaksi"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -298,7 +299,7 @@ func UnApproveOrderTransaksi(ctx context.Context, data PayloadUnApproveOrderTran
 	}
 
 	var id_data_transaksi int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Transaksi{}).Select("id").Where(&models.Transaksi{
+	if err := db.Read.WithContext(ctx).Model(&models.Transaksi{}).Select("id").Where(&models.Transaksi{
 		ID:       data.IdTransaksi,
 		IdSeller: data.IdentitasSeller.IdSeller,
 		Status:   transaksi_enums.Dibayar,
@@ -318,7 +319,7 @@ func UnApproveOrderTransaksi(ctx context.Context, data PayloadUnApproveOrderTran
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.Transaksi{}).Where(&models.Transaksi{
+	if err := db.Write.WithContext(ctx).Model(&models.Transaksi{}).Where(&models.Transaksi{
 		ID: data.IdTransaksi,
 	}).Updates(&models.Transaksi{
 		Status:         transaksi_enums.Dibatalkan,

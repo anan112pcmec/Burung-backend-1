@@ -4,16 +4,15 @@ import (
 	"context"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 )
 
-func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishlist, db *gorm.DB) *response.ResponseForm {
+func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishlist, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahBarangKeWishlist"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -22,7 +21,7 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 	}
 
 	var id_data_wishlist = 0
-	if err := db.WithContext(ctx).Model(&models.Wishlist{}).Select("id").Where(&models.Wishlist{
+	if err := db.Read.WithContext(ctx).Model(&models.Wishlist{}).Select("id").Where(&models.Wishlist{
 		IdPengguna:    data.IdentitasPengguna.ID,
 		IdBarangInduk: data.IdBarangInduk,
 	}).Limit(1).Scan(&id_data_wishlist).Error; err != nil {
@@ -41,7 +40,7 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.Wishlist{
+	if err := db.Write.WithContext(ctx).Create(&models.Wishlist{
 		IdPengguna:    data.IdentitasPengguna.ID,
 		IdBarangInduk: data.IdBarangInduk,
 	}).Error; err != nil {
@@ -59,10 +58,10 @@ func TambahBarangKeWishlist(ctx context.Context, data PayloadTambahBarangKeWishl
 	}
 }
 
-func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWishlist, db *gorm.DB) *response.ResponseForm {
+func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWishlist, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusBarangDariWishlist"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -71,7 +70,7 @@ func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWis
 	}
 
 	var id_data_wishlist int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Wishlist{}).Select("id").Where(&models.Wishlist{
+	if err := db.Read.WithContext(ctx).Model(&models.Wishlist{}).Select("id").Where(&models.Wishlist{
 		ID:         data.IdWishlist,
 		IdPengguna: data.IdentitasPengguna.ID,
 	}).Limit(1).Scan(&id_data_wishlist).Error; err != nil {
@@ -90,7 +89,7 @@ func HapusBarangDariWishlist(ctx context.Context, data PayloadHapusBarangDariWis
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.Wishlist{}).Where(&models.Wishlist{
+	if err := db.Write.WithContext(ctx).Model(&models.Wishlist{}).Where(&models.Wishlist{
 		ID: data.IdWishlist,
 	}).Delete(&models.Wishlist{}).Error; err != nil {
 		return &response.ResponseForm{

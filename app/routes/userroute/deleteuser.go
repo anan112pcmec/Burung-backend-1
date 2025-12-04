@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	pengguna_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/alamat_services"
@@ -16,7 +15,7 @@ import (
 	pengguna_wishlist_services "github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/wishlist_services"
 )
 
-func DeleteUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func DeleteUserHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request) {
 	var hasil *response.ResponseForm
 	ctx := r.Context()
 

@@ -4,17 +4,17 @@ import (
 	"context"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/rekening_services/response_rekening_services_kurir"
+
 )
 
-func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir, db *gorm.DB) *response.ResponseForm {
+func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MasukanRekeningKurir"
 
-	_, validasi := data.IdentitasKurir.Validating(ctx, db)
+	_, validasi := data.IdentitasKurir.Validating(ctx, db.Read)
 	if !validasi {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -26,7 +26,7 @@ func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir,
 	}
 
 	var id_alamat int64 = 0
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.RekeningKurir{}).
 		Select("id").
 		Where(&models.RekeningKurir{IdKurir: data.IdentitasKurir.IdKurir}).
@@ -52,7 +52,7 @@ func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir,
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.RekeningKurir{
+	if err := db.Write.WithContext(ctx).Create(&models.RekeningKurir{
 		IdKurir:         data.IdentitasKurir.IdKurir,
 		NamaBank:        data.NamaBank,
 		NomorRekening:   data.NomorRekening,
@@ -76,10 +76,10 @@ func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir,
 	}
 }
 
-func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *gorm.DB) *response.ResponseForm {
+func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditRekeningKurir"
 
-	_, validasi := data.IdentitasKurir.Validating(ctx, db)
+	_, validasi := data.IdentitasKurir.Validating(ctx, db.Read)
 	if !validasi {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -91,7 +91,7 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *g
 	}
 
 	var id_alamat int64 = 0
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.RekeningKurir{}).
 		Select("id").
 		Where(&models.RekeningKurir{ID: data.IdRekening, IdKurir: data.IdentitasKurir.IdKurir}).
@@ -117,7 +117,7 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *g
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
+	if err := db.Write.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
 		ID: data.IdRekening,
 	}).Updates(&models.RekeningKurir{
 		NamaBank:        data.NamaBank,
@@ -142,10 +142,10 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *g
 	}
 }
 
-func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db *gorm.DB) *response.ResponseForm {
+func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusRekeningKurir"
 
-	_, validasi := data.IdentitasKurir.Validating(ctx, db)
+	_, validasi := data.IdentitasKurir.Validating(ctx, db.Read)
 	if !validasi {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -157,7 +157,7 @@ func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db 
 	}
 
 	var id_alamat int64 = 0
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.RekeningKurir{}).
 		Select("id").
 		Where(&models.RekeningKurir{ID: data.IdRekening, IdKurir: data.IdentitasKurir.IdKurir}).
@@ -183,7 +183,7 @@ func HapusRekeningKurir(ctx context.Context, data PayloadHapusRekeningKurir, db 
 		}
 	}
 
-	if err := db.Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
+	if err := db.Write.Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
 		ID:      data.IdRekening,
 		IdKurir: data.IdentitasKurir.IdKurir,
 	}).Delete(&models.RekeningKurir{}).Error; err != nil {

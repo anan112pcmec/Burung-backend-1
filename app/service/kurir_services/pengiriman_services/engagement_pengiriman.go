@@ -9,17 +9,19 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	kurir_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity/kurir"
 	pengiriman_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/pengiriman"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
+
 )
 
-func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *gorm.DB) *response.ResponseForm {
+func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "AktifkanBidKurir"
 
-	kurir, status := data.IdentitasKurir.Validating(ctx, db)
+	kurir, status := data.IdentitasKurir.Validating(ctx, db.Read)
 
 	if !status {
 		return &response.ResponseForm{
@@ -46,7 +48,7 @@ func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *gor
 	}
 
 	var id_data_kurir_bid int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Select("id").Where(&models.BidKurirData{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Select("id").Where(&models.BidKurirData{
 		IdKurir: data.IdentitasKurir.IdKurir,
 		Selesai: nil,
 	}).Limit(1).Scan(&id_data_kurir_bid).Error; err != nil {
@@ -82,7 +84,7 @@ func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *gor
 		data.Mode = "auto"
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&models.BidKurirData{
 			IdKurir:         data.IdentitasKurir.IdKurir,
 			JenisPengiriman: data.JenisPengiriman,
@@ -124,10 +126,10 @@ func AktifkanBidKurir(ctx context.Context, data PayloadAktifkanBidKurir, db *gor
 	}
 }
 
-func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *gorm.DB) *response.ResponseForm {
+func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "UpdatePosisiBidKurir"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -136,7 +138,7 @@ func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *
 	}
 
 	var id_bid_kurir_data int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Select("id").Where(&models.BidKurirData{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Select("id").Where(&models.BidKurirData{
 		ID:      data.IdBidKurir,
 		IdKurir: data.IdentitasKurir.IdKurir,
 	}).Limit(1).Scan(&id_bid_kurir_data).Error; err != nil {
@@ -155,7 +157,7 @@ func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
+	if err := db.Write.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
 		ID: data.IdBidKurir,
 	}).Updates(&models.BidKurirData{
 		Longitude: data.Longitude,
@@ -175,10 +177,10 @@ func UpdatePosisiBidKurir(ctx context.Context, data PayloadUpdatePosisiBid, db *
 	}
 }
 
-func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPengirimanNonEksManualReguler, db *gorm.DB) *response.ResponseForm {
+func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPengirimanNonEksManualReguler, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "AmbilPengirimanManualReguler"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -188,7 +190,7 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 
 	// Memastikan data bid ada
 	var bid_data models.BidKurirData = models.BidKurirData{ID: 0}
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Select("id", "jenis_kendaraan", "slot_tersisa", "jenis_pengiriman").Where(&models.BidKurirData{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Select("id", "jenis_kendaraan", "slot_tersisa", "jenis_pengiriman").Where(&models.BidKurirData{
 		ID:          data.IdBid,
 		IdKurir:     data.IdentitasKurir.IdKurir,
 		Mode:        kurir_enums.Manual,
@@ -218,7 +220,7 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 	}
 
 	var id_same_bid_scheduler int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+	if err := db.Write.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 		IdPengiriman: data.IdPengiriman,
 	}).Limit(1).Scan(&id_same_bid_scheduler).Error; err != nil {
 		return &response.ResponseForm{
@@ -238,7 +240,7 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 
 	// Memastikan data pengiriman ada
 	var jenis_kendaraan string = ""
-	if err := db.WithContext(ctx).Model(&models.Pengiriman{}).Select("kendaraan_required").Where(&models.Pengiriman{
+	if err := db.Read.WithContext(ctx).Model(&models.Pengiriman{}).Select("kendaraan_required").Where(&models.Pengiriman{
 		ID:      data.IdPengiriman,
 		Status:  pengiriman_enums.Waiting,
 		IdKurir: nil,
@@ -268,7 +270,7 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 
 	var max_slot int8 = 8
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.Pengiriman{}).Where(&models.Pengiriman{
 			ID: data.IdPengiriman,
 		}).Updates(&models.Pengiriman{
@@ -304,7 +306,7 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 	}
 
 	if bid_data.SlotTersisa == 1 {
-		if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
+		if err := db.Write.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
 			ID: data.IdBid,
 		}).Update("status", kurir_enums.SiapAntar).Error; err != nil {
 			return &response.ResponseForm{
@@ -322,10 +324,10 @@ func AmbilPengirimanNonEksManualReguler(ctx context.Context, data PayloadAmbilPe
 	}
 }
 
-func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengirimanEksManualReguler, db *gorm.DB) *response.ResponseForm {
+func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengirimanEksManualReguler, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "AmbilPengirimanEksManualReguler"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -335,7 +337,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 
 	// Memastikan data bid ada
 	var bid_data models.BidKurirData = models.BidKurirData{ID: 0}
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Select("id", "jenis_kendaraan", "slot_tersisa", "jenis_pengiriman").Where(&models.BidKurirData{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Select("id", "jenis_kendaraan", "slot_tersisa", "jenis_pengiriman").Where(&models.BidKurirData{
 		ID:          data.IdBid,
 		IdKurir:     data.IdentitasKurir.IdKurir,
 		Mode:        kurir_enums.Manual,
@@ -366,7 +368,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 
 	// Memastikan data pengiriman ada
 	var jenis_kendaraan string = ""
-	if err := db.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("kendaraan_required").Where(&models.PengirimanEkspedisi{
+	if err := db.Read.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("kendaraan_required").Where(&models.PengirimanEkspedisi{
 		ID:     data.IdPengiriman,
 		Status: pengiriman_enums.Waiting,
 	}).Limit(1).Scan(&jenis_kendaraan).Error; err != nil {
@@ -394,7 +396,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 	}
 
 	var id_bid_scheduler int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 		IdPengirimanEks: data.IdPengiriman,
 	}).Limit(1).Scan(&id_bid_scheduler).Error; err != nil {
 		return &response.ResponseForm{
@@ -414,7 +416,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 
 	var max_slot int64 = 8
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.PengirimanEkspedisi{}).Where(&models.PengirimanEkspedisi{
 			ID: data.IdPengiriman,
 		}).Updates(&models.PengirimanEkspedisi{
@@ -449,7 +451,7 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 	}
 
 	if bid_data.SlotTersisa == 1 {
-		if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
+		if err := db.Write.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
 			ID: data.IdBid,
 		}).Update("status", kurir_enums.SiapAntar).Error; err != nil {
 			return &response.ResponseForm{
@@ -467,10 +469,10 @@ func AmbilPengirimanEksManualReguler(ctx context.Context, data PayloadAmbilPengi
 	}
 }
 
-func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *gorm.DB) *response.ResponseForm {
+func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "LockSiapAntarBidKurir"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -479,7 +481,7 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 	}
 
 	var data_bid_kurir models.BidKurirData = models.BidKurirData{ID: 0}
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Where(&models.BidKurirData{
 		ID:      data.IdBidKurir,
 		IdKurir: data.IdentitasKurir.IdKurir,
 	}).Limit(1).Scan(&data_bid_kurir).Error; err != nil {
@@ -503,7 +505,7 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 	var ids_data_bid_kurir_scheduler []int64
 
 	if data_bid_kurir.IsEkspedisi {
-		if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 			IdBid:   data.IdBidKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,
 			Status:  kurir_enums.Wait,
@@ -515,7 +517,7 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 			}
 		}
 	} else {
-		if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 			IdBid:   data.IdBidKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,
 			Status:  kurir_enums.Wait,
@@ -534,7 +536,7 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		if data_bid_kurir.IsEkspedisi {
 			if err := tx.Model(&models.BidKurirEksScheduler{}).Where("id IN ?", ids_data_bid_kurir_scheduler).Update("status", kurir_enums.Ambil).Error; err != nil {
@@ -573,10 +575,10 @@ func LockSiapAntarBidKurir(ctx context.Context, data PayloadLockSiapAntar, db *g
 	}
 }
 
-func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirimanNonEks, db *gorm.DB) *response.ResponseForm {
+func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirimanNonEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "PickedUpPengiriman"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -585,7 +587,7 @@ func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirima
 	}
 
 	var check_exist_bid_schedul int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 		IdBid:        data.IdBidKurir,
 		IdKurir:      data.IdentitasKurir.IdKurir,
 		IdPengiriman: data.IdPengiriman,
@@ -607,7 +609,7 @@ func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirima
 	}
 
 	var IdTransaksiPengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Pengiriman{}).Select("id_transaksi").Where(&models.Pengiriman{
+	if err := db.Read.WithContext(ctx).Model(&models.Pengiriman{}).Select("id_transaksi").Where(&models.Pengiriman{
 		ID: data.IdPengiriman,
 	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -625,7 +627,7 @@ func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirima
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
 			ID: check_exist_bid_schedul,
 		}).Update("status", kurir_enums.Kirim).Error; err != nil {
@@ -676,10 +678,10 @@ func PickedUpPengirimanNonEks(ctx context.Context, data PayloadPickedUpPengirima
 	}
 }
 
-func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEks, db *gorm.DB) *response.ResponseForm {
+func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "KirimPengirimanNonEks"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -688,7 +690,7 @@ func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEk
 	}
 
 	var exist_bid_data_schedul int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 		IdBid:        data.IdBidKurir,
 		IdKurir:      data.IdentitasKurir.IdKurir,
 		IdPengiriman: data.IdPengiriman,
@@ -710,7 +712,7 @@ func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEk
 	}
 
 	var id_jejak_pengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
+	if err := db.Read.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
 		IdPengiriman: data.IdPengiriman,
 	}).Limit(1).Scan(&id_jejak_pengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -728,7 +730,7 @@ func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEk
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
 			ID: exist_bid_data_schedul,
 		}).Update("status", kurir_enums.Finish).Error; err != nil {
@@ -767,10 +769,10 @@ func KirimPengirimanNonEks(ctx context.Context, data PayloadKirimPengirimanNonEk
 	}
 }
 
-func UpdateInformasiPerjalananPengirimanNonEks(ctx context.Context, data PayloadUpdateInformasiPerjalananPengiriman, db *gorm.DB) *response.ResponseForm {
+func UpdateInformasiPerjalananPengirimanNonEks(ctx context.Context, data PayloadUpdateInformasiPerjalananPengiriman, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "UpdateInformasiPengirimanNonEks"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -779,7 +781,7 @@ func UpdateInformasiPerjalananPengirimanNonEks(ctx context.Context, data Payload
 	}
 
 	var id_jejak_pengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
+	if err := db.Read.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
 		IdPengiriman: data.IdPengiriman,
 	}).Limit(1).Scan(&id_jejak_pengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -797,7 +799,7 @@ func UpdateInformasiPerjalananPengirimanNonEks(ctx context.Context, data Payload
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
+	if err := db.Write.WithContext(ctx).Model(&models.JejakPengiriman{}).Where(&models.JejakPengiriman{
 		ID: id_jejak_pengiriman,
 	}).Updates(&models.JejakPengiriman{
 		Lokasi:     data.Lokasi,
@@ -819,12 +821,12 @@ func UpdateInformasiPerjalananPengirimanNonEks(ctx context.Context, data Payload
 	}
 }
 
-func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNonEks, db *gorm.DB) *response.ResponseForm {
+func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNonEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "SampaiPengirimanNonEks"
 	var wg sync.WaitGroup
 	var final bool = false
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -836,7 +838,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 	go func(idBid int64) {
 		defer wg.Done()
 		var ids_data_bid_kurir_scheduler []int64 = make([]int64, 0, 8)
-		if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
 			IdBid: idBid,
 		}).Limit(8).Scan(&ids_data_bid_kurir_scheduler).Error; err != nil {
 			return
@@ -847,7 +849,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		}
 	}(data.IdBidKurir)
 	var exist_bid_data_schedul int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 		IdBid:        data.IdBidKurir,
 		IdKurir:      data.IdentitasKurir.IdKurir,
 		IdPengiriman: data.IdPengiriman,
@@ -869,7 +871,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 	}
 
 	var id_jejak_pengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
+	if err := db.Read.WithContext(ctx).Model(&models.JejakPengiriman{}).Select("id").Where(&models.JejakPengiriman{
 		IdPengiriman: data.IdPengiriman,
 	}).Limit(1).Scan(&id_jejak_pengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -888,7 +890,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 	}
 
 	var IdTransaksiPengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Pengiriman{}).Select("id_transaksi").Where(&models.Pengiriman{
+	if err := db.Read.WithContext(ctx).Model(&models.Pengiriman{}).Select("id_transaksi").Where(&models.Pengiriman{
 		ID: data.IdPengiriman,
 	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -908,7 +910,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 
 	wg.Wait()
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirNonEksScheduler{}).Where(&models.BidKurirNonEksScheduler{
 			IdBid:        data.IdBidKurir,
 			IdPengiriman: data.IdPengiriman,
@@ -975,10 +977,10 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 	}
 }
 
-func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEks, db *gorm.DB) *response.ResponseForm {
+func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "PickedUpPengirimanEks"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -987,7 +989,7 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 	}
 
 	var id_data_bid_schedul int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 		IdBid:           data.IdBidKurir,
 		IdKurir:         data.IdentitasKurir.IdKurir,
 		IdPengirimanEks: data.IdPengirimanEks,
@@ -1009,7 +1011,7 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 	}
 
 	var IdTransaksiPengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("id_transaksi").Where(&models.PengirimanEkspedisi{
+	if err := db.Read.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("id_transaksi").Where(&models.PengirimanEkspedisi{
 		ID: data.IdPengirimanEks,
 	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -1027,7 +1029,7 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
 			ID: id_data_bid_schedul,
 		}).Update("status", kurir_enums.Kirim).Error; err != nil {
@@ -1072,10 +1074,10 @@ func PickedUpPengirimanEks(ctx context.Context, data PayloadPickedUpPengirimanEk
 	}
 }
 
-func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db *gorm.DB) *response.ResponseForm {
+func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "KirimPengirimanEks"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1084,7 +1086,7 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 	}
 
 	var id_data_schedul int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 		IdBid:           data.IdBidKurir,
 		IdKurir:         data.IdentitasKurir.IdKurir,
 		IdPengirimanEks: data.IdPengirimanEks,
@@ -1106,7 +1108,7 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 	}
 
 	var id_jejak_pengiriman_eks int64 = 0
-	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
+	if err := db.Read.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
 		IdPengirimanEkspedisi: data.IdPengirimanEks,
 	}).Limit(1).Scan(&id_jejak_pengiriman_eks).Error; err != nil {
 		return &response.ResponseForm{
@@ -1124,7 +1126,7 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
 			ID: id_data_schedul,
 		}).Update("status", kurir_enums.Finish).Error; err != nil {
@@ -1164,10 +1166,10 @@ func KirimPengirimanEks(ctx context.Context, data PayloadKirimPengirimanEks, db 
 	}
 }
 
-func UpdateInformasiPerjalananPengirimanEks(ctx context.Context, data PayloadUpdateInformasiPerjalananPengirimanEks, db *gorm.DB) *response.ResponseForm {
+func UpdateInformasiPerjalananPengirimanEks(ctx context.Context, data PayloadUpdateInformasiPerjalananPengirimanEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "UpdateInformasiPerjalananPengirimanEks"
 
-	if _, status := data.IdenititasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdenititasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1176,7 +1178,7 @@ func UpdateInformasiPerjalananPengirimanEks(ctx context.Context, data PayloadUpd
 	}
 
 	var id_data_jejak_pengiriman_eks int64 = 0
-	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
+	if err := db.Read.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
 		IdPengirimanEkspedisi: data.IdPengirimanEks,
 	}).Limit(1).Scan(&id_data_jejak_pengiriman_eks).Error; err != nil {
 		return &response.ResponseForm{
@@ -1194,7 +1196,7 @@ func UpdateInformasiPerjalananPengirimanEks(ctx context.Context, data PayloadUpd
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Where(&models.JejakPengirimanEkspedisi{
+	if err := db.Write.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Where(&models.JejakPengirimanEkspedisi{
 		ID: id_data_jejak_pengiriman_eks,
 	}).Updates(&models.JejakPengirimanEkspedisi{
 		Lokasi:     data.Lokasi,
@@ -1216,12 +1218,12 @@ func UpdateInformasiPerjalananPengirimanEks(ctx context.Context, data PayloadUpd
 	}
 }
 
-func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, db *gorm.DB) *response.ResponseForm {
+func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	const services = "SampaiPengirimanEks"
 	var wg sync.WaitGroup
 	var final bool = false
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1234,7 +1236,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		defer wg.Done()
 
 		var ids_data_bid_kurir_scheduler []int64
-		if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
 			IdBid: idBid,
 		}).Limit(8).Scan(&ids_data_bid_kurir_scheduler).Error; err != nil {
 			return
@@ -1246,7 +1248,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	}(data.IdBidKurir)
 
 	var id_bid_schedul int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 		IdBid:           data.IdBidKurir,
 		IdPengirimanEks: data.IdPengirimanEks,
 		IdKurir:         data.IdBidKurir,
@@ -1268,7 +1270,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	}
 
 	var id_jejak_pengiriman_eks int64 = 0
-	if err := db.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
+	if err := db.Read.WithContext(ctx).Model(&models.JejakPengirimanEkspedisi{}).Select("id").Where(&models.JejakPengirimanEkspedisi{
 		IdPengirimanEkspedisi: data.IdPengirimanEks,
 	}).Limit(1).Scan(&id_jejak_pengiriman_eks).Error; err != nil {
 		return &response.ResponseForm{
@@ -1287,7 +1289,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	}
 
 	var IdTransaksiPengiriman int64 = 0
-	if err := db.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("id_transaksi").Where(&models.PengirimanEkspedisi{
+	if err := db.Read.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Select("id_transaksi").Where(&models.PengirimanEkspedisi{
 		ID: data.IdPengirimanEks,
 	}).Limit(1).Scan(&IdTransaksiPengiriman).Error; err != nil {
 		return &response.ResponseForm{
@@ -1307,7 +1309,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 
 	wg.Wait()
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		if err := tx.Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
 			IdBid:           data.IdBidKurir,
@@ -1378,10 +1380,10 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	}
 }
 
-func NonaktifkanBidKurir(ctx context.Context, data PayloadNonaktifkanBidKurir, db *gorm.DB) *response.ResponseForm {
+func NonaktifkanBidKurir(ctx context.Context, data PayloadNonaktifkanBidKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "NonaktifkanBidKurir"
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db); !status {
+	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1390,7 +1392,7 @@ func NonaktifkanBidKurir(ctx context.Context, data PayloadNonaktifkanBidKurir, d
 	}
 
 	var data_bid models.BidKurirData = models.BidKurirData{ID: 0}
-	if err := db.WithContext(ctx).Model(&models.BidKurirData{}).Select("id", "is_ekspedisi").Where(&models.BidKurirData{
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Select("id", "is_ekspedisi").Where(&models.BidKurirData{
 		ID:      data.IdBidKurir,
 		IdKurir: data.IdentitasKurir.IdKurir,
 		Status:  kurir_enums.Idle,
@@ -1413,7 +1415,7 @@ func NonaktifkanBidKurir(ctx context.Context, data PayloadNonaktifkanBidKurir, d
 	// Mengecek bid kurir scheduler
 	if data_bid.IsEkspedisi {
 		var id_data_bid_schedul_eks int64 = 0
-		if err := db.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 			IdBid:   data.IdBidKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,
 		}).Limit(1).Scan(&id_data_bid_schedul_eks).Error; err != nil {
@@ -1433,7 +1435,7 @@ func NonaktifkanBidKurir(ctx context.Context, data PayloadNonaktifkanBidKurir, d
 		}
 	} else {
 		var id_data_bid_schedul_non_eks int64 = 0
-		if err := db.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirNonEksScheduler{}).Select("id").Where(&models.BidKurirNonEksScheduler{
 			IdBid:   data.IdBidKurir,
 			IdKurir: data.IdentitasKurir.IdKurir,
 		}).Limit(1).Scan(&id_data_bid_schedul_non_eks).Error; err != nil {
@@ -1453,7 +1455,7 @@ func NonaktifkanBidKurir(ctx context.Context, data PayloadNonaktifkanBidKurir, d
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.BidKurirData{}).Where(&models.BidKurirData{
 			ID: data.IdBidKurir,
 		}).Delete(&models.BidKurirData{}).Error; err != nil {

@@ -91,7 +91,7 @@ func GetListBank() (*ResponseFlipGeneralWrapper, bool) {
 	switch res.StatusCode {
 
 	case 200:
-		var success []ResponseGetBank
+		var success ResponseGetBank
 		if err := json.Unmarshal(body, &success); err != nil {
 			return wrapper, false
 		}

@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	kurir_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/alamat_services"
@@ -13,7 +12,7 @@ import (
 	kurir_rekening_services "github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/rekening_services"
 )
 
-func DeleteKurirHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func DeleteKurirHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var hasil *response.ResponseForm
 	switch r.URL.Path {

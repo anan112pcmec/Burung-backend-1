@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gorm.io/gorm"
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 )
 
-func PutUserHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func PutUserHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request) {
 
 	var hasil any
 

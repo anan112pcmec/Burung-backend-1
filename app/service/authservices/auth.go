@@ -12,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -24,11 +25,11 @@ import (
 // :Bertujuan Untuk menangani aksi Login Dari Pengguna atau seller atau kurir,
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
+func UserLogin(db *config.InternalDBReadWriteSystem, email, password string) *response.ResponseForm {
 	service := "UserLogin"
 	var user models.Pengguna
 
-	if err := db.Where(models.Pengguna{Email: email}).Select("id", "nama", "username", "email", "password_hash", "status").Take(&user).Error; err != nil {
+	if err := db.Read.Where(models.Pengguna{Email: email}).Select("id", "nama", "username", "email", "password_hash", "status").Take(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &response.ResponseForm{
 				Status:   http.StatusNotFound,
@@ -59,7 +60,7 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 	} else {
 		go func() {
 			if user.StatusPengguna == "Offline" {
-				if err1 := db.Model(models.Pengguna{}).Where(models.Pengguna{Email: email}).Update("status", "Online").Error; err1 != nil {
+				if err1 := db.Write.Model(models.Pengguna{}).Where(models.Pengguna{Email: email}).Update("status", "Online").Error; err1 != nil {
 					fmt.Println("Gagal Ubah Status")
 				}
 			} else {
@@ -83,11 +84,11 @@ func UserLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 	}
 }
 
-func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
+func SellerLogin(db *config.InternalDBReadWriteSystem, email, password string) *response.ResponseForm {
 	service := "SellerLogin"
 	var seller models.Seller
 
-	if err := db.Where(&models.Seller{Email: email}).
+	if err := db.Read.Where(&models.Seller{Email: email}).
 		Select("id", "nama", "username", "email", "password_hash", "status").
 		First(&seller).Error; err != nil {
 
@@ -122,7 +123,7 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 
 	go func() {
 		if seller.StatusSeller == "Offline" {
-			if err := db.Model(&models.Seller{}).
+			if err := db.Write.Model(&models.Seller{}).
 				Where(&models.Seller{Email: email}).
 				Update("status", "Online").Error; err != nil {
 				fmt.Println("Gagal update status seller:", err)
@@ -147,11 +148,11 @@ func SellerLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 	}
 }
 
-func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
+func KurirLogin(db *config.InternalDBReadWriteSystem, email, password string) *response.ResponseForm {
 	service := "KurirLogin"
 
 	var kurir models.Kurir
-	if err := db.Where(&models.Kurir{Email: email}).
+	if err := db.Read.Where(&models.Kurir{Email: email}).
 		Select("id", "nama", "email", "password_hash", "status").
 		First(&kurir).Error; err != nil {
 
@@ -186,7 +187,7 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 
 	go func() {
 		if kurir.StatusKurir == "Offline" {
-			if err := db.Model(&models.Kurir{}).
+			if err := db.Write.Model(&models.Kurir{}).
 				Where(&models.Kurir{Email: email}).
 				Update("status", "Online").Error; err != nil {
 				fmt.Println("Gagal update status kurir:", err)
@@ -217,12 +218,12 @@ func KurirLogin(db *gorm.DB, email, password string) *response.ResponseForm {
 // :Manfaatnya tidak akan banyak akun spam, semua akun yang terintegrasi valid dengan gmail nya dan identitas lain
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rds *redis.Client) *response.ResponseForm {
+func PreUserRegistration(db *config.InternalDBReadWriteSystem, username, nama, email, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreUserRegistration"
 	ctx := context.Background()
 
 	var user int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Pengguna{}).Select("id").Where(&models.Pengguna{Email: email}).Or(&models.Pengguna{Username: username}).Limit(1).Scan(&user).Error; err != nil {
+	if err := db.Read.WithContext(ctx).Model(&models.Pengguna{}).Select("id").Where(&models.Pengguna{Email: email}).Or(&models.Pengguna{Username: username}).Limit(1).Scan(&user).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
 			Services: services,
@@ -284,11 +285,11 @@ func PreUserRegistration(db *gorm.DB, username, nama, email, password string, rd
 	}
 }
 
-func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
+func PreSellerRegistration(db *config.InternalDBReadWriteSystem, username, nama, email string, jenis string, SellerDedication string, password string, rds *redis.Client) *response.ResponseForm {
 	services := "PreSellerRegistration"
 
 	var seller int64 = 0
-	if err := db.Model(&models.Seller{}).Select("id").
+	if err := db.Read.Model(&models.Seller{}).Select("id").
 		Where(&models.Seller{Email: email}).
 		Or(&models.Seller{Username: username}).
 		Limit(1).Scan(&seller).Error; err != nil {
@@ -359,11 +360,11 @@ func PreSellerRegistration(db *gorm.DB, username, nama, email string, jenis stri
 	}
 }
 
-func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, rds *redis.Client) *response.ResponseForm {
+func PreKurirRegistration(db *config.InternalDBReadWriteSystem, nama, email, password, username string, rds *redis.Client) *response.ResponseForm {
 	services := "PreKurirRegistration"
 
 	var kurir int64 = 0
-	if err := db.Model(&models.Kurir{}).Select("id").Where(&models.Kurir{Email: email}).Or(&models.Kurir{
+	if err := db.Read.Model(&models.Kurir{}).Select("id").Where(&models.Kurir{Email: email}).Or(&models.Kurir{
 		Username: username,
 	}).Limit(1).Scan(&kurir).Error; err != nil {
 		return &response.ResponseForm{
@@ -429,7 +430,7 @@ func PreKurirRegistration(db *gorm.DB, nama, email, password, username string, r
 // :Bermanfaat dalam memvalidasi sebuah pengguna (bukan orang iseng/bot/dll) supaya bisa dipertanggung jawabkan
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
+func ValidateUserRegistration(db *config.InternalDBReadWriteSystem, OTPkey string, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateUserRegistration"
 
 	ctx := context.Background()
@@ -478,7 +479,7 @@ func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *re
 		PasswordHash: string(hashedPassword),
 	}
 
-	if err := db.Unscoped().Create(&user).Error; err != nil {
+	if err := db.Write.Create(&user).Error; err != nil {
 		fmt.Println("[ValidateUserRegistration] ERROR saving to DB:", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -503,7 +504,7 @@ func ValidateUserRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *re
 	}
 }
 
-func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
+func ValidateSellerRegistration(db *config.InternalDBReadWriteSystem, OTPkey string, rds *redis.Client) *response.ResponseForm {
 	services := "ValidateSellerRegistration"
 	ctx := context.Background()
 
@@ -553,7 +554,7 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 		Password:         string(hashedPassword),
 	}
 
-	if err := db.Create(&seller).Error; err != nil {
+	if err := db.Write.Create(&seller).Error; err != nil {
 		fmt.Println("[ValidateUserRegistration] ERROR saving to DB:", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,
@@ -578,7 +579,7 @@ func ValidateSellerRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *
 	}
 }
 
-func ValidateKurirRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *response.ResponseForm {
+func ValidateKurirRegistration(db *config.InternalDBReadWriteSystem, OTPkey string, rds *redis.Client) *response.ResponseForm {
 
 	services := "ValidateKurirRegistration"
 	ctx := context.Background()
@@ -627,7 +628,7 @@ func ValidateKurirRegistration(db *gorm.DB, OTPkey string, rds *redis.Client) *r
 		PasswordHash: string(hashedPassword),
 	}
 
-	if err := db.Unscoped().Create(&seller).Error; err != nil {
+	if err := db.Write.Create(&seller).Error; err != nil {
 		fmt.Println("[ValidateUserRegistration] ERROR saving to DB:", err)
 		return &response.ResponseForm{
 			Status:   http.StatusInternalServerError,

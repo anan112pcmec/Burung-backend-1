@@ -5,8 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -18,10 +17,10 @@ import (
 // Berfungsi Untuk menautkan atau melampirkan akun / social media mereka ke sistem burung
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTautkanSocialMedia, db *gorm.DB) *response.ResponseForm {
+func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTautkanSocialMedia, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahkanSocialMediaPenguna"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		log.Printf("[WARN] Kredensial pengguna tidak valid untuk ID %d", data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -33,7 +32,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 	}
 
 	var id_sosmed_table int64 = 0
-	_ = db.Model(&models.EntitySocialMedia{}).
+	_ = db.Read.WithContext(ctx).Model(&models.EntitySocialMedia{}).
 		Select("id").
 		Where(&models.EntitySocialMedia{
 			EntityId:   data.IdentitasPengguna.ID,
@@ -41,7 +40,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 		}).Take(&id_sosmed_table)
 
 	if id_sosmed_table == 0 {
-		if err_buat_kolom := db.Create(&models.EntitySocialMedia{
+		if err_buat_kolom := db.Write.WithContext(ctx).Create(&models.EntitySocialMedia{
 			EntityId:   data.IdentitasPengguna.ID,
 			Whatsapp:   data.Data.Whatsapp,
 			Facebook:   data.Data.Facebook,
@@ -62,7 +61,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 		log.Printf("[INFO] Data social media berhasil ditambahkan untuk pengguna ID %d", data.IdentitasPengguna.ID)
 	} else {
 		if data.Data.Whatsapp != "" && data.Data.Whatsapp != "not" {
-			if err_update := db.Model(&models.EntitySocialMedia{}).
+			if err_update := db.Write.WithContext(ctx).Model(&models.EntitySocialMedia{}).
 				Where(&models.EntitySocialMedia{ID: id_sosmed_table}).
 				Updates(&models.EntitySocialMedia{
 					Whatsapp: data.Data.Whatsapp,
@@ -79,7 +78,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 		}
 
 		if data.Data.TikTok != "" && data.Data.TikTok != "not" {
-			if err_update := db.Model(&models.EntitySocialMedia{}).
+			if err_update := db.Write.WithContext(ctx).Model(&models.EntitySocialMedia{}).
 				Where(&models.EntitySocialMedia{ID: id_sosmed_table}).
 				Updates(&models.EntitySocialMedia{
 					TikTok: data.Data.TikTok,
@@ -96,7 +95,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 		}
 
 		if data.Data.Facebook != "" && data.Data.Facebook != "not" {
-			if err_update := db.Model(&models.EntitySocialMedia{}).
+			if err_update := db.Write.WithContext(ctx).Model(&models.EntitySocialMedia{}).
 				Where(&models.EntitySocialMedia{ID: id_sosmed_table}).
 				Updates(&models.EntitySocialMedia{
 					Facebook: data.Data.Facebook,
@@ -113,7 +112,7 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 		}
 
 		if data.Data.Instagram != "" && data.Data.Instagram != "not" {
-			if err_update := db.Model(&models.EntitySocialMedia{}).
+			if err_update := db.Write.WithContext(ctx).Model(&models.EntitySocialMedia{}).
 				Where(&models.EntitySocialMedia{ID: id_sosmed_table}).
 				Updates(&models.EntitySocialMedia{
 					Instagram: data.Data.Instagram,
@@ -145,10 +144,10 @@ func EngageTautkanSocialMediaPengguna(ctx context.Context, data PayloadEngageTau
 // Berfungsi Untuk hapus social media mereka yang terhubung ke sistem burung
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EngageHapusSocialMedia(ctx context.Context, data PayloadEngageHapusSocialMedia, db *gorm.DB) *response.ResponseForm {
+func EngageHapusSocialMedia(ctx context.Context, data PayloadEngageHapusSocialMedia, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EngageHapusSocialMedia"
 
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		log.Printf("[WARN] Kredensial pengguna tidak valid untuk ID %d", data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -180,7 +179,7 @@ func EngageHapusSocialMedia(ctx context.Context, data PayloadEngageHapusSocialMe
 		}
 	}
 
-	if err := db.Model(&models.EntitySocialMedia{}).
+	if err := db.Write.WithContext(ctx).Model(&models.EntitySocialMedia{}).
 		Where(&models.EntitySocialMedia{ID: data.IdSocialMedia}).
 		Updates(kolom_update).Error; err != nil {
 		log.Printf("[ERROR] Gagal menghapus data %s untuk pengguna ID %d: %v", data.HapusSocialMedia, data.IdentitasPengguna.ID, err)
@@ -208,10 +207,10 @@ func EngageHapusSocialMedia(ctx context.Context, data PayloadEngageHapusSocialMe
 // Berfungsi Untuk Memfollow sebuah seller
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
+func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "FollowSeller"
 
-	_, status := data.IdentitasUser.Validating(ctx, db)
+	_, status := data.IdentitasUser.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -224,7 +223,7 @@ func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *g
 
 	var id_data_follower int64 = 0
 
-	if err := db.WithContext(ctx).Model(&models.Follower{}).Select("id").
+	if err := db.Read.WithContext(ctx).Model(&models.Follower{}).Select("id").
 		Where(&models.Follower{IdFollower: data.IdentitasUser.ID, IdFollowed: int64(data.IdSeller)}).
 		Limit(1).Scan(&id_data_follower).Error; err != nil {
 		return &response.ResponseForm{
@@ -237,7 +236,7 @@ func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *g
 	}
 
 	if id_data_follower == 0 {
-		if err := db.Create(&models.Follower{
+		if err := db.Write.WithContext(ctx).Create(&models.Follower{
 			IdFollower: data.IdentitasUser.ID,
 			IdFollowed: int64(data.IdSeller),
 		}).Error; err != nil {
@@ -274,10 +273,10 @@ func FollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *g
 // Berfungsi Untuk unfollowe seller
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func UnfollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *gorm.DB) *response.ResponseForm {
+func UnfollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "UnfollowSeller"
 
-	_, status := data.IdentitasUser.Validating(ctx, db)
+	_, status := data.IdentitasUser.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -289,7 +288,7 @@ func UnfollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db 
 	}
 
 	var id_follower int64 = 0
-	if err := db.WithContext(ctx).Model(&models.Follower{}).Select("id").Where(&models.Follower{
+	if err := db.Read.WithContext(ctx).Model(&models.Follower{}).Select("id").Where(&models.Follower{
 		IdFollower: data.IdentitasUser.ID,
 		IdFollowed: int64(data.IdSeller),
 	}).Limit(1).Scan(&id_follower).Error; err != nil {
@@ -312,7 +311,7 @@ func UnfollowSeller(ctx context.Context, data PayloadFollowOrUnfollowSeller, db 
 		}
 	}
 
-	if result := db.WithContext(ctx).Where(&models.Follower{
+	if result := db.Write.WithContext(ctx).Where(&models.Follower{
 		ID: id_follower,
 	}).Delete(&models.Follower{}).Error; result != nil {
 		return &response.ResponseForm{

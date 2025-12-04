@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services/response_credential_seller"
@@ -17,11 +18,11 @@ import (
 // Berfungsi untuk menambahkan rekening seller ke database
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller, db *gorm.DB) *response.ResponseForm {
+func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "TambahRekeningSeller"
 
 	// validasi kredensial seller
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -33,7 +34,7 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 
 	// cek rekening sudah ada
 	var id_rekening int64 = 0
-	if err_check_rekening := db.WithContext(ctx).
+	if err_check_rekening := db.Read.WithContext(ctx).
 		Model(&models.RekeningSeller{}).
 		Select("id").
 		Where(models.RekeningSeller{
@@ -66,7 +67,7 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 
 	// cek apakah seller sudah punya rekening lain (buat tentuin default)
 	var id_data_rekening int64 = 0
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.RekeningSeller{}).
 		Select("id").
 		Where(&models.RekeningSeller{
@@ -93,7 +94,7 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 	}
 
 	// insert rekening baru
-	if err_masukan := db.WithContext(ctx).Create(&models.RekeningSeller{
+	if err_masukan := db.Write.WithContext(ctx).Create(&models.RekeningSeller{
 		IDSeller:        data.IdentitasSeller.IdSeller,
 		NamaBank:        data.NamaBank,
 		NomorRekening:   data.NomorRekening,
@@ -123,10 +124,10 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 // Berfungsi untuk mengedit rekening seller di database
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *gorm.DB) *response.ResponseForm {
+func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditRekeningSeller"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -137,7 +138,7 @@ func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *gor
 	}
 
 	var id_data_rekening int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+	if err := db.Read.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
 		ID:       data.IdRekening,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
@@ -160,7 +161,7 @@ func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *gor
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
+	if err := db.Write.WithContext(ctx).Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
 		ID: data.IdRekening,
 	}).Updates(&models.RekeningSeller{
 		NamaBank:        data.NamaBank,
@@ -190,10 +191,10 @@ func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *gor
 // Berfungsi untuk mengubah rekening default
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func SetDefaultRekeningSeller(ctx context.Context, data PayloadSetDefaultRekeningSeller, db *gorm.DB) *response.ResponseForm {
+func SetDefaultRekeningSeller(ctx context.Context, data PayloadSetDefaultRekeningSeller, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "SetDefaultRekeningSeller"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -204,7 +205,7 @@ func SetDefaultRekeningSeller(ctx context.Context, data PayloadSetDefaultRekenin
 	}
 
 	var id_data_rekening int64 = 0
-	if err := db.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
+	if err := db.Read.WithContext(ctx).Model(&models.RekeningSeller{}).Select("id").Where(&models.RekeningSeller{
 		ID:       data.IdRekening,
 		IDSeller: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_rekening).Error; err != nil {
@@ -227,7 +228,7 @@ func SetDefaultRekeningSeller(ctx context.Context, data PayloadSetDefaultRekenin
 		}
 	}
 
-	if err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
 			IDSeller:  data.IdentitasSeller.IdSeller,
 			IsDefault: true,
@@ -267,11 +268,11 @@ func SetDefaultRekeningSeller(ctx context.Context, data PayloadSetDefaultRekenin
 // Berfungsi untuk Menghapus Data Rekening Seller Yang sudah ada di db
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func HapusRekeningSeller(ctx context.Context, data PayloadHapusNorekSeller, db *gorm.DB) *response.ResponseForm {
+func HapusRekeningSeller(ctx context.Context, data PayloadHapusNorekSeller, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusRekeningSeller"
 
 	// Validasi kredensial seller
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -283,7 +284,7 @@ func HapusRekeningSeller(ctx context.Context, data PayloadHapusNorekSeller, db *
 
 	// Validasi apakah rekening ada dan milik seller ini
 	var id_data_rekening int64
-	if err := db.WithContext(ctx).
+	if err := db.Read.WithContext(ctx).
 		Model(&models.RekeningSeller{}).
 		Select("id").
 		Where(&models.RekeningSeller{
@@ -312,7 +313,7 @@ func HapusRekeningSeller(ctx context.Context, data PayloadHapusNorekSeller, db *
 	}
 
 	// Hapus rekening
-	if err := db.WithContext(ctx).
+	if err := db.Write.WithContext(ctx).
 		Where(&models.RekeningSeller{
 			ID:            id_data_rekening,
 			NomorRekening: data.NomorRekening,

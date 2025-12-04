@@ -4,17 +4,16 @@ import (
 	"context"
 	"net/http"
 
-	"gorm.io/gorm"
-
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/jenis_seller_services/response_jenis_seller"
 )
 
-func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistributor, db *gorm.DB) *response.ResponseForm {
+func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistributor, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MasukanDataDistributor"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -25,7 +24,7 @@ func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistribu
 	}
 
 	var id_data_distributor int64 = 0
-	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
+	if err := db.Read.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
 		SellerId: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_distributor).Error; err != nil {
 		return &response.ResponseForm{
@@ -47,7 +46,7 @@ func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistribu
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.DistributorData{
+	if err := db.Write.WithContext(ctx).Create(&models.DistributorData{
 		SellerId:                  data.IdentitasSeller.IdSeller,
 		NamaPerusahaan:            data.NamaPerusahaan,
 		NIB:                       data.NIB,
@@ -74,10 +73,10 @@ func MasukanDataDistributor(ctx context.Context, data PayloadMasukanDataDistribu
 	}
 }
 
-func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, db *gorm.DB) *response.ResponseForm {
+func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditDataDistributor"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -88,7 +87,7 @@ func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, d
 	}
 
 	var id_data_distributor int64 = 0
-	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
+	if err := db.Read.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
 		ID:       data.IdDistributorData,
 		SellerId: data.IdentitasSeller.IdSeller,
 		Status:   "Pending",
@@ -112,7 +111,7 @@ func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, d
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Where(&models.DistributorData{
+	if err := db.Write.WithContext(ctx).Model(&models.DistributorData{}).Where(&models.DistributorData{
 		ID: data.IdDistributorData,
 	}).Updates(&models.DistributorData{
 		NamaPerusahaan:            data.NamaPerusahaan,
@@ -139,10 +138,10 @@ func EditDataDistributor(ctx context.Context, data PayloadEditDataDistributor, d
 	}
 }
 
-func HapusDataDistributor(ctx context.Context, data PayloadHapusDataDistributor, db *gorm.DB) *response.ResponseForm {
+func HapusDataDistributor(ctx context.Context, data PayloadHapusDataDistributor, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusDataDistributor"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -153,7 +152,7 @@ func HapusDataDistributor(ctx context.Context, data PayloadHapusDataDistributor,
 	}
 
 	var id_data_distributor int64 = 0
-	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
+	if err := db.Read.WithContext(ctx).Model(&models.DistributorData{}).Select("id").Where(&models.DistributorData{
 		ID:       data.IdDistributorData,
 		SellerId: data.IdentitasSeller.IdSeller,
 		Status:   "Pending",
@@ -177,7 +176,7 @@ func HapusDataDistributor(ctx context.Context, data PayloadHapusDataDistributor,
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.DistributorData{}).Where(&models.DistributorData{
+	if err := db.Write.WithContext(ctx).Model(&models.DistributorData{}).Where(&models.DistributorData{
 		ID: data.IdDistributorData,
 	}).Delete(&models.DistributorData{}).Error; err != nil {
 		return &response.ResponseForm{
@@ -198,10 +197,10 @@ func HapusDataDistributor(ctx context.Context, data PayloadHapusDataDistributor,
 	}
 }
 
-func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *gorm.DB) *response.ResponseForm {
+func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "MasukanDataBrand"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -212,7 +211,7 @@ func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *gor
 	}
 
 	var id_data_brand int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
+	if err := db.Read.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
 		SellerId: data.IdentitasSeller.IdSeller,
 	}).Limit(1).Scan(&id_data_brand).Error; err != nil {
 		return &response.ResponseForm{
@@ -234,7 +233,7 @@ func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *gor
 		}
 	}
 
-	if err := db.WithContext(ctx).Create(&models.BrandData{
+	if err := db.Write.WithContext(ctx).Create(&models.BrandData{
 		SellerId:              data.IdentitasSeller.IdSeller,
 		NamaPerusahaan:        data.NamaPerusahaan,
 		NegaraAsal:            data.NegaraAsal,
@@ -265,10 +264,10 @@ func MasukanDataBrand(ctx context.Context, data PayloadMasukanDataBrand, db *gor
 	}
 }
 
-func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *gorm.DB) *response.ResponseForm {
+func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "EditDataBrand"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -279,7 +278,7 @@ func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *gorm.DB) 
 	}
 
 	var id_data_brand int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
+	if err := db.Read.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
 		ID:       data.IdDataBrand,
 		SellerId: data.IdentitasSeller.IdSeller,
 		Status:   "Pending",
@@ -303,7 +302,7 @@ func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *gorm.DB) 
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.BrandData{}).Where(&models.BrandData{
+	if err := db.Write.WithContext(ctx).Model(&models.BrandData{}).Where(&models.BrandData{
 		ID: data.IdDataBrand,
 	}).Updates(&models.BrandData{
 		NamaPerusahaan:        data.NamaPerusahaan,
@@ -334,10 +333,10 @@ func EditDataBrand(ctx context.Context, data PayloadEditDataBrand, db *gorm.DB) 
 	}
 }
 
-func HapusDataBrand(ctx context.Context, data PayloadHapusDataBrand, db *gorm.DB) *response.ResponseForm {
+func HapusDataBrand(ctx context.Context, data PayloadHapusDataBrand, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "HapusDataBrand"
 
-	if _, status := data.IdentitasSeller.Validating(ctx, db); !status {
+	if _, status := data.IdentitasSeller.Validating(ctx, db.Read); !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -348,7 +347,7 @@ func HapusDataBrand(ctx context.Context, data PayloadHapusDataBrand, db *gorm.DB
 	}
 
 	var id_data_brand int64 = 0
-	if err := db.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
+	if err := db.Read.WithContext(ctx).Model(&models.BrandData{}).Select("id").Where(&models.BrandData{
 		ID:       data.IdDataBrand,
 		SellerId: data.IdentitasSeller.IdSeller,
 		Status:   "Pending",
@@ -362,7 +361,7 @@ func HapusDataBrand(ctx context.Context, data PayloadHapusDataBrand, db *gorm.DB
 		}
 	}
 
-	if err := db.WithContext(ctx).Model(&models.BrandData{}).Where(&models.BrandData{
+	if err := db.Write.WithContext(ctx).Model(&models.BrandData{}).Where(&models.BrandData{
 		ID: data.IdDataBrand,
 	}).Delete(&models.BrandData{}).Error; err != nil {
 		return &response.ResponseForm{

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	seller_alamat_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services"
@@ -20,7 +20,7 @@ import (
 	seller_transaksi_services "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/transaksi_services"
 )
 
-func PatchSellerHandler(db *gorm.DB, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
+func PatchSellerHandler(db *config.InternalDBReadWriteSystem, w http.ResponseWriter, r *http.Request, rds_engagement *redis.Client) {
 	var hasil *response.ResponseForm
 
 	ctx := r.Context()

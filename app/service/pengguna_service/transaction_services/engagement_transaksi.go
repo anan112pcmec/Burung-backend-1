@@ -21,6 +21,7 @@ import (
 	payment_in_va "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/virtual_account"
 	payment_in_wallet "github.com/anan112pcmec/Burung-backend-1/app/api/payment_in_midtrans/wallet"
 	data_cache "github.com/anan112pcmec/Burung-backend-1/app/cache/data"
+	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
@@ -30,12 +31,12 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/service/pengguna_service/transaction_services/response_transaction_pengguna"
 )
 
-func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gorm.DB) *response.ResponseForm {
+func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "CheckoutBarangUser"
 	log.Printf("[%s] Memulai proses checkout untuk user ID: %v", services, data.IdentitasPengguna.ID)
 
 	// Validasi pengguna
-	if _, status := data.IdentitasPengguna.Validating(ctx, db); !status {
+	if _, status := data.IdentitasPengguna.Validating(ctx, db.Read); !status {
 		log.Printf("[%s] Kredensial pengguna tidak valid untuk user ID: %v", services, data.IdentitasPengguna.ID)
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -83,7 +84,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 
 		jumlahNeeded := int(data.DataCheckout[i].Jumlah)
 		var idsVarianStok []int64 = make([]int64, 0, jumlahNeeded)
-		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+		if err := db.Read.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
 			IdBarangInduk: data.DataCheckout[i].IdBarangInduk,
 			IdKategori:    data.DataCheckout[i].IdKategori,
 			Status:        barang_enums.Ready,
@@ -108,7 +109,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 		if BarangInduk[int64(data.DataCheckout[i].IdBarangInduk)].NamaBarang == "" {
 			barang := models.BarangInduk{}
 
-			if err := db.WithContext(ctx).Model(&models.BarangInduk{}).Select("nama_barang", "id_seller", "jenis_barang").Where(&models.BarangInduk{
+			if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("nama_barang", "id_seller", "jenis_barang").Where(&models.BarangInduk{
 				ID: int32(data.DataCheckout[i].IdBarangInduk),
 			}).Limit(1).Scan(&barang).Error; err != nil {
 				return &response.ResponseForm{
@@ -123,7 +124,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 
 		if KategoriBarang[data.DataCheckout[i].IdKategori].Nama == "" {
 			var kategori models.KategoriBarang = models.KategoriBarang{Nama: ""}
-			if err := db.Model(&models.KategoriBarang{}).Select("nama", "harga", "stok", "id_barang_induk", "id_alamat_gudang", "berat_gram").
+			if err := db.Read.Model(&models.KategoriBarang{}).Select("nama", "harga", "stok", "id_barang_induk", "id_alamat_gudang", "berat_gram").
 				Where(&models.KategoriBarang{ID: data.DataCheckout[i].IdKategori}).Limit(1).Scan(&kategori).Error; err != nil {
 				return &response.ResponseForm{
 					Status:   http.StatusInternalServerError,
@@ -147,7 +148,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 
 		if NamaSeller[int64(data.DataCheckout[i].IdSeller)] == "" {
 			var namaSeller string = ""
-			if err := db.Model(&models.Seller{}).Select("nama").
+			if err := db.Read.Model(&models.Seller{}).Select("nama").
 				Where(&models.Seller{ID: data.DataCheckout[i].IdSeller}).
 				Limit(1).Scan(&namaSeller).Error; err != nil {
 				return &response.ResponseForm{
@@ -188,7 +189,7 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 		responseData = append(responseData, resp)
 	}
 
-	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		// Update status varian sekaligus
 		if len(varianUpdates) > 0 {
@@ -248,30 +249,34 @@ func CheckoutBarangUser(ctx context.Context, data PayloadCheckoutBarang, db *gor
 // Befungsi Untuk MembatalkanCheckout yang telah dilakukan
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, db *gorm.DB) *response.ResponseForm {
+func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "BatalCheckoutKeranjang"
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		var varianIDs []int64
-		kategoriUpdates := make(map[int32]int32) // kategoriID => total jumlah dikembalikan
+	var varianIDs []int64
+	kategoriUpdates := make(map[int32]int32) // kategoriID => total jumlah dikembalikan
 
-		for _, keranjang := range data.DataResponse {
-			var varian_id []int64
-			if err := tx.Model(&models.VarianBarang{}).
-				Where(models.VarianBarang{
-					IdBarangInduk: keranjang.IdBarangInduk,
-					IdKategori:    keranjang.IdKategoriBarang,
-					Status:        barang_enums.Dipesan,
-					HoldBy:        keranjang.IDUser,
-				}).
-				Limit(int(keranjang.Dipesan)).
-				Pluck("id", &varian_id).Error; err != nil {
-				return err
+	for _, keranjang := range data.DataResponse {
+		var varian_id []int64
+		if err := db.Read.Model(&models.VarianBarang{}).
+			Where(models.VarianBarang{
+				IdBarangInduk: keranjang.IdBarangInduk,
+				IdKategori:    keranjang.IdKategoriBarang,
+				Status:        barang_enums.Dipesan,
+				HoldBy:        keranjang.IDUser,
+			}).
+			Limit(int(keranjang.Dipesan)).
+			Pluck("id", &varian_id).Error; err != nil {
+			return &response.ResponseForm{
+				Status:   http.StatusInternalServerError,
+				Services: services,
+				Message:  "Gagal server sedang sibuk coba lagi lain waktu",
 			}
-			varianIDs = append(varianIDs, varian_id...)
-			kategoriUpdates[int32(keranjang.IdKategoriBarang)] += keranjang.Dipesan
 		}
+		varianIDs = append(varianIDs, varian_id...)
+		kategoriUpdates[int32(keranjang.IdKategoriBarang)] += keranjang.Dipesan
+	}
 
+	err := db.Write.Transaction(func(tx *gorm.DB) error {
 		// Update status semua varian sekaligus
 		if len(varianIDs) > 0 {
 			if err := tx.Model(&models.VarianBarang{}).
@@ -318,7 +323,7 @@ func BatalCheckoutUser(data response_transaction_pengguna.ResponseDataCheckout, 
 // pendukungnya)
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *gorm.DB) *response.ResponseForm {
+func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "SnapTransaksiUser"
 	fmt.Println("[TRACE] Start SnapTransaksi")
 
@@ -340,7 +345,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 	}
 
-	model, status := data.IdentitasPengguna.Validating(ctx, db)
+	model, status := data.IdentitasPengguna.Validating(ctx, db.Read)
 	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -385,7 +390,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		// Defensive: Check if seller exists in map
 		if _, exists := sellerTransaction[data.DataCheckout.DataResponse[i].IDSeller]; !exists {
 			var seller models.Seller
-			if err := db.WithContext(ctx).Model(&models.Seller{}).Where(&models.Seller{
+			if err := db.Read.WithContext(ctx).Model(&models.Seller{}).Where(&models.Seller{
 				ID: data.DataCheckout.DataResponse[i].IDSeller,
 			}).Limit(1).First(&seller).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -402,7 +407,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		}
 
 		var varianIds []int64 = make([]int64, 0, int(data.DataCheckout.DataResponse[i].Dipesan))
-		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+		if err := db.Read.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
 			IdBarangInduk: data.DataCheckout.DataResponse[i].IdBarangInduk,
 			IdKategori:    data.DataCheckout.DataResponse[i].IdKategoriBarang,
 			Status:        barang_enums.Dipesan,
@@ -431,7 +436,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 	var err_payment error
 	maxRetry := 10
 	for i := 0; i < maxRetry; i++ {
-		PaymentCode, err_payment = helper.GenerateAutoPaymentId(db)
+		PaymentCode, err_payment = helper.GenerateAutoPaymentId(db.Read)
 		if err_payment == nil {
 			fmt.Printf("[TRACE] PaymentCode berhasil dibuat: %s (percobaan ke-%d)\n", PaymentCode, i+1)
 			break
@@ -557,7 +562,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		// Defensive: Check if warehouse address exists
 		if _, exists := AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang]; !exists {
 			var alamat models.AlamatGudang
-			if err := db.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
+			if err := db.Read.WithContext(ctx).Model(&models.AlamatGudang{}).Where(&models.AlamatGudang{
 				ID: data.DataCheckout.DataResponse[i].IdAlamatGudang,
 			}).Limit(1).Take(&alamat).Error; err != nil {
 				_ = BatalCheckoutUser(data.DataCheckout, db)
@@ -592,7 +597,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 		var IdAlamatEkspedisi int64 = 0
 		if isEkspedisi {
 			var id_alamat_eks int64 = 0
-			if err := db.WithContext(ctx).Model(&models.AlamatEkspedisi{}).Select("id").Where(&models.AlamatEkspedisi{
+			if err := db.Read.WithContext(ctx).Model(&models.AlamatEkspedisi{}).Select("id").Where(&models.AlamatEkspedisi{
 				Kota: AlamatGudang[data.DataCheckout.DataResponse[i].IdAlamatGudang].Kota,
 			}).Order("id DESC").Limit(1).Scan(&id_alamat_eks).Error; err != nil {
 				_ = BatalCheckoutUser(data.DataCheckout, db)
@@ -890,7 +895,7 @@ func SnapTransaksi(ctx context.Context, data PayloadSnapTransaksiRequest, db *go
 	}
 }
 
-func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.SnapTransaksi, db *gorm.DB) *response.ResponseForm {
+func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.SnapTransaksi, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "BatalTransaksi"
 
 	var total_varian int64 = 0
@@ -903,7 +908,7 @@ func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.Snap
 
 	for i := 0; i < len(data.DataCheckout); i++ {
 		idkategori[data.DataCheckout[i].IdKategoriBarang] = int64(data.DataCheckout[i].Dipesan)
-		if err := db.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
+		if err := db.Read.WithContext(ctx).Model(&models.VarianBarang{}).Select("id").Where(&models.VarianBarang{
 			IdBarangInduk: data.DataCheckout[i].IdBarangInduk,
 			IdKategori:    data.DataCheckout[i].IdKategoriBarang,
 			Status:        barang_enums.Dipesan,
@@ -917,7 +922,7 @@ func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.Snap
 		}
 	}
 
-	err := db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&models.VarianBarang{}).
 			Where("id IN ?", varianIds).
 			Updates(map[string]interface{}{
@@ -964,7 +969,7 @@ func BatalTransaksi(ctx context.Context, data response_transaction_pengguna.Snap
 // jenis pembayaran yang dilakukan oleh pengguna disini adalah VA (virtual account)
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.ResponseForm {
+func LockTransaksiVa(data PayloadLockTransaksiVa, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "LockTransaksiVa"
 
 	for i := 0; i < len(data.DataHold); i++ {
@@ -1066,14 +1071,14 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	pembayaran.IdPengguna = data.DataHold[0].IDUser
 	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold))
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
 
 		for i := 0; i < len(data.DataHold); i++ {
 			var kategori models.KategoriBarang
-			if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+			if err := db.Read.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 				ID: data.DataHold[i].IdKategoriBarang,
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
@@ -1142,7 +1147,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *gorm.DB) *response.Respons
 	}
 }
 
-func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *response.ResponseForm {
+func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "PaidFailedTransaksiVa"
 
 	bank, err_p := payment_gateaway.ParseVirtualAccount(data.PaymentResult)
@@ -1239,7 +1244,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 
 	standard_response.IdPengguna = data.DataHold[0].IDUser
 
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err := db.Write.Transaction(func(tx *gorm.DB) error {
 
 		if err := tx.Create(&standard_response).Error; err != nil {
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
@@ -1297,7 +1302,7 @@ func PaidFailedTransaksiVa(data PayloadPaidFailedTransaksiVa, db *gorm.DB) *resp
 // jenis pembayaran yang dilakukan oleh pengguna disini adalah Wallet
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response.ResponseForm {
+func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "LockTransaksiWallet"
 
 	for _, keranjang := range data.DataHold {
@@ -1324,14 +1329,14 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 	pembayaran.IdPengguna = data.DataHold[0].IDUser
 	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold))
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
 
 		for i := 0; i < len(data.DataHold); i++ {
 			var kategori models.KategoriBarang
-			if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+			if err := db.Read.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 				ID: data.DataHold[i].IdKategoriBarang,
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
@@ -1398,7 +1403,7 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *gorm.DB) *response
 	}
 }
 
-func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.DB) *response.ResponseForm {
+func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "PaidFailedTransaksiWallet"
 
 	var resp payment_in_wallet.Response = &data.PaymentResult
@@ -1407,7 +1412,7 @@ func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.D
 	standard_response.IdPengguna = data.DataHold[0].IDUser
 	var TransaksiGagalBatch []models.TransaksiFailed = make([]models.TransaksiFailed, 0, len(data.DataHold))
 	// --- Jalankan transaksi database ---
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err := db.Write.Transaction(func(tx *gorm.DB) error {
 		// Simpan ke PaidFailed
 		if err := tx.Create(&standard_response).Error; err != nil {
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
@@ -1465,7 +1470,7 @@ func PaidFailedTransaksiWallet(data PayloadPaidFailedTransaksiWallet, db *gorm.D
 // jenis pembayaran yang dilakukan oleh pengguna disini adalah Gerai
 // ////////////////////////////////////////////////////////////////////////////////////
 
-func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.ResponseForm {
+func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "LockTransaksiGerai"
 
 	for _, keranjang := range data.DataHold {
@@ -1500,14 +1505,14 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 	pembayaran.IdPengguna = data.DataHold[0].IDUser
 	var transaksi_save []models.Transaksi = make([]models.Transaksi, 0, len(data.DataHold))
 
-	if err := db.Transaction(func(tx *gorm.DB) error {
+	if err := db.Write.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&pembayaran).Error; err != nil {
 			return err
 		}
 
 		for i := 0; i < len(data.DataHold); i++ {
 			var kategori models.KategoriBarang
-			if err := db.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
+			if err := db.Read.Model(&models.KategoriBarang{}).Where(&models.KategoriBarang{
 				ID: data.DataHold[i].IdKategoriBarang,
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
@@ -1574,7 +1579,7 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *gorm.DB) *response.R
 	}
 }
 
-func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB) *response.ResponseForm {
+func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
 	services := "PaidFailedTransaksiGerai"
 
 	var resp payment_in_gerai.Response = &data.PaymentResult
@@ -1583,7 +1588,7 @@ func PaidFailedTransaksiGerai(data PayloadPaidFailedTransaksiGerai, db *gorm.DB)
 	standard_response.IdPengguna = data.DataHold[0].IDUser
 
 	// --- Jalankan transaksi database ---
-	err := db.Transaction(func(tx *gorm.DB) error {
+	err := db.Write.Transaction(func(tx *gorm.DB) error {
 		// Simpan ke PaidFailed
 		if err := tx.Create(&standard_response).Error; err != nil {
 			return fmt.Errorf("gagal menyimpan PaidFailed: %w", err)
