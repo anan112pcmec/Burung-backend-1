@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/nama_bank"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/kurir_services/rekening_services/response_rekening_services_kurir"
-
 )
 
 func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir, db *config.InternalDBReadWriteSystem) *response.ResponseForm {
@@ -22,6 +22,14 @@ func MasukanRekeningKurir(ctx context.Context, data PayloadMasukanRekeningKurir,
 			Payload: response_rekening_services_kurir.ResponseMasukanRekeningKurir{
 				Message: "Gagal Data Kurir Tidak Valid",
 			},
+		}
+	}
+
+	if _, ok := nama_bank.BankMap[data.NamaBank]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal, nama bank tidak diterima",
 		}
 	}
 
@@ -87,6 +95,14 @@ func EditRekeningKurir(ctx context.Context, data PayloadEditRekeningKurir, db *c
 			Payload: response_rekening_services_kurir.ResponseEditRekeningKurir{
 				Message: "Gagal menemukan data kurir",
 			},
+		}
+	}
+
+	if _, ok := nama_bank.BankMap[data.NamaBank]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal, nama bank tidak diterima",
 		}
 	}
 

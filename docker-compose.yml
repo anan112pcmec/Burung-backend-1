@@ -1,15 +1,4 @@
 services:
-  pg-slave:
-    image: postgres:17
-    container_name: pg_burung_slave
-    environment:
-      POSTGRES_PASSWORD: slavepass
-      POSTGRES_USER: postgres
-    ports:
-      - "5433:5432"
-    volumes:
-      - pg_slave_data:/var/lib/postgresql/data
-    restart: unless-stopped
 
   redis:
     image: redis:latest
@@ -44,6 +33,3 @@ services:
     ports:
       - "9042:9042"
     restart: unless-stopped
-
-volumes:
-  pg_slave_data:

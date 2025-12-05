@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/nama_bank"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	"github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/credential_services/response_credential_seller"
@@ -29,6 +30,14 @@ func TambahRekeningSeller(ctx context.Context, data PayloadTambahkanNorekSeller,
 			Payload: response_credential_seller.ResponseTambahRekeningSeller{
 				Message: "Gagal Kredensial Seller Tidak Valid",
 			},
+		}
+	}
+
+	if _, ok := nama_bank.BankMap[data.NamaBank]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal, nama bank tidak diterima",
 		}
 	}
 
@@ -134,6 +143,14 @@ func EditRekeningSeller(ctx context.Context, data PayloadEditNorekSeler, db *con
 			Payload: response_credential_seller.ResponseEditRekeningSeller{
 				Message: "Gagal Data seller tidak valid",
 			},
+		}
+	}
+
+	if _, ok := nama_bank.BankMap[data.NamaBank]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal, nama bank tidak diterima",
 		}
 	}
 

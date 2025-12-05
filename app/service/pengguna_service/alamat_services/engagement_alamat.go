@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/nama_kota"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/nama_provinsi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
@@ -22,6 +24,22 @@ func MasukanAlamatPengguna(ctx context.Context, data PayloadMasukanAlamatPenggun
 			Status:   http.StatusNotFound,
 			Services: services,
 			Message:  "Gagal Data Pengguna Tidak Valid",
+		}
+	}
+
+	if _, ok := nama_provinsi.JawaProvinsiMap[data.Provinsi]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama provinsi tidak valid",
+		}
+	}
+
+	if _, ok := nama_kota.KotaJawaMap[data.Kota]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama kota tidak valid",
 		}
 	}
 
@@ -101,6 +119,22 @@ func EditAlamatPengguna(ctx context.Context, data PayloadEditAlamatPengguna, db 
 			Status:   http.StatusNotFound,
 			Services: services,
 			Message:  "Gagal data Pengguna tidak ditemukan",
+		}
+	}
+
+	if _, ok := nama_provinsi.JawaProvinsiMap[data.Provinsi]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama provinsi tidak valid",
+		}
+	}
+
+	if _, ok := nama_kota.KotaJawaMap[data.Kota]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama kota tidak valid",
 		}
 	}
 

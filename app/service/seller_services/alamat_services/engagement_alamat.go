@@ -6,10 +6,13 @@ import (
 	"net/http"
 
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/nama_kota"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/nama_provinsi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_alamat_services_seller "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/alamat_services/response_alamat_service_seller"
+
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,6 +34,22 @@ func TambahAlamatGudang(ctx context.Context, data PayloadTambahAlamatGudang, db 
 			Payload: response_alamat_services_seller.ResponseTambahAlamatGudang{
 				Message: "Kredensial seller tidak valid.",
 			},
+		}
+	}
+
+	if _, ok := nama_provinsi.JawaProvinsiMap[data.Provinsi]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama provinsi tidak valid",
+		}
+	}
+
+	if _, ok := nama_kota.KotaJawaMap[data.Kota]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama kota tidak valid",
 		}
 	}
 
@@ -108,6 +127,22 @@ func EditAlamatGudang(ctx context.Context, data PayloadEditAlamatGudang, db *con
 			Payload: response_alamat_services_seller.ResponseEditAlamatGudang{
 				Message: "Kredensial seller tidak valid.",
 			},
+		}
+	}
+
+	if _, ok := nama_provinsi.JawaProvinsiMap[data.Provinsi]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama provinsi tidak valid",
+		}
+	}
+
+	if _, ok := nama_kota.KotaJawaMap[data.Kota]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Nama kota tidak valid",
 		}
 	}
 

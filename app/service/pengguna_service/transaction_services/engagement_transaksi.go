@@ -24,6 +24,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/jenis_kendaraan_kurir"
 	transaksi_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/transaksi"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/helper"
@@ -1083,27 +1084,47 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *config.InternalDBReadWrite
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
 			}
+			beratTotalKg := kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000
+			if beratTotalKg == 0 {
+				beratTotalKg = 1
+			}
+
+			var kendaraan string = ""
+
+			if beratTotalKg <= 10 {
+				kendaraan = jenis_kendaraan_kurir.Motor
+			}
+
+			if beratTotalKg <= 20 {
+				kendaraan = jenis_kendaraan_kurir.Mobil
+			}
+
+			if beratTotalKg > 20 {
+				kendaraan = jenis_kendaraan_kurir.Pickup
+			}
+
 			transaksi_save = append(transaksi_save, models.Transaksi{
-				IdPengguna:        data.DataHold[i].IDUser,
-				IdSeller:          data.DataHold[i].IDSeller,
-				IdBarangInduk:     int64(data.DataHold[i].IdBarangInduk),
-				IdAlamatGudang:    data.DataHold[i].IdAlamatGudang,
-				IdAlamatEkspedisi: data.DataTransaksi[i].IdAlamatEkspedisi,
-				IdKategoriBarang:  data.DataHold[i].IdKategoriBarang,
-				IdAlamatPengguna:  data.IdAlamatUser,
-				IdPembayaran:      pembayaran.ID,
-				JenisPengiriman:   data.JenisLayananKurir,
-				JarakTempuh:       strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				BeratTotalKg:      kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
-				KodeOrderSistem:   pembayaran.KodeOrderSistem,
-				Status:            transaksi_enums.Dibayar,
-				DibatalkanOleh:    nil,
-				KuantitasBarang:   int32(data.DataHold[i].Dipesan),
-				IsEkspedisi:       data.DataTransaksi[i].IsEkspedisi,
-				SellerPaid:        data.DataTransaksi[i].HargaBarang,
-				KurirPaid:         data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
-				EkspedisiPaid:     data.DataTransaksi[i].HargaEkspedisi,
-				Total:             data.DataTransaksi[i].TotalTagihan,
+				IdPengguna:          data.DataHold[i].IDUser,
+				IdSeller:            data.DataHold[i].IDSeller,
+				IdBarangInduk:       int64(data.DataHold[i].IdBarangInduk),
+				IdAlamatGudang:      data.DataHold[i].IdAlamatGudang,
+				IdAlamatEkspedisi:   data.DataTransaksi[i].IdAlamatEkspedisi,
+				IdKategoriBarang:    data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna:    data.IdAlamatUser,
+				IdPembayaran:        pembayaran.ID,
+				JenisPengiriman:     data.JenisLayananKurir,
+				KendaraanPengiriman: kendaraan,
+				JarakTempuh:         strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
+				BeratTotalKg:        beratTotalKg,
+				KodeOrderSistem:     pembayaran.KodeOrderSistem,
+				Status:              transaksi_enums.Dibayar,
+				DibatalkanOleh:      nil,
+				KuantitasBarang:     int32(data.DataHold[i].Dipesan),
+				IsEkspedisi:         data.DataTransaksi[i].IsEkspedisi,
+				SellerPaid:          data.DataTransaksi[i].HargaBarang,
+				KurirPaid:           data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
+				EkspedisiPaid:       data.DataTransaksi[i].HargaEkspedisi,
+				Total:               data.DataTransaksi[i].TotalTagihan,
 			})
 		}
 
@@ -1341,27 +1362,48 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *config.InternalDBR
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
 			}
+
+			beratTotalKg := kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000
+			if beratTotalKg == 0 {
+				beratTotalKg = 1
+			}
+
+			var kendaraan string = ""
+
+			if beratTotalKg <= 10 {
+				kendaraan = jenis_kendaraan_kurir.Motor
+			}
+
+			if beratTotalKg <= 20 {
+				kendaraan = jenis_kendaraan_kurir.Mobil
+			}
+
+			if beratTotalKg > 20 {
+				kendaraan = jenis_kendaraan_kurir.Pickup
+			}
+
 			transaksi_save = append(transaksi_save, models.Transaksi{
-				IdPengguna:        data.DataHold[i].IDUser,
-				IdSeller:          data.DataHold[i].IDSeller,
-				IdBarangInduk:     int64(data.DataHold[i].IdBarangInduk),
-				IdAlamatGudang:    data.DataHold[i].IdAlamatGudang,
-				IdAlamatEkspedisi: data.DataTransaksi[i].IdAlamatEkspedisi,
-				IdKategoriBarang:  data.DataHold[i].IdKategoriBarang,
-				IdAlamatPengguna:  data.IdAlamatUser,
-				IdPembayaran:      pembayaran.ID,
-				JenisPengiriman:   data.JenisLayananKurir,
-				JarakTempuh:       strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				BeratTotalKg:      kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
-				KodeOrderSistem:   pembayaran.KodeOrderSistem,
-				Status:            transaksi_enums.Dibayar,
-				DibatalkanOleh:    nil,
-				KuantitasBarang:   int32(data.DataHold[i].Dipesan),
-				IsEkspedisi:       data.DataTransaksi[i].IsEkspedisi,
-				SellerPaid:        data.DataTransaksi[i].HargaBarang,
-				KurirPaid:         data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
-				EkspedisiPaid:     data.DataTransaksi[i].HargaEkspedisi,
-				Total:             data.DataTransaksi[i].TotalTagihan,
+				IdPengguna:          data.DataHold[i].IDUser,
+				IdSeller:            data.DataHold[i].IDSeller,
+				IdBarangInduk:       int64(data.DataHold[i].IdBarangInduk),
+				IdAlamatGudang:      data.DataHold[i].IdAlamatGudang,
+				IdAlamatEkspedisi:   data.DataTransaksi[i].IdAlamatEkspedisi,
+				IdKategoriBarang:    data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna:    data.IdAlamatUser,
+				IdPembayaran:        pembayaran.ID,
+				JenisPengiriman:     data.JenisLayananKurir,
+				KendaraanPengiriman: kendaraan,
+				JarakTempuh:         strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
+				BeratTotalKg:        beratTotalKg,
+				KodeOrderSistem:     pembayaran.KodeOrderSistem,
+				Status:              transaksi_enums.Dibayar,
+				DibatalkanOleh:      nil,
+				KuantitasBarang:     int32(data.DataHold[i].Dipesan),
+				IsEkspedisi:         data.DataTransaksi[i].IsEkspedisi,
+				SellerPaid:          data.DataTransaksi[i].HargaBarang,
+				KurirPaid:           data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
+				EkspedisiPaid:       data.DataTransaksi[i].HargaEkspedisi,
+				Total:               data.DataTransaksi[i].TotalTagihan,
 			})
 		}
 
@@ -1517,27 +1559,48 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *config.InternalDBRea
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
 			}
+
+			beratTotalKg := kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000
+			if beratTotalKg == 0 {
+				beratTotalKg = 1
+			}
+
+			var kendaraan string = ""
+
+			if beratTotalKg <= 10 {
+				kendaraan = jenis_kendaraan_kurir.Motor
+			}
+
+			if beratTotalKg <= 20 {
+				kendaraan = jenis_kendaraan_kurir.Mobil
+			}
+
+			if beratTotalKg > 20 {
+				kendaraan = jenis_kendaraan_kurir.Pickup
+			}
+
 			transaksi_save = append(transaksi_save, models.Transaksi{
-				IdPengguna:        data.DataHold[i].IDUser,
-				IdSeller:          data.DataHold[i].IDSeller,
-				IdBarangInduk:     int64(data.DataHold[i].IdBarangInduk),
-				IdAlamatGudang:    data.DataHold[i].IdAlamatGudang,
-				IdAlamatEkspedisi: data.DataTransaksi[i].IdAlamatEkspedisi,
-				IdKategoriBarang:  data.DataHold[i].IdKategoriBarang,
-				IdAlamatPengguna:  data.IdAlamatUser,
-				IdPembayaran:      pembayaran.ID,
-				JenisPengiriman:   data.JenisLayananKurir,
-				JarakTempuh:       strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				BeratTotalKg:      kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000,
-				KodeOrderSistem:   pembayaran.KodeOrderSistem,
-				Status:            transaksi_enums.Dibayar,
-				DibatalkanOleh:    nil,
-				KuantitasBarang:   int32(data.DataHold[i].Dipesan),
-				IsEkspedisi:       data.DataTransaksi[i].IsEkspedisi,
-				SellerPaid:        data.DataTransaksi[i].HargaBarang,
-				KurirPaid:         data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
-				EkspedisiPaid:     data.DataTransaksi[i].HargaEkspedisi,
-				Total:             data.DataTransaksi[i].TotalTagihan,
+				IdPengguna:          data.DataHold[i].IDUser,
+				IdSeller:            data.DataHold[i].IDSeller,
+				IdBarangInduk:       int64(data.DataHold[i].IdBarangInduk),
+				IdAlamatGudang:      data.DataHold[i].IdAlamatGudang,
+				IdAlamatEkspedisi:   data.DataTransaksi[i].IdAlamatEkspedisi,
+				IdKategoriBarang:    data.DataHold[i].IdKategoriBarang,
+				IdAlamatPengguna:    data.IdAlamatUser,
+				IdPembayaran:        pembayaran.ID,
+				JenisPengiriman:     data.JenisLayananKurir,
+				KendaraanPengiriman: kendaraan,
+				JarakTempuh:         strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
+				BeratTotalKg:        beratTotalKg,
+				KodeOrderSistem:     pembayaran.KodeOrderSistem,
+				Status:              transaksi_enums.Dibayar,
+				DibatalkanOleh:      nil,
+				KuantitasBarang:     int32(data.DataHold[i].Dipesan),
+				IsEkspedisi:         data.DataTransaksi[i].IsEkspedisi,
+				SellerPaid:          data.DataTransaksi[i].HargaBarang,
+				KurirPaid:           data.DataTransaksi[i].HargaBerat + data.DataTransaksi[i].HargaJarak,
+				EkspedisiPaid:       data.DataTransaksi[i].HargaEkspedisi,
+				Total:               data.DataTransaksi[i].TotalTagihan,
 			})
 		}
 

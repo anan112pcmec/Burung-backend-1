@@ -123,3 +123,17 @@ var CityFlipJawaCode = map[string]string{
 	"batu":                  "1271",
 	"lainnya di jawa timur": "1288",
 }
+
+const (
+	Pending  string = "PENDING"
+	Done     string = "DONE"
+	Canceled string = "CANCELLED"
+)
+
+func StatusDoneDisbursment(s string) bool {
+	return s == Done
+}
+
+func StatusCanceledDisbursment(s string) bool {
+	return s == Canceled
+}

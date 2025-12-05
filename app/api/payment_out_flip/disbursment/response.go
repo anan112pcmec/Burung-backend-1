@@ -40,11 +40,11 @@ type ResponseDisbursment struct {
 	TimeServed       string `json:"time_served"`
 	BundleID         int64  `json:"bundle_id"`
 	CompanyID        int64  `json:"company_id"`
-	RecipientCity    int64  `json:"recipient_city"`
+	RecipientCity    int    `json:"recipient_city"`
 	CreatedFrom      string `json:"created_from"`
 	Direction        string `json:"direction"`
 	Sender           string `json:"sender"` // "null" dikirim sebagai string, bukan null
-	Fee              int64  `json:"fee"`
+	Fee              int    `json:"fee"`
 	BeneficiaryEmail string `json:"beneficiary_email"`
 	IdempotencyKey   string `json:"idempotency_key"`
 	IsVirtualAccount bool   `json:"is_virtual_account"`

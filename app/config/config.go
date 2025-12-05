@@ -76,7 +76,7 @@ func (e *Environment) RunConnectionEnvironment() (
 	}
 
 	// Atur pool koneksi
-	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxOpenConns(1000)
 	sqlDB.SetMaxIdleConns(50)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
@@ -104,7 +104,7 @@ func (e *Environment) RunConnectionEnvironment() (
 		log.Fatalf("❌ Gagal ping ke PostgreSQL (replica_system): %v", err)
 	}
 
-	sqlDBReplicaSystem.SetMaxOpenConns(100)
+	sqlDBReplicaSystem.SetMaxOpenConns(1000)
 	sqlDBReplicaSystem.SetMaxIdleConns(50)
 	sqlDBReplicaSystem.SetConnMaxLifetime(time.Hour)
 

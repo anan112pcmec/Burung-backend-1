@@ -11,9 +11,11 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	barang_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/barang"
 	entity_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity"
+	"github.com/anan112pcmec/Burung-backend-1/app/database/enums/seller_dedication"
 	"github.com/anan112pcmec/Burung-backend-1/app/database/models"
 	"github.com/anan112pcmec/Burung-backend-1/app/response"
 	response_seller_barang_service "github.com/anan112pcmec/Burung-backend-1/app/service/seller_services/barang_services/response_barang_service"
+
 )
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,6 +33,14 @@ func MasukanBarangInduk(ctx context.Context, db *config.InternalDBReadWriteSyste
 			Payload: response_seller_barang_service.ResponseMasukanBarangInduk{
 				Message: "Gagal memasukkan barang karena kredensial seller tidak valid",
 			},
+		}
+	}
+
+	if _, ok := seller_dedication.CategoryMap[data.BarangInduk.JenisBarang]; !ok {
+		return &response.ResponseForm{
+			Status:   http.StatusNotAcceptable,
+			Services: services,
+			Message:  "Gagal jenis barang tidak dikenal",
 		}
 	}
 
