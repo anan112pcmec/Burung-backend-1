@@ -10,6 +10,7 @@ import (
 
 	"gorm.io/gorm"
 
+	payment_out_constanta "github.com/anan112pcmec/Burung-backend-1/app/api/payment_out_flip"
 	payment_out_disbursment "github.com/anan112pcmec/Burung-backend-1/app/api/payment_out_flip/disbursment"
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	kurir_enums "github.com/anan112pcmec/Burung-backend-1/app/database/enums/entity/kurir"
@@ -1037,7 +1038,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		BankCode:         dataRekeningKurir.NamaBank,
 		Amount:           strconv.Itoa(int(dataTransaksi.SellerPaid)),
 		Remark:           fmt.Sprintf("Pembelian Barang: %s - Kategori: %s, Sebanyak: %v", NamaBarangInduk, kategoriBarang.Nama, dataTransaksi.KuantitasBarang),
-		ReciepentCity:    NamaKotaSeller,
+		ReciepentCity:    payment_out_constanta.CityFlipJawaCode[NamaKotaSeller],
 		BeneficiaryEmail: EmailSeller,
 	})
 
@@ -1054,7 +1055,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		BankCode:         dataRekeningKurir.NamaBank,
 		Amount:           strconv.Itoa(int(dataTransaksi.KurirPaid)),
 		Remark:           fmt.Sprintf("Membayar Biaya Pengiriman Barang: %s - Kategori: %s, Sebanyak: %v", NamaBarangInduk, kategoriBarang.Nama, dataTransaksi.KuantitasBarang),
-		ReciepentCity:    NamaKotaKurir,
+		ReciepentCity:    payment_out_constanta.CityFlipJawaCode[NamaKotaKurir],
 		BeneficiaryEmail: kurirData.Email,
 	})
 
@@ -1546,6 +1547,118 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 
 	wg.Wait()
 
+	var (
+		DataTransaksi      models.Transaksi
+		DataPengiriman     models.Pengiriman
+		RekeningKurir      models.RekeningKurir
+		NamaKotaKurir      string
+		NamaBarangInduk    string
+		NamaKategoriBarang string
+	)
+
+	if err := db.Read.WithContext(ctx).Model(&models.Transaksi{}).Where(&models.Transaksi{
+		ID: IdTransaksiPengiriman,
+	}).Limit(1).Scan(&DataTransaksi).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data transaksi tidak ditemukan",
+		}
+	}
+
+	if err := db.Read.WithContext(ctx).Model(&models.PengirimanEkspedisi{}).Where(&models.PengirimanEkspedisi{
+		ID: data.IdPengirimanEks,
+	}).Limit(1).Take(&DataPengiriman).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data pengiriman tidak ditemukan",
+		}
+	}
+
+	if err := db.Read.WithContext(ctx).Model(&models.RekeningKurir{}).Where(&models.RekeningKurir{
+		IdKurir: data.IdentitasKurir.IdKurir,
+	}).Limit(1).Take(&RekeningKurir).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data rekening kurir tidak ditemukan",
+		}
+	}
+
+	if err := db.Read.WithContext(ctx).Model(&models.BidKurirData{}).Select("kota").Where(&models.BidKurirData{
+		ID: data.IdBidKurir,
+	}).Limit(1).Take(&NamaKotaKurir).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data kota kurir tidak didapatkan",
+		}
+	}
+
+	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("nama_barang").Where(&models.BarangInduk{
+		ID: int32(DataTransaksi.IdBarangInduk),
+	}).Limit(1).Take(&NamaBarangInduk).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal menemukan data barang induk",
+		}
+	}
+
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("nama").Where(&models.KategoriBarang{
+		ID: DataTransaksi.IdKategoriBarang,
+	}).Limit(1).Scan(&NamaKategoriBarang).Error; err != nil {
+		return &response.ResponseForm{
+			Status:   http.StatusNotFound,
+			Services: services,
+			Message:  "Gagal data kategori barang tidak ditemukan",
+		}
+	}
+
+	dataDisbursmentKurir, StatusDisbursmentKurir := payment_out_disbursment.ReqCreateDisbursment(payment_out_disbursment.PayloadCreateDisbursment{
+		AccountNumber: RekeningKurir.NomorRekening,
+		BankCode:      RekeningKurir.NamaBank,
+		Amount:        strconv.Itoa(int(DataPengiriman.KurirPaid)),
+		Remark:        fmt.Sprintf("Membayar Biaya Pengiriman Barang: %s - Kategori: %s, Sebanyak: %v", NamaBarangInduk, NamaKategoriBarang, DataTransaksi.KuantitasBarang),
+	})
+
+	if !StatusDisbursmentKurir {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server mengalami gangguan mohon bersabar dan coba lagi",
+		}
+	}
+
+	DisbursmentKurir := dataDisbursmentKurir.ReturnDisburstment()
+	saveDisbursmentKurir := models.PayOutKurir{
+		IdKurir:          data.IdentitasKurir.IdKurir, // Pastikan field ini ada
+		IdDisbursment:    DisbursmentKurir.ID,
+		UserId:           int(DisbursmentKurir.UserID),
+		Amount:           int(DisbursmentKurir.Amount),
+		Status:           DisbursmentKurir.Status,
+		Reason:           DisbursmentKurir.Reason,
+		Timestamp:        DisbursmentKurir.Timestamp,
+		BankCode:         DisbursmentKurir.BankCode,
+		AccountNumber:    DisbursmentKurir.AccountNumber,
+		RecipientName:    DisbursmentKurir.RecipientName,
+		SenderBank:       DisbursmentKurir.SenderBank,
+		Remark:           DisbursmentKurir.Remark,
+		Receipt:          DisbursmentKurir.Receipt,
+		TimeServed:       DisbursmentKurir.TimeServed,
+		BundleId:         DisbursmentKurir.BundleID,
+		CompanyId:        DisbursmentKurir.CompanyID,
+		RecipientCity:    DisbursmentKurir.RecipientCity,
+		CreatedFrom:      DisbursmentKurir.CreatedFrom,
+		Direction:        DisbursmentKurir.Direction,
+		Sender:           DisbursmentKurir.Sender,
+		Fee:              DisbursmentKurir.Fee,
+		BeneficiaryEmail: DisbursmentKurir.BeneficiaryEmail,
+		IdempotencyKey:   DisbursmentKurir.IdempotencyKey,
+		IsVirtualAccount: DisbursmentKurir.IsVirtualAccount,
+	}
+
 	if err := db.Write.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 
 		if err := tx.Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
@@ -1584,6 +1697,10 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		}).Updates(&models.Transaksi{
 			KodeResiEkspedisi: &data.NoResiEkspedisi,
 		}).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Create(&saveDisbursmentKurir).Error; err != nil {
 			return err
 		}
 
