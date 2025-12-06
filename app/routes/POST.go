@@ -10,6 +10,7 @@ import (
 	"github.com/anan112pcmec/Burung-backend-1/app/config"
 	admin_routes "github.com/anan112pcmec/Burung-backend-1/app/routes/admin"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/auth"
+	"github.com/anan112pcmec/Burung-backend-1/app/routes/callback"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/kurir"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/seller"
 	"github.com/anan112pcmec/Burung-backend-1/app/routes/userroute"
@@ -44,6 +45,10 @@ func PostHandler(db *config.InternalDBReadWriteSystem, rds *redis.Client, rds_en
 		if len(r.URL.Path) >= 7 && r.URL.Path[:7] == "/admin/" {
 			admin_routes.AdminPostHandler(w, r)
 			return
+		}
+
+		if len(r.URL.Path) >= 10 && r.URL.Path[:10] == "/callback/" {
+			callback.CallbackPostHandler(w, r, db)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{

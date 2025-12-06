@@ -1631,6 +1631,14 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		}
 	}
 
+	if !dataDisbursmentKurir.Validating() {
+		return &response.ResponseForm{
+			Status:   http.StatusInternalServerError,
+			Services: services,
+			Message:  "Gagal server sedang mengalami gangguan coba lagi lain waktu",
+		}
+	}
+
 	DisbursmentKurir := dataDisbursmentKurir.ReturnDisburstment()
 	saveDisbursmentKurir := models.PayOutKurir{
 		IdKurir:          data.IdentitasKurir.IdKurir, // Pastikan field ini ada
