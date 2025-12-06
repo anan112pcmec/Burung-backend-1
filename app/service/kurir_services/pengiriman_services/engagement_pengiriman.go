@@ -959,13 +959,12 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		NamaKotaSeller     string
 		NamaKotaKurir      string
 		EmailSeller        string
-		NamaBarangInduk    string
 	)
 
-	var kategoriBarang models.KategoriBarang
-	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id_rekening", "nama").Where(&models.KategoriBarang{
+	var id_rekening_barang int64 = 0
+	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("id_rekening").Where(&models.KategoriBarang{
 		ID: dataTransaksi.IdKategoriBarang,
-	}).Limit(1).Take(&kategoriBarang).Error; err != nil {
+	}).Limit(1).Take(&id_rekening_barang).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -974,7 +973,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 	}
 
 	if err := db.Read.WithContext(ctx).Model(&models.RekeningSeller{}).Where(&models.RekeningSeller{
-		ID: kategoriBarang.IDRekening,
+		ID: id_rekening_barang,
 	}).Limit(1).Take(&dataRekeningSeller).Error; err != nil {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
@@ -1013,16 +1012,6 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		}
 	}
 
-	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("nama_barang").Where(&models.BarangInduk{
-		ID: int32(dataTransaksi.IdBarangInduk),
-	}).Limit(1).Take(&NamaBarangInduk).Error; err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Message:  "Gagal nama barang induk tidak ditemukan",
-		}
-	}
-
 	if err := db.Read.WithContext(ctx).Model(&models.Seller{}).Select("email").Where(&models.Seller{
 		ID: dataTransaksi.IdSeller,
 	}).Limit(1).Take(&EmailSeller).Error; err != nil {
@@ -1037,7 +1026,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		AccountNumber:    dataRekeningSeller.NomorRekening,
 		BankCode:         dataRekeningKurir.NamaBank,
 		Amount:           strconv.Itoa(int(dataTransaksi.SellerPaid)),
-		Remark:           fmt.Sprintf("Pembelian Barang: %s - Kategori: %s, Sebanyak: %v", NamaBarangInduk, kategoriBarang.Nama, dataTransaksi.KuantitasBarang),
+		Remark:           "Bayaran",
 		ReciepentCity:    payment_out_constanta.CityFlipJawaCode[NamaKotaSeller],
 		BeneficiaryEmail: EmailSeller,
 	})
@@ -1054,7 +1043,7 @@ func SampaiPengirimanNonEks(ctx context.Context, data PayloadSampaiPengirimanNon
 		AccountNumber:    dataRekeningKurir.NomorRekening,
 		BankCode:         dataRekeningKurir.NamaBank,
 		Amount:           strconv.Itoa(int(dataTransaksi.KurirPaid)),
-		Remark:           fmt.Sprintf("Membayar Biaya Pengiriman Barang: %s - Kategori: %s, Sebanyak: %v", NamaBarangInduk, kategoriBarang.Nama, dataTransaksi.KuantitasBarang),
+		Remark:           "Pengiriman",
 		ReciepentCity:    payment_out_constanta.CityFlipJawaCode[NamaKotaKurir],
 		BeneficiaryEmail: kurirData.Email,
 	})
@@ -1461,7 +1450,9 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	var wg sync.WaitGroup
 	var final bool = false
 
-	if _, status := data.IdentitasKurir.Validating(ctx, db.Read); !status {
+	DataKurir, status := data.IdentitasKurir.Validating(ctx, db.Read)
+
+	if !status {
 		return &response.ResponseForm{
 			Status:   http.StatusNotFound,
 			Services: services,
@@ -1474,7 +1465,7 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		defer wg.Done()
 
 		var ids_data_bid_kurir_scheduler []int64
-		if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Where(&models.BidKurirEksScheduler{
+		if err := db.Read.WithContext(ctx).Model(&models.BidKurirEksScheduler{}).Select("id").Where(&models.BidKurirEksScheduler{
 			IdBid: idBid,
 		}).Limit(8).Scan(&ids_data_bid_kurir_scheduler).Error; err != nil {
 			return
@@ -1548,12 +1539,10 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 	wg.Wait()
 
 	var (
-		DataTransaksi      models.Transaksi
-		DataPengiriman     models.Pengiriman
-		RekeningKurir      models.RekeningKurir
-		NamaKotaKurir      string
-		NamaBarangInduk    string
-		NamaKategoriBarang string
+		DataTransaksi  models.Transaksi
+		DataPengiriman models.PengirimanEkspedisi
+		RekeningKurir  models.RekeningKurir
+		NamaKotaKurir  string
 	)
 
 	if err := db.Read.WithContext(ctx).Model(&models.Transaksi{}).Where(&models.Transaksi{
@@ -1596,31 +1585,13 @@ func SampaiPengirimanEks(ctx context.Context, data PayloadSampaiPengirimanEks, d
 		}
 	}
 
-	if err := db.Read.WithContext(ctx).Model(&models.BarangInduk{}).Select("nama_barang").Where(&models.BarangInduk{
-		ID: int32(DataTransaksi.IdBarangInduk),
-	}).Limit(1).Take(&NamaBarangInduk).Error; err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Message:  "Gagal menemukan data barang induk",
-		}
-	}
-
-	if err := db.Read.WithContext(ctx).Model(&models.KategoriBarang{}).Select("nama").Where(&models.KategoriBarang{
-		ID: DataTransaksi.IdKategoriBarang,
-	}).Limit(1).Scan(&NamaKategoriBarang).Error; err != nil {
-		return &response.ResponseForm{
-			Status:   http.StatusNotFound,
-			Services: services,
-			Message:  "Gagal data kategori barang tidak ditemukan",
-		}
-	}
-
 	dataDisbursmentKurir, StatusDisbursmentKurir := payment_out_disbursment.ReqCreateDisbursment(payment_out_disbursment.PayloadCreateDisbursment{
-		AccountNumber: RekeningKurir.NomorRekening,
-		BankCode:      RekeningKurir.NamaBank,
-		Amount:        strconv.Itoa(int(DataPengiriman.KurirPaid)),
-		Remark:        fmt.Sprintf("Membayar Biaya Pengiriman Barang: %s - Kategori: %s, Sebanyak: %v", NamaBarangInduk, NamaKategoriBarang, DataTransaksi.KuantitasBarang),
+		AccountNumber:    RekeningKurir.NomorRekening,
+		BankCode:         RekeningKurir.NamaBank,
+		Amount:           strconv.Itoa(int(DataPengiriman.KurirPaid)),
+		Remark:           "Pengiriman",
+		ReciepentCity:    payment_out_constanta.CityFlipJawaCode[NamaKotaKurir],
+		BeneficiaryEmail: DataKurir.Email,
 	})
 
 	if !StatusDisbursmentKurir {

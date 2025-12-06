@@ -76,6 +76,7 @@ func Run() {
 	// Router.Use(blockBadRequestsMiddleware)
 
 	// Jalankan enums dan migrasi
+	// Migration SOT
 	if err := enums.UpEnumsEntity(db_system.Write); err != nil {
 		log.Printf("❌ Gagal UpEnumsEntity: %v", err)
 	}
@@ -92,6 +93,7 @@ func Run() {
 	migrate.UpEngagementEntity(db_system.Write)
 	migrate.UpSystemData(db_system.Write)
 	migrate.UpTresholdData(db_system.Write)
+	//
 
 	// Caching data
 	maintain_cache.DataAlamatEkspedisiUp(db_system.Write)

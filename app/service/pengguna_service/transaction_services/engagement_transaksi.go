@@ -1084,7 +1084,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *config.InternalDBReadWrite
 			}).Limit(1).Take(&kategori).Error; err != nil {
 				return err
 			}
-			beratTotalKg := kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000
+			beratTotalKg := int32(kategori.BeratGram) * int32(data.DataHold[i].Dipesan) / 1000
 			if beratTotalKg == 0 {
 				beratTotalKg = 1
 			}
@@ -1115,7 +1115,7 @@ func LockTransaksiVa(data PayloadLockTransaksiVa, db *config.InternalDBReadWrite
 				JenisPengiriman:     data.JenisLayananKurir,
 				KendaraanPengiriman: kendaraan,
 				JarakTempuh:         strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				BeratTotalKg:        beratTotalKg,
+				BeratTotalKg:        int16(beratTotalKg),
 				KodeOrderSistem:     pembayaran.KodeOrderSistem,
 				Status:              transaksi_enums.Dibayar,
 				DibatalkanOleh:      nil,
@@ -1363,7 +1363,7 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *config.InternalDBR
 				return err
 			}
 
-			beratTotalKg := kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000
+			beratTotalKg := int32(kategori.BeratGram) * int32(data.DataHold[i].Dipesan) / 1000
 			if beratTotalKg == 0 {
 				beratTotalKg = 1
 			}
@@ -1394,7 +1394,7 @@ func LockTransaksiWallet(data PayloadLockTransaksiWallet, db *config.InternalDBR
 				JenisPengiriman:     data.JenisLayananKurir,
 				KendaraanPengiriman: kendaraan,
 				JarakTempuh:         strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				BeratTotalKg:        beratTotalKg,
+				BeratTotalKg:        int16(beratTotalKg),
 				KodeOrderSistem:     pembayaran.KodeOrderSistem,
 				Status:              transaksi_enums.Dibayar,
 				DibatalkanOleh:      nil,
@@ -1560,7 +1560,7 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *config.InternalDBRea
 				return err
 			}
 
-			beratTotalKg := kategori.BeratGram * int16(data.DataHold[i].Dipesan) / 1000
+			beratTotalKg := int32(kategori.BeratGram) * int32(data.DataHold[i].Dipesan) / 1000
 			if beratTotalKg == 0 {
 				beratTotalKg = 1
 			}
@@ -1591,7 +1591,7 @@ func LockTransaksiGerai(data PayloadLockTransaksiGerai, db *config.InternalDBRea
 				JenisPengiriman:     data.JenisLayananKurir,
 				KendaraanPengiriman: kendaraan,
 				JarakTempuh:         strconv.FormatFloat(data.DataTransaksi[i].Jarak, 'f', 2, 64),
-				BeratTotalKg:        beratTotalKg,
+				BeratTotalKg:        int16(beratTotalKg),
 				KodeOrderSistem:     pembayaran.KodeOrderSistem,
 				Status:              transaksi_enums.Dibayar,
 				DibatalkanOleh:      nil,
